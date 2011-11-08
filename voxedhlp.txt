@@ -1,0 +1,331 @@
+                       +------------------------------+
+                       | VOXED voxel editor reference |
+                       +------------------------------+
+
+-------------------------------- INTRODUCTION --------------------------------
+
+   The user interface isn't so easy right now - there are a lot of keys you
+need to memorize. There are a lot of weird combinations that are useful, but
+sometimes it's not so obvious, so please explore and try to be creative.
+   In my documentation, when I use the word "box", I am referring to a cube,
+where the lengths of the 3 sides aren't necessarily of equal length. I prefer
+to reserve the word "rectangle" for 2D primitives only. Also, any controls
+that have a prefix of "KP" means that I'm talking about the key on the KeyPad.
+   One of the most confusing things are the 3 different types of cursors. You
+should try to understand this before reading the rest of the documentation.
+
+  Screen-cursor: This is the dot that's ALWAYS in the center of the screen.
+
+Numbered-cursor: These are the "spheres" that appear when you press SPACE bar.
+                 They have a number in the middle of them, starting with 0 and
+                 incrementing as you insert more of them (up to 100). They are
+                 intended mainly for editing functions which require 3 or more
+                 points as input (for example, the sector & lathe tools) These
+                 cursors can only be moved by dragging them with the mouse.
+                 These are usually used BEFORE you insert an object.
+
+    Mini-cursor: These are smaller "spheres" that get inserted automatically
+                 after you insert an object, such as a box or sphere. They
+                 have no numbers inside them. Mini-cursors must be moved with
+                 the keypad controls: (1,2,3,4,5,Enter)
+                 These are usually used AFTER you insert an object.
+
+------------------------------- GETTING AROUND -------------------------------
+
+ESC             Quit
+Mouse X/Y       Turn left/right, Look up/down (Press 'Y' to invert)
+Arrows          Move Forward/Backward/Left/Right
+R.CTRL          Move Up
+KP0             Move Down
+R.SHIFT         Hold down to speed up movement (by 4 times)
+L.SHIFT         Hold down to slow down movement (by 4 times)
+KP*, KP/        Zoom in/out. Use the other / (next to SHIFT) to reset
+R.MouseBut      Hold this down and move mouse left/right to tilt screen.
+
+------------------------------- SIMPLE EDITING -------------------------------
+
+  (These functions don't require an understanding of the cursor types)
+
+Home            Insert sphere (mini-cursor becomes center)
+End             Delete sphere (mini-cursor becomes center)
+ALT+Home        Voxel spray (hold it down) - works like spraypaint, but
+                   inserts voxels instead of changing color.
+ALT+End         Voxel suck (hold it down): works like spraypaint, but deletes
+                   voxels instead of changing color.
+
+[ and ]         Decrease/increase radius of sphere, ellipsoid, or cylinder
+; and '         Change superquadric power (p) of sphere (default:p=2)
+                     abs(x)^p + abs(y)^p + abs(z)^p = r^p
+                   Notice when p=2 in this equation, it's a sphere.
+                   Sounds complex, but it really isn't. Try it!
+                These keys also change the brightness of the flash function
+
+X               Paint color onto individual voxel permanently
+Tab             Select current drawing color to color under screen-cursor
+KP+ and KP-     Change procedural texture. There are 7 currently defined:
+                   0:cur   Solid color from the color bar
+                   1:floor Set to first color below position (default)
+                   2:jit   Take current color and randomize a little
+                   3:many  A funny looking RGB color cube
+                   4:sph   Use this one for shading spheres
+                   5:wood  An interesting wood pattern
+                   6:png   Enabled when you load a PNG file using 'V' key,
+                              otherwise it acts like the "0:cur" mode.
+
+\               Undo/Redo most recent modification
+
+------------------------------ COLOR SELECTION -------------------------------
+
+   Color can be selected before you insert an object, but it is best to select
+it afterwards, so you don't end up changing the color of the previous object.
+
+L.Enter         Activate/Deactivate color bar
+L.MouseBut      Select color (when color bar is activated)
+R.MouseBut      Hold and move mouse up/down. Use this to change the palette
+                    brightness (when color bar is activated)
+
+--------------------------- LIGHTING MANIPULATION ----------------------------
+
+   I recommend you saving the map BEFORE you go nuts with the lighting. This
+is because the lighting functions tend to deteriorate the colors of the map
+if you use them too much.
+
+F               Flash! This is the main lighting function. Press it and
+                   everything you can see (within a distance) will brighten.
+ALT+F           Old flash. Use in the same way as F, but this uses an older
+                   lighting algorithm which has moire pattens on the curves.
+Caps Lock       Darken all intensities on map by 25% Useful before a flash.
+Z               Hold to blend nearby intensities. Use this to remove the
+                   aliasing you see after a "flash".
+SHIFT+Z         Hold to blend nearby voxel colors.
+S               Hold to delete thin voxels. By thin voxel, I mean any voxel
+                   with air on opposite sides. If you use this before a
+                   "flash", you can improve the lighting. (It removes the
+                   possibility of a voxel getting brightened on one side and
+                   it appearing bright on the back side as well.)
+L.CTRL          Hold to brighten area slowly, randomly, & smoothly. This is a
+                    different effect from "flash", and also a lot slower.
+L.CTRL+L.ALT    Hold to darken area slowly, randomly, and smoothly.
+
+-------------------------- MINI-CURSOR MANIPULATION --------------------------
+
+KP1,KP2,KP3,KP5 Move mini-cursor Forward/Backward/Left/Right 1 unit
+KP4             Move mini-cursor Up 1 unit
+KPEnter         Move mini-cursor Down 1 unit
+KP.             If .KV6 sprite is selected, this x-flips the object (so the
+                   writing is backwards). This is a good way to save memory.
+KP9             Toggle between 1 mini-cursor and all mini-cursors. When you
+                   see only 1 mini-cursor, dragging that point will move just
+                   that 1 point. When you see more than 1 mini-cursor, the
+                   keypad controls will move the entire object without
+                   changing its size. When you switch back to the 1 mini-
+                   cursor, the vertex selected is the one closest to the
+                   voxel under the screen-cursor. Has no effect for objects
+                   that use only 1 mini-cursor.
+
+   NOTE: Some of these keys also let you manipulate numbered cursors.
+
+------------------------ NUMBERED-CURSOR MANIPULATION ------------------------
+
+Space           Insert numbered-cursor. A sphere with a number inside it is
+                   inserted at the point under the screen-cursor.
+Backspace       Remove last numbered-cursor
+/               Remove ALL numbered-cursors. Also resets zoom & angle mode.
+
+L.MouseBut      Drag numbered-cursor (direction restricted to the arrows)
+L+R MouseButs   When dragging numbered-cursors around, use this to change the
+                   axes. You should see the "arrows" change orientation.
+                   Note: You must have BOTH mouse buttons held down!
+PGUP/PGDN       Raise lower ceiling/floor of sector object. You must have at
+                   least 3 numbered-cursors for this to take effect.
+
+------------------------------ ADVANCED EDITING ------------------------------
+
+Insert/Delete:
+   Less than 2 numbered-cursors active:
+                Insert/Delete box. The box starts out as an individual voxel
+                   (1*1*1) where both mini-cursors are at the same point. To
+                   incease the size, use the mini-cursor controls:
+                   (1,2,3,5,4,Enter on keypad)
+   2 or more numbered-cursors active:
+                Fills the selected volume with solid voxels (Insert) or air
+                   (Delete).
+                Special mode: if you have 3 or more numbered-cursors, and
+                   you select .PNG procedural texturing, then it will treat
+                   the alpha channel as a signed-char height offset for 3D
+                   bump-mapping.
+
+E / SHIFT+E     Insert/Delete Ellipsoid (The mini-cursors are the foci)
+L / SHIFT+L     Insert/Delete Cylinder/Line (The mini-cursors are endpoints)
+W / SHIFT+W     Insert/Delete Walls. You must have at least 3 numbered-
+                   cursors first to use this. Then you must use PGUP/PGDN.
+C / SHIFT+C     Insert/Delete Ceiling. Requires >= 3 numbered-cursors.
+T / SHIFT+T     Insert/Delete Rotational sweep. Requires >= 3 numbered-
+                   cursors. Cursors #0 and #1 become axis of rotation.
+                   Everything on the right side of a clockwise-drawn loop
+                   will be included as part of the object. It's ok to have
+                   points on the left side of the axis, but that area will be
+                   ignored.
+H / SHIFT+H     Insert/Delete a randomly generated convex hull.
+B / SHIFT+B     Insert/Delete Blobs. Requires numbered-cursors. (Not fully
+                   working yet)
+3               Insert triangle. You must have at least 3 numbered cursors.
+
+4               3D floodfill, starting at camera's location. Floodfill is
+                   restricted to numbered-cursor boxes if there are 2 cursors.
+5               Lassoo tool. This tool is for filling in cracks - polygons
+                   that don't have coplanar points. Press '5' with the mouse
+                   cursor on each point of a loop and you should see a path
+                   connecting from the previous point. Make sure there is a
+                   relatively short path (< ~128 voxels) along the surface
+                   between each pair of points. When you complete the loop,
+                   press '6' to fill in the gaps.
+6               Used in conjunction with '5'. See '5'.
+
+D               Duplicate box. First specify source box using two numbered-
+                   cursors. Then press D at the point where you want
+                   numbered-cursor #0 to be copied to.
+Shift+D         Same as 'D' but doesn't copy air voxels.
+
+U               Insert .KV6/.KVX/.VOX file. If you select a .KV6 file, then
+                   the object will stay separated from the map. If you select
+                   a .KVX/.VOX file, then the object will permanently become
+                   a part of the map.
+
+                You can use 'U' to insert a dummy "DOT" sprite. To do this,
+                   type any invalid filename, such as "ASDF" at the openfile
+                   dialog and it will be saved as "DOT" in the .SXL file.
+
+                You can use 'U' to insert a dummy "BOX" sprite. To do this,
+                   first make a box with 2 numbered cursors, then press 'U'.
+                   It uses the vx5sprite .s field for the first corner,
+                   vx5sprite .h for the second corner, and .p for the
+                   "sphere" handle in VOXED. You can use this info too.
+
+V               Set procedural texture to .PNG file.
+P               Paints selected .PNG file onto the voxel map, projected in
+                   exactly the same way as what you're looking at.
+=               First select a box with 2 numbered cursors. This key then
+                   re-calculates all colors inside the box, preserving the
+                   state of air or solid.
+
+KP6             For .KVX/.VOX: Rotate object (Switches between x,y,z axis)
+KP7,KP8,KP9     For .KVX/.VOX: Flip/Mirror axis (I don't remember which key
+                   does what, but I know all 48 possible 90ø cases are in
+                   there. Keep pressing on the keys until it looks right.)
+
+KP7,KP8         For .KV6: Rotate object left/right
+KP6,KP9         For .KV6: Rotate object up/down (depends on your orientation)
+
+-------------------- MODES & OTHER MISCELLANEOUS CONTROLS --------------------
+
+`               Toggle global shading mode:
+                   0: no shading (default)
+                   1: normal estimation, light sources (in this mode,
+                         pressing 'F' inserts a temporary light source)
+                   2: normal estimation, no light sources (brighter!)
+KP.             Toggle shading (default) / no shading on cube faces (if
+                   .KV6 sprite is not selected).
+, and .         Select raycast resolution (1-16), 1:best quality&default
+R               Toggle smart raycast resolution mode (lower quality when
+                   turning quickly, higher quality when still) Default is
+                   disabled.
+Numlock         Toggle raycasting cut-off distance: 256 (default) or no limit
+                   (slow, especially if you're outside)
+A               Toggle anglemode (horizon correction (default) vs. free
+                   direction)
+G               Toggle grid and grid alignment size (16 or 32)
+
+2               Shoot an invisible fireball (just a toy)
+F10             Enable MIP-MAPPING.
+
+Scroll lock     Panic Quit (DOS version only): Use to escape from lock-ups.
+                   Try to avoid using this key whenever possible.
+
+------------------------------ LOADING & SAVING ------------------------------
+
+ALT+F2          Load .VXL map.
+ALT+F3          Save .VXL map. (NOTE: Use F3 to save .SXL separately)
+F3              Save .SXL file. (Game data: sky, sprite locations, etc...)
+F5              Load new sky from file.
+F6              Edit global user string (stored in .SXL files)
+F7              Save floating object to .KV6 (put cursor on object)
+
+F12             Screencapture exactly what you see to VXL5####.PNG
+ALT+F12         Surroundcapture to VXL5####.PNG (2560*1024 resolution)
+
+   NOTE: Both F12 and ALT-F12 create valid .PNG files, but I use absolutely
+   NO COMPRESSION when storing them! You can reduce their size A LOT if you
+   are willing to re-compress them with another utility.
+
+------------------------ Known Limitations / Problems ------------------------
+
+Pentium III only!  A lot of my new sprite & z-buffer code uses the new
+   Pentium III instructions. If you don't have a Pentium III or compatible
+   processor, then the engine will give an invalid opcode exception. It
+   would probably take a few hours to get the code working again on an
+   MMX-capable machine (with a noticable decrease in frame rate).
+
+Memory: You WILL need at least 128MB of RAM to run this. Do not attempt to run
+   it on anything less.
+
+"alloc: vbuf full". Right now, I allocate 64MB of memory to store the voxel
+   map. If voxlap5 suddenly exits out with this message, it means the board
+   is too complex - too much surface area for the board map to fit within
+   this limit, or the memory is too fragmented. In the future, I might
+   implement a way of defragmenting the cache, or a better warning, or maybe
+   even a disk cacheing system so this never happens.
+
+The following issue applies to the DOS version only:
+
+VESA 2.0 linear mode crashes under NT. I don't know why, but I know how to
+   replace the code with slower VESA code that doesn't crash.
+
+-------------------------------- COMMAND LINE --------------------------------
+
+   >voxed [SXL/VXL/DTA/BSP map name] [/(xdim)x(ydim)] [/win]
+       (options can be listed in any order)
+
+   If you do not specify a Master sprite file (.SXL), Voxlap5 format (.VXL),
+Comanche format (.DTA), or Quake 3 format (.BSP), then voxlap5 tries to load
+VXL/DEFAULT.SXL. If that doesn't exist, then it loads a built-in map, with a
+gray plain, called "UNTITLED.VXL". You start inside a box in the middle.
+   Voxlap5 supports all 32-bit color modes where xdim<=640 and ydim<=480.
+Default is 320*200 fullscreen mode. If the mode isn't found, then the DOS
+version defaults to true-color emulation mode (320x400 8 bit color which
+should work on all VGA compatible video cards). The windows version has no
+emulation mode and just exits with an error message.
+
+Some examples:
+   >voxed /640x480
+      Use hi-res VESA mode (640x480x32) To specify resolution, you must have
+      a lowercase 'x' separating the x- and y- dimensions and there can't be
+      any spaces in between.
+   >voxed /480x360 /win
+      Set resolution to 480x360 and use windowed mode instead of fullscreen.
+   >voxed 1
+      If you have Novalogic's classic game Comanche Maximum Overkill, then
+      copy (C1.DTA & D1.DTA) into the voxlap directory and it will load them.
+   >voxed c:\games\id\q3ademo\demoq3\q3dm17.bsp
+      If you extract *.BSP from Quake3's PAK0.PK3 file, then it will convert
+      the geometry from a Quake map. No textures are converted, so the best
+      way to view the map is to go wild and press 'F' everywhere.
+   >voxed asdf
+      Force loading of boring gray plain (assuming asdf doesn't exist)
+   >voxed /0
+      Forces truecolor emulation (DOS version only)
+
+------------------------ Documentation Update History ------------------------
+
+11/20/2000: VOXLAP5 documentation first written
+11/21/2000: Documentation revised for clarity
+02/25/2001: Added windows command line info
+03/19/2001: Made DOS command line same as windows version
+03/28/2001: Added documentation for P & =
+05/16/2001: Updated for .KV6 keys (KP6-KP9)
+06/23/2001: Updated limitations, added 3D bump & Q3 info
+03/05/2002: Added some info about .SXL files & new keys related to lighting
+05/14/2002: Added info about 4,5,6,Shift+D, and dummy sprite info with 'U'
+
+------------------------------------------------------------------------------
+VOXLAP5 programmed by Ken Silverman (http://www.advsys.net/ken)

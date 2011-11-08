@@ -1,0 +1,201 @@
+							+----------------------------------+
+							| KWALK animation editor reference |
+							+----------------------------------+
+
+-------------------------------- INTRODUCTION --------------------------------
+
+	KWALK is a key-frame animation program. This program handles all parts of
+the animation process except for drawing the original voxel model. For that,
+you must use SLAB6D (which is available on my website). KWALK requires each
+limb (arm, leg, head, etc...) to be drawn separately, so they're not touching
+any other limb. This is how KWALK separates the limbs when you load the .KV6
+object. In this documentation, I will use the word "limb" to refer to one of
+the pieces of the object, and the word "hinge" to refer to the connection
+between 2 limbs.
+	Once you've loaded the .KV6 object, you must do the following steps to
+turn it into an animation:
+
+STEP 1: Connect limbs with hinges.
+	Each hinge is a 1-D axis of rotation defined by:
+		a 3D point p[0] and vector v[0] relative to the child limb and:
+		a 3D point p[1] and vector v[1] relative to the parent limb.
+	Once the hinge is complete, the two points (p[0] an p[1]) will always
+	occupy the same location in space, and the two vectors (v[0] and v[1])
+	will always point in the same direction (be parallel).
+		First choose a limb that will be the parent of everything. This limb
+	will act as the "base" and it's the one you control in the game. For
+	humanoid models, usually the lower torso / butt is the best choice.
+
+	A. Start by choosing the child limb. Press SPACE with the cursor
+		(center of the screen) over the child limb. Once you do this, you
+		should see a white 3D cursor on the child limb that looks sort of
+		like a "koosh" ball. This is your child point (p[0]). You can adjust
+		the position of this cursor by using the keypad controls (KP5=FORWARD,
+		KP2=BACK,KP1=LEFT,KP3=RIGHT,KP4=UP,KPENTER=DOWN).
+
+	B. Now, press SPACE again (anywhere is ok). You should now see a line
+		coming out from the child point (p[0]). This is your child vector
+		(v[0]). You can adjust the angle by using the keypad controls. Those
+		numbers you see are angles in degrees away from an exactly aligned
+		axis.
+
+	C. Repeat steps A & B, but for the parent limb. The parent vector will
+		always start parallel to the child vector. Usually this is desired,
+		but you are free to change it.
+
+	D. To finish the object, press SPACE a 5th time and the hinge should snap
+		the child limb to the parent limb. You can use BACKSPACE to go back 1
+		step, but once you snap the limbs together, the only way to fix the
+		hinge is by detaching the child limb (select the child and press \)
+		and starting at step A again.
+
+	Once the limbs are snapped together, you should be able to move the hinge
+	around its axis by holding down the left mouse button and moving the mouse.
+	At this point, you may either proceed to step 2 for this hinge, or connect
+	another child limb.
+
+	Ball joints are supported by using 2 hinges between parent & child
+	Need to write more on this...
+
+Step 2: Set hinge limits.
+		Use this to prevent a knee from bending backwards. Setting hinge limits
+	is not mandatory, but it can be very helpful later on and it's quite easy
+	to do. You hold down the right mouse button with the child limb selected
+	and then move the mouse. When you do this, you will see 3 copies of the
+	limb being drawn (5 for ball joints). You control 1 of the copies and the
+	others show the limits (the maximum extent that that can rotate) Once you
+	release the right mouse button, the limits will be set. If you want the
+	hinge to rotate around 360 degrees freely, then you can reset it by
+	clicking the right mouse button on the child limb, pressing / (don't move
+	the mouse!) and then release the right mouse button.
+
+Step 3: Generate frames.
+		This is where the fun really begins. If you look at the top-left corner
+	of the screen, you'll notice there are 2 numbers: 0/1. The left number is
+	the current frame number and the right number is the total number of
+	frames. You start by setting the position of each limb on frame #0 (left
+	click the limb and drag the mouse). Once you're satisfied, you can use PGUP
+	and PGDN to switch to the next frame. KWALK does not allow 2 sequential
+	frames to be in exactly the same position because it's a waste of memory.
+	That's why you sometimes see the total number of frames decrease when you
+	press PGDN. To delete a frame, press DELETE with no limbs selected.
+
+Step 4: Action sequencer.
+		To enter and exit the sequencer, press ` (the key at the top-left of
+	the keyboard next to the '1' and below 'ESC'. You should see a ruler on the
+	bottom of the screen. The scale is always in seconds. The sequencer allows
+	you to specify at what time each frame should be player. It supports
+	one-shot playback as well as looping.
+		To insert a sequence mark, first select a frame using PGUP/PGDN. Then
+	press INSERT to put the mark on the time ruler. (Move the mouse so you
+	can see the mark.) You can drag marks with the left mouse button. You can
+	delete marks with the DELETE key. You can change a frame number by using
+	+ and - with the cursor over that mark. You can move all marks after the
+	cursor forward or backward by using SPACE or BACKSPACE.
+		To make a looping sequence, you can insert a stop/repeat marker by
+	using the END key. By default it's a stop marker and it will look like a
+	red stopsign. You'll want to leave some time between the last frame marker
+	and this stop/repeat marker. To change this into a repeat marker, click it
+	using the RIGHT mouse button and move the mouse (with the button still
+	held) to the desired jump position. To play the animation, use either the
+	ENTER key, or hold down the RIGHT mouse button (making sure it's not near
+	a stop/repeat marker)
+
+----------------------------- CONTROL REFERENCE ------------------------------
+
+										GENERAL CONTROLS:
+
+Esc             Quit
+ALT+L           Load .KFA or .KV6 file
+						  .KV6 files are sprite objects from SLAB6D
+						  .KFA files are animation files used in KWALK
+ALT+S           Save .KFA file
+`               Switch between FRAME mode (default) and SEQUENCER mode. When
+						 you are in sequencer mode, you should see the time scale
+						 on the bottom of the screen. If not, then you are in FRAME
+						 mode.
+F8              Toggle windowed / fullscreen mode
+CTRL+LEnter     Toggle Directinput mouse acquire (for windowed mode)
+
+										MOVEMENT CONTROLS:
+
+Mouse           Turn left/right, look up/down
+Y               Invert mouse Y (default is inverted)
+Arrows          Move forward/back/left/right
+R.CTRL,KP0      Move up/down
+L.SHIFT         Hold down to slow down movement (by 4 times)
+R.SHIFT         Hold down to speed up movement (by 4 times)
+,/.             Rotate camera around object left/right
+
+							 HINGE (FRAME MODE) EDITING CONTROLS:
+
+Arrows          Move forward,back,strafe left/right
+L.Mouse Button  Select limb. Hold down to move limb (when connected)
+R.Mouse Button  Set hinge limits
+PGDN,PGUP       Increment/decrement frame number
+Space           4-step hinge connecting process (see tutorial above)
+Backspace       Undo last step during 4-step hinge connecting process
+Delete          Delete currently displayed frame
+Insert          Limb selected: generate ball-joint (it's an ugly hack!)
+					 No limb selected: insert frame (moves all frames after it)
+\               If child limb is selected, it disconnects it from the parent
+Tab             Reverse the direction of child & parent vectors (v[0], v[1])
+					 Use this to make the mouse drag limbs in a more intuitive way
+CTRL+Tab        Swap limb under cursor with highlighted limb
+/               During hinge connecting: aligns vector to closest major axis
+					 If limb selected&connected: sets angle to default (0)
+					 If limb selected&not connected: resets to default orientation
+					 If no limbs selected: resets all limbs to default orientation
+KP9/9,KP6/O     Rotate unconnected limb up/down
+KP8/8,KP7/7     Rotate unconnected limb left/right
+KP1/J,KP3/L     Move left/right, rotate vector left/right
+KP5/I,KP2/K     Move forward/backward, rotate vector up/down
+KP4/U,KPEnter/; Move up/down, rotate vector up/down
+
+									  SEQUENCER MODE CONTROLS:
+
+Arrows/mouse    Move cursor left/right
+Insert          Insert sequence mark for current frame
+End             Insert stop/repeat mark
+Delete          Delete sequence mark near cursor
+KP+/=,KP-/-     Increment/decrement frame of sequence mark under cursor
+Space/Backspace Move all marks after cursor forward/backward
+L.Mouse Button  Hold down to drag mark left/right
+R.Mouse Button  If you put the cursor near a repeat/stop mark, this will let
+						 you select a jump position. You must hold the button down
+						 while moving the mouse when you do this.
+					 If the cursor is not near a mark, then it will move the
+						 playback position and you can watch the object animate as
+						 you do it.
+L.Enter         Start/stop playback from current position
+Home            Start playback from last mark before cursor
+KP*,KP/         Zoom in/out timescale (max zoom is exactly 1 pixel/ms)
+G               Toggle gridlock mode (default is on)
+
+------------------------ Known Limitations / Problems ------------------------
+
+Pentium III only!  A lot of my new sprite & z-buffer code uses the new
+	Pentium III instructions. If you don't have a Pentium III or compatible
+	processor, then the engine will give an invalid opcode exception. It
+	would probably take a few hours to get the code working again on an
+	MMX-capable machine (with a noticable decrease in frame rate).
+
+-------------------------------- COMMAND LINE --------------------------------
+
+	>kwalk [.KV6 or .KFA filename] [/(xdim)x(ydim)] [/win]
+		 (options can be listed in any order)
+
+		KWALK supports all 32-bit color modes where xdim<=640 and ydim<=480.
+	Default is 640*480 fullscreen mode. If the mode isn't found, then it
+	attempts to use 24, 16, 15, or 8 bit color emulation.
+
+	Example:
+		>kwalk kv6\kmedkit2.kfa /640x480 /win
+			Uses windowed 640x480 mode and loads kv6\kmedkit2.kfa at startup.
+
+------------------------ Documentation Update History ------------------------
+
+04/24/2002: KWALK documentation started
+
+------------------------------------------------------------------------------
+KWALK programmed by Ken Silverman (http://www.advsys.net/ken)

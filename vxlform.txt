@@ -1,0 +1,74 @@
+Ken Silverman's Voxlap5 VXL format
+06/28/2004: Notes first written (not tested though)
+08/02/2004: Tested code for 1st time.. found&fixed major bug!
+
+Here's some C pseudo-code:
+//----------------------------------------------------------------------------
+typedef struct { double x, y, z; } dpoint3d;
+dpoint3d ipos, istr, ihei, ifor;
+
+   //Called at least once for every voxel of the board
+   //issolid: 0:air, 1:solid
+void setgeom (long x, long y, long z, long issolid) { /*your code here*/ }
+
+   //Called only for surface voxels
+   //A surface voxel is any solid voxel with at least 1 air voxel
+   //  on one of its 6 sides. All solid voxels at z=0 are automatically
+   //  surface voxels, but this is not true for x=0, x=1023, y=0, y=1023,
+   //  z=255 (I believe)
+   //argb: 32-bit color, high byte is used for shading scale (can be ignored)
+void setcol (long x, long y, long z, long argb) { /*printf("%d %d %d: %08x\n",x,y,z,argb);*/ }
+
+long loadvxl (char *filnam)
+{
+   FILE *fil;
+   long i, x, y, z;
+   unsigned char *v, *vbuf;
+
+   fil = fopen(filnam,"rb"); if (!fil) return(-1);
+   fread(&i,4,1,fil); if (i != 0x09072000) return(-1);
+   fread(&i,4,1,fil); if (i != 1024) return(-1);
+   fread(&i,4,1,fil); if (i != 1024) return(-1);
+   fread(&ipos,24,1,fil); //camera position
+   fread(&istr,24,1,fil); //unit right vector
+   fread(&ihei,24,1,fil); //unit down vector
+   fread(&ifor,24,1,fil); //unit forward vector
+
+      //Allocate huge buffer and load rest of file into it...
+   i = filelength(_fileno(fil))-ftell(fil);
+   vbuf = (unsigned char *)malloc(i); if (!vbuf) { fclose(fil); return(-1); }
+   fread(vbuf,i,1,fil);
+   fclose(fil);
+
+      //Set entire board to solid
+   for(z=0;z<256;z++)
+      for(y=0;y<1024;y++)
+         for(x=0;x<1024;x++)
+            setgeom(x,y,z,1);
+
+   v = vbuf;
+   for(y=0;y<1024;y++)
+      for(x=0;x<1024;x++)
+      {
+         z = 0;
+         while (1)
+         {
+            for(i=z;i<v[1];i++) setgeom(x,y,i,0);
+            for(z=v[1];z<=v[2];z++) setcol(x,y,z,*(long *)&v[(z-v[1]+1)<<2]);
+            if (!v[0]) break; z = v[2]-v[1]-v[0]+2; v += v[0]*4;
+            for(z+=v[3];z<v[3];z++) setcol(x,y,z,*(long *)&v[(z-v[3])<<2]);
+         }
+         v += ((((long)v[2])-((long)v[1])+2)<<2);
+      }
+
+   free(vbuf);
+}
+//----------------------------------------------------------------------------
+You need to write the body of setgeom() and setcol(). Obviously, you can
+replace them and write directly to your own data buffers. I just wrote it this
+way for simplicity. I recommend you store solid/air geometry data separately
+from the colors. For a 1024x1024x256 size, using a 32MB bit array is
+reasonable. For colors, probably the easiest thing is to use hashing since
+the surface voxels are sparse.
+
+-Ken S.
