@@ -1,0 +1,1388 @@
+							+----------------------------------+
+							| VOXLAP5 engine library reference |
+							+----------------------------------+
+
+
+-------------------------  Initialization functions: -------------------------
+
+	//Call this before using any other functions in VOXLAP5&V5
+	//(Initializes some internal buffers and look-up tables)
+	//returns: -1:bad, 0:good
+long initvoxlap ();
+
+	//Call this before quitting (De-allocates internal buffers)
+void uninitvoxlap ();
+
+--------------------------  File related functions: --------------------------
+
+	//Loads and begins parsing of an .SXL file. Always call this first before
+	//   using parspr().
+	//sxlnam: .SXL filename
+	//vxlnam: pointer to .VXL filename (written by loadsxl)
+	//vxlnam: pointer to .SKY filename (written by loadsxl)
+	//globst: pointer to global user string. You parse this yourself!
+	//        You can edit this in Voxed by pressing F6.
+	//returns: 0: loadsxl failed (file not found or malloc failed)
+	//         1: loadsxl successful; call parspr()!
+long loadsxl (const char *sxlnam, char **vxlnam,
+				  char **skynam, char **globst);
+
+	//If loadsxl returns a 1, then you should call parspr with a while loop
+	//   that terminates when the return value is 0.
+	//    spr: pointer to sprite structure (written by parspr) You allocate
+	//            the vx5sprite, & parspr fills in the position&orientation.
+	// userst: pointer to user string associated with the given sprite.
+	//            You can edit this in Voxed by right-clicking the sprite.
+	//returns: pointer to .KV6 filename OR NULL if no more sprites left.
+	//            You must load the .KV6 to memory yourself by doing:
+	//               char *kv6filename = parspr(...)
+	//               if (kv6filename) spr->voxnum = getkv6(kv6filename);
+char *parspr (vx5sprite *spr, char **userst);
+
+	//Sticks a default VXL map into memory (puts you inside a brownish box)
+	//   This is useful for VOXED when you want to start a new map.
+	//ipo: default starting camera position
+	//ist: RIGHT unit vector
+	//ihe: DOWN unit vector
+	//ifo: FORWARD unit vector
+void loadnul (dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo);
+
+	//Loads a Comanche format map into memory.
+	//filename: Should be formatted like this: "C1.DTA"
+	//          It replaces the first letter with C&D to get both height&color
+	//returns: 0:bad, 1:good
+long loaddta (const char *filename, dpoint3d *ipo,
+				  dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo);
+
+	//Loads a heightmap from PNG (or TGA) into memory; alpha channel is height.
+	//filename: Any 1024x1024 PNG or TGA file with alpha channel.
+	//returns: 0:bad, 1:good
+long loadpng (const char *filename, dpoint3d *ipo,
+				  dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo);
+
+	//Loads a Quake 3 Arena .BSP format map into memory. First extract the map
+	//   from the .PAK file. NOTE: only tested with Q3DM(1,7,17) and Q3TOURNEY
+	//filnam: .BSP map formatted like this: "Q3DM17.BSP"
+	//(See loadnul() for description of rest of params)
+void loadbsp (const char *filnam, dpoint3d *ipo,
+				  dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo);
+
+	//Loads a native Voxlap5 .VXL file into memory.
+	//filnam: .VXL map formatted like this: "UNTITLED.VXL"
+	//(See loadnul() for description of rest of params)
+	//returns: 0:bad, 1:good
+long loadvxl (const char *lodfilnam, dpoint3d *ipo,
+				  dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo);
+
+	//Saves a native Voxlap5 .VXL file & specified position to disk
+	//(Parameters same as loadvxl())
+	//returns: 0:bad, 1:good
+long savevxl (const char *savfilnam, dpoint3d *ipo,
+				 dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo);
+
+	//Loads a sky into memory. Sky must be PNG,JPG,TGA,GIF,BMP,PCX formatted as
+	//   a Mercator projection on its side. This means x-coordinate is latitude
+	//   and y-coordinate is longitude. Loadsky() can be called at any time.
+	//If for some reason you don't want to load a textured sky, you call call
+	//   loadsky with these 2 built-in skies:
+	//   loadsky("BLACK");  //pitch black
+	//   loadsky("BLUE");   //a cool ramp of bright blue to blue to greenish
+	//returns: -1:bad, 0:good
+long loadsky (const char *skyfilnam);
+
+-------------------------  Screen related functions: -------------------------
+
+	//Since voxlap is currently a software renderer and I don't have any system
+	//   dependent code in it, you must provide it with the frame buffer. You
+	//   MUST call this once per frame, AFTER startdirectdraw(), but BEFORE any
+	//   functions that access the frame buffer.
+	//    p: pointer to the top-left corner of the frame
+	//    b: pitch (bytes per line)
+	//  x,y: dimensions of frame
+void voxsetframebuffer (long p, long b, long x, long y);
+
+	//Shade offset for each face of the cube: useful for editing
+	//sto: top face (z minimum) shade offset
+	//sbo: bottom face (z maximum) shade offset
+	//sle: left face (x minimum) shade offset
+	//sri: right face (x maximum) shade offset
+	//sup: top face (y minimum) shade offset
+	//sdo: bottom face (y maximum) shade offset
+void setsideshades (char sto, char sbo,
+						  char sle, char sri,
+						  char sup, char sdo);
+
+	//Set global camera position for future voxlap5 engine calls. Functions
+	//   that depend on this include: opticast, drawsprite, spherefill, etc...
+	//The 5th & 6th parameters define the center of the screen projection. This
+	//   is the point on the screen that intersects the <ipos + ifor*t> vector.
+	//The last parameter is the focal length - use it to control zoom. If you
+	//   want a 90 degree field of view (left to right side of screen), then
+	//   set it to half of the screen's width: (xdim*.5).
+	//ipo: camera position
+	//ist: camera's unit RIGHT vector
+	//ihe: camera's unit DOWN vector
+	//ifo: camera's unit FORWARD vector
+	//dahx: x-dimension of viewing window
+	//dahy: y-dimension of viewing window
+	//dahz: z-dimension of viewing window (should = dahx for 90 degree FOV)
+void setcamera (dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo,
+					 float dahx, float dahy, float dahz);
+
+	//Render VXL screen (this is where it all happens!)
+	//Make sure you have .VXL loaded in memory by using one of the loadnul(),
+	//   loadvxl(), loadbsp(), loaddta() functions.
+	//Also make sure to call setcamera() and setvoxframebuffer() before this.
+void opticast ();
+
+	//Draw a pixel on the screen.
+void drawpoint2d (long sx, long sy, long col);
+
+	//Draw a pixel on the screen (specified by VXL location) Ignores Z-buffer.
+void drawpoint3d (float x0, float y0, float z0, long col);
+
+	//Draw a 2d line on the screen
+void drawline2d (float x1, float y1, float x2, float y2, long col);
+
+	//Draw a 3d line on the screen (specified by VXL location).
+	//   Line is automatically Z-buffered into the map.
+	//   Set alpha of col to non-zero to disable Z-buffering
+void drawline3d (float x0, float y0, float z0,
+					  float x1, float y1, float z1, long col);
+
+	//Transform & Project a 3D point to a 2D screen coordinate. This could be
+	//   used for flat sprites (those cardboard-cutouts from old games)
+	//x,y,z: VXL location to transform&project
+	//px,py: screen coordinate returned
+	//   sx: depth of screen coordinate
+	//returns 1 if visible else 0
+long project2d (float x, float y, float z, float *px, float *py, float *sx);
+
+	//Draw a solid-color filled sphere on screen (useful for particle effects)
+	//ox,oy,oz: center of sphere
+	//  bakrad: radius of sphere. NOTE: if bakrad is negative, it uses
+	//             Z-buffering with abs(radius), otherwise no Z-buffering
+	//     col: 32-bit color of sphere
+void drawspherefill (float ox, float oy, float oz, float bakrad, long col);
+
+	//Draw a texture-mapped quadrilateral to the screen. Drawpicinquad projects
+	//   the source texture with perspective into the 4 coordinates specified.
+	//rpic,rbpl,rxsiz,rysiz: source texture/frame
+	//wpic,wbpl,wxsiz,wysiz: destination texture/frame
+	//where: ?pic: pointer to top-left corner
+	//       ?bpl: pitch (bytes per line)
+	//?xsiz,?ysiz: dimensions of texture/frame
+	//x?,y?: the 4 points of the quadrilateral in the destination texture/frame
+	//   The points must be in loop order.
+void drawpicinquad (long rpic, long rbpl, long rxsiz, long rysiz,
+						  long wpic, long wbpl, long wxsiz, long wysiz,
+						  float x0, float y0, float x1, float y1,
+						  float x2, float y2, float x3, float y3);
+
+	//Draw a texture-mapped quadrilateral to the screen (OpenGL style).
+	//rpic,rbpl,rxsiz,rysiz: source texture/frame
+	//where: ?pic: pointer to top-left corner
+	//       ?bpl: pitch (bytes per line)
+	//?xsiz,?ysiz: dimensions of texture/frame
+	//x?,y?,z?: World coordinates of the 4 corners
+	//u?,v?: Texture coordinates of the 1st 3 corners (4th one not needed)
+void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
+						 float x0, float y0, float z0, float u0, float v0,
+						 float x1, float y1, float z1, float u1, float v1,
+						 float x2, float y2, float z2, float u2, float v2,
+						 float x3, float y3, float z3);
+
+	//Draws 4x6 font on screen (very fast!)
+	//(x,y) is top-left corner
+	//fcol: foreground color (32-bit RGB format)
+	//bcol: background color (32-bit RGB format) or -1 for transparent
+	//*fmt,...: string - same syntax as printf
+void print4x6 (long x, long y, long fcol, long bcol, const char *fmt, ...);
+
+	//Draws 6x8 font on screen (very fast!)
+	//(x,y) is top-left corner
+	//fcol: foreground color (32-bit RGB format)
+	//bcol: background color (32-bit RGB format) or -1 for transparent
+	//*fmt,...: string - same syntax as printf
+void print6x8 (long x, long y, long fcol, long bcol, const char *fmt, ...);
+
+	//Draws a 32-bit color texture from memory to the screen. This is the
+	//   low-level function used to draw text loaded from a PNG,JPG,TGA,GIF.
+	//     tf: pointer to top-left corner of SOURCE picture
+	//     tp: pitch (bytes per line) of the SOURCE picture
+	//  tx,ty: dimensions of the SOURCE picture
+	//tcx,tcy: texel (<<16) at (sx,sy). Set this to (0,0) if you want (sx,sy)
+	//            to be the top-left corner of the destination
+	//  sx,sy: screen coordinate (matches the texture at tcx,tcy)
+	//  xz,yz: x&y zoom, all (<<16). Use (65536,65536) for no zoom change
+	//black,white: shade scale (ARGB format). For no effects, use (0,-1)
+	//   NOTE: if alphas of black&white are same, then alpha channel ignored
+void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
+					long sx, long sy, long xz, long yz, long black, long white);
+
+	//Captures a screenshot of the current frame to disk. The current frame
+	//   is defined by the last call to the voxsetframebuffer function. NOTE:
+	//   you MUST call this function while video memory is accessible. In
+	//   DirectX, that means it must be between a call to startdirectdraw and
+	//   stopdirectdraw.
+	// fname: filename to write to (writes uncompressed .PNG format)
+	//returns: 0:always
+long screencapture32bit (const char *fname);
+
+	//Generates a cubic panorama (skybox) from the given position
+	//   This is an old function that is very slow, but it is pretty cool
+	//   being able to view a full panorama screenshot. Unfortunately, it
+	//   doesn't draw sprites or the sky.
+	//   pos: VXL map position of camera
+	// fname: filename to write to (writes uncompressed .PNG format)
+	//boxsiz: length of side of square. I recommend using 256 or 512 for this.
+	//returns: 0:always
+long surroundcapture32bit (dpoint3d *pos, const char *fname, long boxsiz);
+
+-------------------------  Sprite related functions: -------------------------
+
+	//Loads a .KV6 voxel sprite into memory. It malloc's the array for you and
+	//   returns the pointer to the loaded vx5sprite. If the same filename was
+	//   passed before to this function, it will return the pointer to the
+	//   previous instance of the .KV6 buffer in memory (It will NOT load the
+	//   same file twice). Uninitvoxlap() de-allocates all .KV6 sprites for
+	//   you.
+	//Other advanced info: Uses a 256-entry hash table to compare filenames, so
+	//   it should be fast. If you want to modify a .KV6 without affecting all
+	//   instances, you must allocate&de-allocate your own kv6data structure,
+	//   and use memcpy. The buffer is kv6data.leng bytes long (inclusive).
+	// kv6nam: .KV6 filename
+	//returns: pointer to malloc'ed kv6data structure. Do NOT free this buffer
+	//         yourself! Returns 0 if there's an error - such as bad filename.
+kv6data *getkv6 (const char *kv6nam);
+
+	//Loads a .KFA file and its associated .KV6 voxel sprite into memory. Works
+	//   just like getkv6() for for .KFA files.
+	// kfanam: .KFA filename
+	//returns: pointer to malloc'ed kfatype structure. Do NOT free this buffer
+	//         yourself! Returns 0 if there's an error - such as bad filename.
+kfatype *getkfa (const char *kfanam);
+
+	//If you generate any sprites using one of the melt* functions, and then
+	//   generate mip-maps for it, you can use this function to de-allocate
+	//   all mip-maps of the .KV6 safely. You don't need to use this for
+	//   kv6data objects that were loaded by getkv6,getkfa, or getspr since
+	//   these functions automatically de-allocate them using this function.
+void freekv6 (kv6data *kv6);
+
+	//This could be a handy function for debugging I suppose. Use it to save
+	//   .KV6 sprites to disk.
+	// filnam: filename of .KV6 to save to disk. It's your responsibility to
+	//         make sure it doesn't overwrite a file of the same name.
+	//     kv: pointer to .KV6 object to save to disk.
+void savekv6 (const char *filnam, kv6data *kv);
+
+	//Cover-up function to handle both .KV6 and .KFA files. It looks at the
+	//   filename extension and uses the appropriate function (either getkv6
+	//   or getkfa) and sets the sprite flags depending on the type of file.
+	//   The file must have either .KV6 or .KFA as the filename extension. If
+	//   you want to use weird filenames, then use getkv6/getkfa instead.
+	//    spr: Pointer to sprite structure that you provide. getspr() writes:
+	//            only to the kv6data/voxtype, kfatim, and flags members.
+	// filnam: filename of either a .KV6 or .KFA file.
+void getspr (vx5sprite *spr, const char *filnam);
+
+	//Generate 1 more mip-level for a .KV6 sprite. This function generates a
+	//   lower MIP level only if kv6->lowermip is NULL, and kv6->xsiz,
+	//   kv6->ysiz, and kv6->zsiz are all >= 3. When these conditions are
+	//   true, it will generate a new .KV6 sprite with half the resolution in
+	//   all 3 dimensions. It will set kv6->lowermip so it points to the newly
+	//   generated .KV6 object. You can use freekv6() to de-allocate all levels
+	//   of the .KV6 object. To generate all mip levels use this pseudo-code:
+	//      for(kv6data *tempkv6=mykv6;tempkv6=genmipkv6(tempkv6););
+	//kv6: pointer to current MIP-level
+	//returns: pointer to newly generated half-size MIP-level
+kv6data *genmipkv6 (kv6data *kv6);
+
+	//Returns a pointer to the filename associated with the kv6data/kfatype
+	//   object. Notice that each structure has a "namoff" member. Since I
+	//   use remalloc(), I have to make these offsets, not pointers. Use this
+	//   function to convert the offsets into pointers.
+	// namoff: offset to the name
+char *getkfilname (long namoff);
+
+	//You could animate .KFA sprites by simply modifying the .kfatim member of
+	//   vx5sprite structure. A better way is to use this function because it
+	//   will handle repeat/stop markers for you.
+	//    spr: .KFA sprite to animate
+	//timeadd: number of milliseconds to add to the current animation time
+void animsprite (vx5sprite *spr, long timeadd);
+
+	//Draw a .KV6/.KFA voxel sprite to the screen. Position & orientation are
+	//  specified in the vx5sprite structure. See VOXLAP5.H for details on the
+	//  structure.
+void drawsprite (vx5sprite *spr);
+
+	//This converts a spherical cut-out of the VXL map into a .KV6 sprite in
+	//   memory. This function can be used to make walls fall over (with full
+	//   rotation). It allocates a new vx5sprite sprite structure and you are
+	//   responsible for freeing the memory using "free" in your own code.
+	//   spr: new vx5sprite structure. Position & orientation are initialized
+	//           so when you call drawsprite, it exactly matches the VXL map.
+	//   hit: center of sphere
+	//hitrad: radius of sphere
+	//returns: 0:bad, >0:mass of captured object (# of voxels)
+long meltsphere (vx5sprite *spr, lpoint3d *hit, long hitrad);
+
+	//This function is similar to meltsphere, except you can use any user-
+	//   defined shape (with some size limits). The user-defined shape is
+	//   described by a list of vertical columns in the "vspans" format:
+	//      typedef struct { char z1, z0, x, y; } vspans;
+	//   The list MUST be ordered first in increasing Y, then in increasing X
+	//   or else the function will crash! Fortunately, the structure is
+	//   arranged in a way that the data can be sorted quite easily using a
+	//   simple trick: if you use a typecast from vspans to "unsigned long",
+	//   you can use a generic sort code on 32-bit integers to achieve a
+	//   correct sort. The vspans members are all treated as unsigned chars,
+	//   so it's usually a good idea to bias your columns by 128, and then
+	//   reverse-bias them in the "offs" offset.
+	//
+	//   spr: new vx5sprite structure. Position & orientation are initialized
+	//           so when you call drawsprite, it exactly matches the VXL map.
+	//   lst: list in "vspans" format
+	//lstnum: number of columns on list
+	//  offs: offset of top-left corner in VXL coordinates
+	//returns: mass (in voxel units), returns 0 if error (or no voxels)
+long meltspans (vx5sprite *spr, vspans *lst, long lstnum, lpoint3d *offs);
+
+-------------------------  Physics helper functions: -------------------------
+
+	//Math helper: The vectors are refreshed to be perpendicular to each other
+	//   and have unit length. v0 does not change orientation.
+void orthonormalize (point3d *v0, point3d *v1, point3d *v2);
+
+	//Math helper: same as orthonormalize but for doubles
+void dorthonormalize (dpoint3d *v0, dpoint3d *v1, dpoint3d *v2);
+
+	//Math helper: rotates 3 vectors using 3 Euclidian rotation
+	//ox: angle #1 (yaw)
+	//oy: angle #2 (up/down)
+	//oz: angle #3 (left/right)
+	//ist: input&output: vector #1 to rotate
+	//ihe: input&output: vector #2 to rotate
+	//ifo: input&output: vector #3 to rotate
+void orthorotate (float ox, float oy, float oz,
+						point3d *ist, point3d *ihe, point3d *ifo);
+
+	//Math helper: same as orthorotate but for doubles
+void dorthorotate (double ox, double oy, double oz,
+						 dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo);
+
+	//Math helper: rotates point p around axis by angle w
+void axisrotate (point3d *p, point3d *axis, float w);
+
+	//Math helper: Spherical Linear intERPolation. Quaternions not necessary :)
+	//   Given two 3*3 orthonormal orientation matrices, this finds a 3rd
+	//      matrix that is a smooth interpolation (shortest path) between them.
+	//   istr,ihei,ifor:  first 3*3 rotation matrix (right,down,forward vector)
+	//istr2,ihei2,ifor2: second 3*3 rotation matrix (right,down,forward vector)
+	//      ist,hei,ifo: output 3*3 rotation matrix (right,down,forward vector)
+	//              rat: ratio between first & second matrices to interpolate
+	//                   0 means ist=istr, etc..., 1 means ist=istr2, etc...
+void slerp (point3d *istr, point3d *ihei, point3d *ifor,
+				point3d *istr2, point3d *ihei2, point3d *ifor2,
+				point3d *ist, point3d *ihe, point3d *ifo, float rat);
+
+	//Detect if 2 points have a direct line-of-sight
+	//p0: starting point
+	//p1: ending point
+	//hit: integer VXL coordinate (closest to p0) that caused the collision
+	//returns: 1:didn't hit anything, 0:something is in the way
+long cansee (point3d *p0, point3d *p1, lpoint3d *hit);
+
+	//Shoot a vector until it hits something or escapes the board
+	//  p: start position
+	//  d: direction
+	//  h: coordinate of voxel hit (if any)
+	//ind: pointer to surface voxel's 32-bit color (0 if none hit)
+	//dir: 0-5: face of cube that was hit (-1 if inside solid)
+	//WARNING: 'h' and 'dir' are written only if a voxel is hit (remember it's
+	//   possible to shoot a ray into the sky!). To see if a voxel is hit, test
+	//   whether 'ind' is nonzero
+void hitscan (dpoint3d *p, dpoint3d *d, lpoint3d *h, long **ind, long *dir);
+
+	//Similar to hitscan but for sprites. With this, you can determine exactly
+	//which voxel on a specified .KV6 sprite is hit. This is useful for .KV6
+	//selection in Voxed, or for weapons that require extreme accuracy.
+	//  p: start position
+	//  d: direction
+	//spr: pointer of sprite to test collision with
+	//  h: coordinate of voxel hit in sprite coordinates (if any)
+	//ind: pointer to voxel hit (kv6voxtype) (0 if none hit)
+	//vsc:  input: max multiple/fraction of v0's length to scan (1.0 for |v0|)
+	//     output: multiple/fraction of v0's length of hit point
+void sprhitscan (dpoint3d *p, dpoint3d *d, vx5sprite *spr, lpoint3d *h,
+					  kv6voxtype **ind, float *vsc);
+
+	//Squish detection function: returns the radius of the biggest sphere that
+	//   can fit purely in air around the given point. Basically, it tells you
+	//   how big a "balloon" can get before it pops
+	//px,py,pz: VXL map coordinate to test
+	//cr: maximum radius to check
+double findmaxcr (double px, double py, double pz, double cr);
+
+	//Fancy collision detection function for spheres - does smooth sliding.
+	//p: input/output: starting/ending position of object
+	//v: vector to move sphere (specifies both direction&length)
+	//acr: radius of sphere
+void clipmove (dpoint3d *p, dpoint3d *v, double acr);
+
+	//Special collision detection function (useful for rope) This function does
+	//   collision detection sort of like a windshield wiper, but along a
+	//   triangle instead of a circular arc. There is no thickness.
+	//    p0: joint/axis point
+	//    p1: vertex of start position
+	//    p2: vertex of goal position
+	//   hit: point along p1-p2 line where the "wiper" collided
+	//  lhit: VXL map location that caused the collision
+	//returns: 1:collision, 0:no collision
+long triscan (point3d *p0, point3d *p1, point3d *p2,
+				  point3d *hit, lpoint3d *lhit);
+
+	//Estimate normal vector direction. Useful for lighting / bouncing
+	//x,y,z: VXL map coordinate
+	//fp: estimated vector to be returned (magnitude always 1)
+void estnorm (long x, long y, long z, point3d *fp);
+
+--------------------------- VXL reading functions: ---------------------------
+
+	//Returns 0 if voxel(x,y,z) is air, or 1 if it is solid
+long isvoxelsolid (long x, long y, long z);
+
+	//Returns 1 if any voxels in range (x,y,z0) to (x,y,z1-1) are solid, else 0
+long anyvoxelsolid (long x, long y, long z0, long z1);
+
+	//Returns 1 if any voxels in range (x,y,z0) to (x,y,z1-1) are empty, else 0
+long anyvoxelempty (long x, long y, long z0, long z1);
+
+	//Returns z of first solid voxel under (x,y,z). Returns z if in solid.
+long getfloorz (long x, long y, long z);
+
+	//Returns:
+	//   0: air
+	//   1: unexposed solid
+	//else: address to color in vbuf (this can never be 0 or 1)
+long getcube (long x, long y, long z);
+
+--------------------------- VXL writing functions: ---------------------------
+
+	//Writes a single 1*1*1 cube to VXL memory
+	//NOTE: This function is here for simplicity only - do not overuse!
+	//px,py,pz: VXL map location
+	//col:  -1: set air
+	//      -2: use vx5.colfunc (vx5.colfunc MUST point to valid function!)
+	//             Note: vxl.colfunc is only called for newly exposed voxels,
+	//             so if the voxel already exists, its color won't change. Use
+	//             the "else" case to modify the color of existing voxels.
+	//    else: set cube directly to the value of col. High byte of col is
+	//             an intensity scale. Use 0x80RRGGBB to pass RGB unmodified.
+void setcube (long px, long py, long pz, long col);
+
+	//Render a sphere to VXL memory (code is optimized!)
+	//   hit: center of sphere
+	//hitrad: radius of sphere
+	// dacol:  0: insert (additive CSG)
+	//        -1: remove (subtractive CSG)
+	//To specify color, set vx5.colfunc to the desired procedural texture
+	//   before the call
+void setsphere (lpoint3d *hit, long hitrad, long dacol);
+
+	//Render an ellipsoid to VXL memory (code is optimized!)
+	//   hit: focus #1
+	//  hit2: focus #2
+	//hitrad: radius of ellipsoid (length of minor axis/2)
+	// dacol:  0: insert (additive CSG)
+	//        -1: remove (subtractive CSG)
+	// bakit: 0:fast&permanent change, 1:backup (much slower: used in VOXED)
+void setellipsoid (lpoint3d *hit, lpoint3d *hit2,
+						 long hitrad, long dacol, long bakit);
+
+	//Render a cylinder to VXL memory (code is optimized!)
+	//    p0: endpoint #1
+	//    p1: endpoint #2
+	//    cr: radius of cylinder
+	// dacol:  0: insert (additive CSG)
+	//        -1: remove (subtractive CSG)
+	// bakit: 0:fast&permanent change, 1:backup (much slower: used in VOXED)
+void setcylinder (lpoint3d *p0, lpoint3d *p1, long cr,
+						long dacol, long bakit);
+
+	//Render a box to VXL memory (code is optimized!)
+	//   hit: box corner #1
+	//  hit2: box corner #2
+	// dacol:  0: insert (additive CSG)
+	//        -1: remove (subtractive CSG)
+void setrect (lpoint3d *hit, lpoint3d *hit2, long dacol);
+
+	//Render a filled triangle to VXL memory (code is optimized!)
+	//    p0: triangle vertex #1
+	//    p1: triangle vertex #2
+	//    p2: triangle vertex #3
+	// bakit: 0:fast&permanent change, 1:backup (much slower: used in VOXED)
+void settri (point3d *p0, point3d *p1, point3d *p2, long bakit);
+
+	//Render a complex polygon with TRANSLATIONAL SWEEP to VXL memory
+	//    (code is optimized!)
+	//     p: pointer to list of 3D coplanar vertices that make up polygon
+	//point2: pointer to list of indexes that describe the connectivity. Each
+	//           vertex "connects" to 1 vertex on its right. Holes supported.
+	//           For example: point2[4] = {1,2,3,0} might describe a square
+	//     n: numbers of vertices in polygon (limited by MAXCURS)
+	// thick: thickness of polygon (amount of translational sweep)
+	// dacol:  0: insert (additive CSG)
+	//        -1: remove (subtractive CSG)
+	// bakit: 0:fast&permanent change, 1:backup (much slower: used in VOXED)
+void setsector (point3d *p, long *point2, long n,
+					 float thick, long dacol, long bakit);
+
+	//Do CSG using pre-sorted spanlist.
+	//   lst: Spans (see meltspans() for structure description)
+	//lstnum: Number of entries in lst.
+	//  offs: offset in VXL map to apply CSG. This point is origin in vspans.
+	// dacol:  0: insert (additive CSG)
+	//        -1: remove (subtractive CSG)
+void setspans (vspans *lst, long lstnum, lpoint3d *offs, long dacol);
+
+	//Apply additive CSG using a 2D heightmap (connected to floor) as source.
+	//where: hpic: pointer to top-left corner of heightmap
+	//       hbpl: pitch (bytes per line) of heightmap
+	//    hxs,hys: dimensions of heightmap
+	//x0,y0,x1,y1: 2D box in VXL coordinates to apply additive heightmap CSG.
+void setheightmap (const unsigned char *hptr, long hbpl, long hxs, long hys,
+						 long x0, long y0, long x1, long y1);
+
+	//Render .KV6 voxel sprite to VXL memory. Instead of drawing the sprite
+	//   to the screen, this renders it permanently to VXL memory. This can
+	//   be used for many effects, such as piling up "infinite" dead bodies.
+	//   spr: sprite to "freeze" to the VXL map
+	// dacol:  0: insert (additive CSG)
+	//        -1: remove (subtractive CSG)
+void setkv6 (vx5sprite *spr, long dacol);
+
+	//Render 3D convex hull to VXL memory (code is optimized!)
+	//    pt: pointer to list of points formatted as point3d
+	//  nump: number of points (note: limited by MAXPOINTS)
+	// dacol:  0: insert (additive CSG)
+	//        -1: remove (subtractive CSG)
+	// bakit: 0:fast&permanent change, 1:backup (much slower: used in VOXED)
+	//WARNING: There is a lock-up bug if there are any planes are co-planar.
+	//  This can happen at the edges of the map even if you don't pass it
+	//  coplanar planes. You might want to avoid this function until I fix it!
+void sethull3d (point3d *pt, long nump, long dacol, long bakit);
+
+	//Render a polygon with ROTATIONAL SWEEP to VXL memory. The first 2
+	//   vertices define the axis of rotation. (WARNING: code NOT optimized)
+	//     p: pointer to list of 3D coplanar vertices that make up polygon
+	//numcurs: number of vertices in polygon
+	// dacol:  0: insert (additive CSG)
+	//        -1: remove (subtractive CSG)
+	// bakit: 0:fast&permanent change, 1:backup (much slower: used in VOXED)
+void setlathe (point3d *p, long numcurs, long dacol, long bakit);
+
+	//Render "metaballs" to VXL memory. (WARNING: code NOT optimized)
+	//     p: pointer to list of 3D points that make up the sources
+	//numcurs: number of sources
+	// dacol:  0: insert (additive CSG)
+	//        -1: remove (subtractive CSG)
+	// bakit: 0:fast&permanent change, 1:backup (much slower: used in VOXED)
+	//NOTE: uses vx5.currad as "threshold" for metaballs cutoff value
+void setblobs (point3d *p, long numcurs, long dacol, long bakit);
+
+	//Conducts on air and writes solid.
+	//x,y,z: starting point
+	//minx,miny,minz: top/left/up corner of box used to restrict floodfill
+	//                (inclusive)
+	//maxx,maxy,maxz: bot/right/down corner of box used to restrict floodfill
+	//                (exclusive)
+void setfloodfill3d (long x, long y, long z, long minx, long miny, long minz,
+															long maxx, long maxy, long maxz);
+
+	//Fill in all hollow areas of map - mainly used in editor. Very slow! This
+	//will destroy any hidden "bonus" areas in your map.
+void sethollowfill ();
+
+	//Render VOX/KVX voxel sprite to VXL memory. (WARNING: code NOT optimized)
+	//filename: VOX/KVX file
+	//ox,oy,oz: VXL map location to render the object
+	//     rot: 0-47 possible rotation, all are axis-aligned
+	// bakit: 0:fast&permanent change, 1:backup (much slower: used in VOXED)
+void setkvx (const char *filename, long ox, long oy, long oz,
+				 long rot, long bakit);
+
+	//Old lighting function (has aliasing artifacts)
+	//px,py,pz: origin of light source
+	//flashradius: maximum radius to scan out (recommended values: 128-253)
+	//numang: angle density (recommended values: 512,1024,2048)
+	//intens: intensity scale (recommended values: 1,2)
+void setflash (float px, float py, float pz,
+					long flashradius, long numang, long intens);
+
+	//Fancy lighting function (uses estnorm for smoother lighting)
+	//px,py,pz: VXL map coordinate of point source
+	//flashradius: rectangular distance to scan out (recommended value:128)
+	//intens: intensity scale (recommended range: 2048-8192)
+void setnormflash (float px, float py, float pz,
+						 long flashradius, long intens);
+
+---------------------------- VXL MISC functions:  ----------------------------
+
+	//Add dirty box to internal list - for use with updatevxl().
+void updatebbox (long x0, long y0, long z0, long x1, long y1, long z1,
+					  long csgdel);
+
+	//All set* functions update the dirty box list. At the end of your
+	//modifications, you should call updatevxl(). Updatevxl() then updates
+	//lighting, mip-maps, and checks for floating pieces (see fallcheck()).
+	//This should be called once per opticast() if you use any of these
+	//features. These things COULD be done automatically inside the set*
+	//functions, but it is faster to do them separately - especially if you
+	//modify the same area multiple times per frame.
+void updatevxl ();
+
+	//You must call this to enable MIP-mapping for the VXL board. This allows
+	//   you to render the entire .VXL board with a fast frame rate. There are
+	//   a few disadvantages however. They are:
+	//   - Uses about 35-45% more memory on the VXL buffer.
+	//   - Map modification is a little slower (negligible) since it has to
+	//        update all mip levels for any modification to the VXL board.
+	//   - Far areas look even more blocky and sometimes have weird colors.
+	//Your first call to genmipvxl MUST be to the whole board. The best place
+	//   to do this is right after you call updatelighting() for the whole vxl
+	//   board. You must do this every time you load a new board. Your first
+	//   call to genmipvxl() should look like this:
+	//      genmipvxl(0,0,VSID,VSID);
+	//Once you do this, mip-mapping mode will be enabled. This means that
+	//   future calls to updatelighting() will automatically call genmipvxl()
+	//   internally, so if you use a lighting mode, then you never need to call
+	//   this function again! :) If you don't use lighting and you enabled
+	//   mip-mapping mode, then it's your responsibility to pass the bounding
+	//   box to genmipvxl() every time you modify the board. Unlike
+	//   updatelighting() it is dangerous NOT to call this after each change
+	//   (if mip-mapping mode is enabled).
+	//x0,y0: top-left corner (inclusive: x>=x0, y>=y0)
+	//x1,y1: bottom-right corner (exclusive: x<x1, y<y1)
+void genmipvxl (long x0, long y0, long x1, long y1);
+
+	//This re-calculates "fake" estnorm-based lighting for all voxels inside
+	//   a bounding box
+	//x0,y0,z0: high-top-left corner (inclusive: x>=x0, y>=y0, z>=z0)
+	//x1,y1,z1: low-bottom-right corner (exclusive: x<x1, y<y1, z<z1)
+void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1);
+
+------------------------- Falling voxels functions: --------------------------
+
+	//NOTE: THIS FUNCTION IS OBSOLETE!
+	//It has been replaced with updatevxl() (remember to set vx5.fallcheck=1;)
+	//Old documentation was:
+	//   (Call it after every set* call that removes voxels (subtractive CSG)
+	//   It remembers the location on an internal "float check" list that will
+	//   be used in the following call to dofalls())
+void checkfloatinbox (long x0, long y0, long z0, long x1, long y1, long z1);
+
+	//Call this once per frame (or perhaps at a slower constant rate 20hz-40hz)
+void startfalls ();
+
+	//NOTE: THIS FUNCTION IS OBSOLETE! It still works, but it is much better to
+	//   use the meltfall() function. With dofall(), pieces fall straight down
+	//   in the VXL map (without any kind of support for rotation).
+	//Old documentation was:
+	//   (Call this only between a call to startfalls() and
+	//   finishfalls(). You MUST call it either 0 or 1 times between each
+	//   startfalls and finishfalls. (See sample code in GAME.C))
+void dofall (long i);
+
+	//Works sort of like meltsphere(), but works with floating sections of the
+	//   .VXL map instead of spheres. This function can be used to make
+	//   floating pieces fall over (with full rotation). It allocates a new
+	//   vx5sprite sprite structure and you are responsible for freeing the
+	//   memory using "free" in your own code.
+	//   NOTE: this MUST be called between startfalls() and finishfalls() and
+	//      you MUST NOT call dofall() if this function succeeds!
+	//   spr: new vx5sprite structure. Position & orientation are initialized
+	//        so when you call drawsprite, it exactly matches the VXL map.
+	//     i: index to falling object (same param passed to dofall())
+	//delvxl: 0:don't change .VXL map, 1:delete .VXL from map
+	//returns: 0:failed, >0:mass of captured object (# of voxels)
+long meltfall (vx5sprite *spr, long i, long delvxl);
+
+	//Call this once for each startfalls()
+void finishfalls ();
+
+----------------------- Procedural texture functions: ------------------------
+	//Use procedural texture functions to determine new voxel colors. All set*
+	//calls (setcube(), setsphere(), setrect(), etc...) use vx5.colfunc as a
+	//callback function to determine newly exposed voxel colors. You can use
+	//one of the existing procedural functions in VOXLAP, or you can write your
+	//own. The callback functions all have the same parameters. Given an x,y,z
+	//coordinate (specified as lpoint3d *), you return a 32-bit color, the low
+	//24 bits are the base RGB color, and the high byte is an intensity scale.
+	//The default intensity is 128 (meaning no brightening or darkening effect)
+
+long curcolfunc (lpoint3d *p) { return(vx5.curcol); }
+
+	//returns color of nearest voxel below the specified point: (x,y,>=z)
+long floorcolfunc (lpoint3d *p);
+
+	//returns vx5.curcol with RGB randomly jittered; scaled by vx5.amount
+long jitcolfunc (lpoint3d *p);
+
+	//colorful sin waves: Red=x, Green=y, Blue=z
+long manycolfunc (lpoint3d *p);
+
+	//directional shading. uses vx5.cen as vector center and vx5.daf as scale
+long sphcolfunc (lpoint3d *p);
+
+	//wood, color can be selected with vx5.curcol
+long woodcolfunc (lpoint3d *p);
+
+	//use a 2D texture defined by frame: vx5.pic, vx5.bpl, vx5.xsiz, vx5.ysiz
+	//vx5.picmode =
+	//  0: aligned-axis mapping, uses vx5.pico, vx5.picu/v, vx5.xoru/v
+	//  1: cylindrical mapping, uses vx5.fpico, vx5.fpicu/v/w, vx5.xoru
+	//  2: spherical mapping, uses vx5.fpico, vx5.fpicu/v/w, vx5.xoru
+	//  3: any axis mapping, uses vx5.fpico, vx5.fpicu/v
+	//where:
+	//   vx5.(f)pico is the x,y,z location where: u=0 & v=0
+	//   vx5.(f)picu/v/w are directions vectors that specify how u & v map
+	//   vx5.xoru/v is used to mirror coordinates in picmode 0
+long pngcolfunc (lpoint3d *p);
+
+	//Used internally by setkv6(). Do not use for anything else!
+long kv6colfunc (lpoint3d *);
+
+--------------------- Editing backup/restore functions: ----------------------
+
+Sorry, undocumented. These functions are used in Voxed. They are all slow and
+probably not useful for making a game.
+
+void voxbackup (long x0, long y0, long x1, long y1, long tag);
+void voxdontrestore ();
+void voxrestore ();
+
+---------------- Picture functions (PNG,JPG,TGA,GIF,PCX,BMP): ----------------
+
+	//Easy picture loading function. This does most of the background work for
+	//   you. It allocates the buffer for the uncompressed image for you, and
+	//   loads PNG,JPG,TGA,GIF,PCX,BMP files, even handling pictures inside ZIP
+	//   files. Kpzload() always writes 32-bit ARGB format (even if source is
+	//   less).
+	//   filnam: name of the graphic file (can be inside ZIP file).
+	//      pic: pointer to top-left corner of destination uncompressed image
+	//      bpl: pitch (bytes per line) of destination uncompressed image
+	//xsiz,ysiz: dimensions of destination image
+	//NOTE: You are responsible for calling free() on the returned pointer
+void kpzload (const char *filnam, long *pic, long *bpl,
+				  long *xsiz, long *ysiz);
+
+	//This retrieves the dimensions of a compressed graphic file image loaded
+	//   into memory. It supports the same file types as kpzload().
+	//     buf: pointer to file image in memory
+	//    leng: length of file (and file image)
+void kpgetdim (const char *buf, long leng, long *xsiz, long *ysiz);
+
+	//This decompresses the compressed file image from memory to memory.
+	//   Kprender always writes 32-bit ARGB format (even if source is less).
+	//      buf: pointer to file image in memory
+	//     leng: length of file (and file image)
+	// frameptr: pointer to top-left corner of destination uncompressed image
+	//      bpl: pitch (bytes per line) of destination uncompressed image
+	//xdim,ydim: dimensions of destination image
+	//xoff,yoff: (x,y) offset into the destination image to store the tile.
+	//           Non-zero values are useful here for picture viewer programs.
+	//returns: -1:bad, 0:good
+long kprender (const char *buf, long leng, long frameptr, long bpl,
+					long xdim, long ydim, long xoff, long yoff);
+
+------------------------------- ZIP functions: -------------------------------
+
+	//These functions are all optional. If you want to distribute the game
+	//   without cluttering up people's hard drives with tons of small files,
+	//   then you should really take a look at these functions.
+	//
+	//Except for kzaddstack(), these functions work very similar to the
+	//   low-level file functions from the standard C library. I did this so it
+	//   would be easy to convert standard file code to support my .ZIP
+	//   library. One thing you should note about my "kz" library is that it
+	//   doesn't support multiple file handles. Because of this, there is no
+	//   reason to maintain file handles - so I omitted that parameter from my
+	//   functions.
+
+	//This adds a .ZIP file to the internal list of .ZIP files to check. Every
+	//   time you open a file using kzopen(), it will check to see if the file
+	//   is located inside this ZIP file. Priority is given to the most recent
+	//   call to kzaddstack(), so you should always call kzaddstack() with your
+	//   big game data file first, and call it with any user patches later.
+void kzaddstack (const char *filnam);
+
+	//This clears all ZIP files from the kz stack. You would use this if for
+	//   some reason you need to re-load the user patches in the game
+void kzuninit ();
+
+	//Similar to open/fopen. Kzopen file priority:
+	//   1. Search local dirs for stand-alone files
+	//   2. Search .ZIP filenames passed to kzaddstack (last one first)
+	//   3. return(0); (File not found)
+	//Always uses binary mode.
+	//returns: 0:bad/file not found, !=0:good (long)(FILE *fil)
+long kzopen (const char *filnam);
+
+	//Similar to read/fread: Returns number of bytes copied
+long kzread (void *buffer, long leng);
+
+	//Similar to filelength: Returns file length
+long kzfilelength ();
+
+	//Similar to seek/fseek; whence can be: SEEK_SET, SEEK_CUR, or SEEK_END
+	//NOTE: try to avoid using kzseek(#,SEEK_CUR) where # is < -32768. For
+	//   compressed files, this is very slow, because KZLIB must decompress
+	//   the whole file up to that point, starting from the beginning.
+void kzseek (long offset, long whence);
+
+	//Similar to tell/ftell: Returns file position (offset from beginning)
+long kztell ();
+
+	//Similar to fgetc: Reads 1 byte and returns the byte value
+	//  If file pointer is at the end of the file, it returns -1
+long kzgetc ();
+
+	//Similar to eof/feof: Returns 1 if at end of file, otherwise 0
+long kzeof ();
+
+	//Similar to close/fclose
+void kzclose ();
+
+	//The following 2 functions are cover-up functions for FindFirstFile/
+	//   FindNextFile. In addition to finding stand-along files, they also look
+	//   for files in any .ZIP files that have been specified by kzaddstack().
+	//   It supports full ? and * wildcards for both stand-alone files and
+	//   files inside .ZIP files. Unlike FindFirstFile, kzfindfilestart() does
+	//   not return a filename. This can make your loops simpler because you
+	//   only need to use a single function (kzfindfile) to retrieve all the
+	//   filenames. Here's a simple example showing how to use these functions:
+	//      char filnam[MAX_PATH];
+	//      kzfindfilestart("vxl/*.vxl");
+	//      while (kzfindfile(filnam)) puts(filnam);
+	//
+	//   NOTES:
+	//    * Directory names begin with '\'
+	//    * Files inside zip begin with '|'
+
+	//First, pass a file specification string (wildcards supported)
+void kzfindfilestart (const char *st);
+
+	//You must alloc buffer yourself (MAX_PATH characters)
+	//returns: 1 if file found, filnam written, continue processing
+	//         0 if no files left
+long kzfindfile (char *filnam);
+
+--------------------------  WINMAIN Misc functions: --------------------------
+
+	//Global application window handle used by WINMAIN.
+HWND ghwnd;
+
+	//Global instance handle used by WINMAIN.
+HINSTANCE ghinst;
+
+	//Call this before using GDI functions. Do not use it inside any
+	//startdirectdraw..stopdirectdraw blocks.
+HDC startdc ();
+
+	//Call this for each startdc(), when done using GDI functions.
+void stopdc ();
+
+	//Call this before using GDI functions, such as MessageBox, or file open
+	//dialogs to ensure that they render to the correct page. Do not use it
+	//inside any startdirectdraw..stopdirectdraw blocks.
+void ddflip2gdi ();
+
+	//Call with 1 to tell WINMAIN to call doframe() even when application is
+	//inactive. Default:0
+void setalwaysactive (long alwaysactive);
+
+	//Pass 0 values to tell Directinput to give exclusive access of the
+	//mouse of keyboard to your application. Default is: (1,1). If you know
+	//your application doesn't need exclusive mouse access, then it is best
+	//to call this in initapp() by using: setacquire(0,1);
+void setacquire (long mouse, long kbd);
+
+	//Returns non-zero value if your application is active (calling doframe).
+long canrender ();
+
+	//Treat this as a read-only variable. Non-zero values means WINMAIN is
+	//rendering to a buffer, and not directly to the screen. This is usually
+	//true in windowed modes, but sometimes also full-screen mode if the
+	//specified color bit depth is not supported directly.
+long ddrawuseemulation;
+
+	//Use this to determine if debug mode is enabled. Debug mode is not needed
+	//in most instances.
+long ddrawdebugmode; // -1 = off, old ddrawuseemulation = on
+
+	//Use this to allow the debugger to work better... This should not be neeed
+	//in most instances.
+	//NOTE: Do NOT call debugdirectdraw inside startdirectdraw..stopdirectdraw.
+	//NOTE: debugmode is automatically turned off after changeres or
+	//initdirectdraw!
+void debugdirectdraw (); //toggle debug mode
+
+---------------------------  WINMAIN Program Flow: ---------------------------
+
+	//This is the string that displays in the taskbar. Feel free to change
+	//   the pointer to your own program name in your initapp() function.
+char *prognam;
+
+	//Set to 0 in initapp() to make window not have a resize icon. Default:1
+long progresiz;
+
+	//This is the first of 3 functions that you must provide to WINMAIN.
+	//The command line is in the same format as an old C console program. You
+	//MUST return a 0 for the program to continue. Returning -1 will cause
+	//WINMAIN to exit immediately. Use this for error conditions, such as file
+	//not found.
+long initapp (long argc, char **argv);
+
+	//This is the second of 3 functions that you must provide to WINMAIN.
+	//It is called once per frame - hopefully as fast as the refresh rate of
+	//your monitor :) Put all of your program controls and drawing routines
+	//in here.
+void doframe ();
+
+	//Call this inside doframe() to tell WINMAIN that you are ready to quit.
+	//WINMAIN will respond when you return, by not calling doframe() any more,
+	//calling uninitapp(), and shutting down all other things before quitting.
+void quitloop ();
+
+	//This is the third of 3 functions that you must provide to WINMAIN.
+	//WINMAIN calls this just before quitting. Use it to shut down systems,
+	//de-allocate buffers, etc..
+void uninitapp ();
+
+-------------------------- WINMAIN Video functions: --------------------------
+
+	//Video mode specification. For example, 640x480x32768 color mode might be:
+	//   x=640, y=480, c=15, r0=10, g0=5, b0=0, a0=15, rn=5, gn=5, bn=5, an=1;
+typedef struct { long x, y; char c, r0, g0, b0, a0, rn, gn, bn, an; }
+	validmodetype;
+
+	//The video settings of the current video mode (written by WINMAIN).
+validmodetype curvidmodeinfo;
+
+	//These are global values that tell the application the desired screen
+	//   characteristics during initialization in initapp()
+	// xres,yres: desired screen dimensions
+	//   colbits: desired bit depth (always use 32 for Voxlap)
+	//fullscreen: 0:in a window, 1:fullscreen
+long xres, yres, colbits, fullscreen, maxpages;
+
+	//The current palette (for 8-bit color modes only)
+PALETTEENTRY pal[256];
+
+	//This function obtains and locks an off-screen surface for you to draw to.
+	//The 4 parameters fully specify a frame buffer:
+	//   frameptr : 32-bit address pointing to the top-left corner of the frame
+	//              You can cast this as (long *)frameptr but be careful with
+	//              the pitch when you do this, since pitch is in BYTES.
+	//      pitch : the number of BYTES per scan line (NOTE: bytes, not pixels)
+	//       xdim : the horizontal resolution of the frame in PIXELS
+	//       ydim : the vertical resolution of the frame in PIXELS
+	// This example shows how you could draw a green pixel at location (30,20):
+	//    *(long *)((30<<2)+20*pitch+frameptr) = 0x00ff00;
+	// WARNING: Do NOT call hardware accelerator functions between
+	//    startdirectdraw..stopdirectdraw since video memory will be locked
+	//    between these 2 calls. If you forget this rule, then your system may
+	//    freeze.
+	//Returns: 1=good, 0=bad
+long startdirectdraw (long *vidplc, long *dabpl, long *daxres, long *dayres);
+
+	//If you called startdirectdraw, then you MUST call this before flipping
+	//   pages. Once you do this, video memory is unlocked and you're free to
+	//   draw to the frame buffer using hardware accelerator functions or GDI.
+void stopdirectdraw ();
+
+	//Call this function when you're finished drawing to the frame. This
+	//   function flips video pages for double-buffering.
+void nextpage ();
+
+	//Call this to fill the screen to a specified color or palette index. It is
+	//safe to call this anywhere - even inside startdirectdraw..stopdirectdraw.
+long clearscreen (long fillcolor);
+
+	//Call this to update a block of palette entries (8-bit color mode only)
+	//You must write the pal[] array of the matching indices before calling
+	//this function.
+void updatepalette (long start, long danum);
+
+	//Update the internal list of video modes.
+	//validmodelist: a pointer to a list of validmodtype structures
+	//   (allocated by WINMAIN)
+	//Returns: the number of video modes found.
+long getvalidmodelist (validmodetype **validmodelist);
+
+	//Call this to change video mode immediately. Do not call inside
+	//   startdirectdraw..stopdirectdraw section.
+	//xres: new x dimension
+	//yres: new y dimension
+	//colbits: new color bit depth (8,15,16,24,32)
+	//fullscreen: 0=in a window, 1=fullscreen
+	//Returns: 0=success, non-zero=failed
+long changeres (long xres, long yres, long colbits, long fullscreen)
+
+-------------------------- WINMAIN Sound functions: --------------------------
+
+	//Flags for use with playsound. Use LOGICAL OR (|) to combine flags
+							 //No flags defaults to global non-3D sound.
+#define KSND_3D 1     //3D static sound. Location updated in setears().
+#define KSND_MOVE 2   //3D moving sound (overrides KSND_3D). Updates location
+							 //   in background (using point3d *) while playing. Be
+							 //   sure point3d * memory is valid throughout playback.
+#define KSND_LOOP 4   //Enable looping sound. When using this flag, you must
+							 //   call playsoundupdate() later to turn the sound off.
+#define KSND_LOPASS 8 //Enable quick&dirty lo-pass filter (not any slower)
+#define KSND_MEM 16   //Play a sound from memory. "filnam" acts as a pointer
+
+	//Play a sound. Source MUST be a mono, uncompressed WAV file.
+	// filnam: filename string (can be inside .ZIP file if USEKZ is enabled)
+	//         Filenames are compared with a hash, and samples are cached
+	//         internally, so don't worry about the speed of using filenames.
+	//volperc: volume scale (0 is silence, 100 is max volume). Can make sounds
+	//         softer, but not louder.
+	// frqmul: frequency multiplier (use 1.0 to playback at original frequency)
+	//    pos: This is a pointer to a point3d if KSND_3D or KSND_MOV is used.
+	//         Pass as NULL for non 3D sounds. For looping non-3D sounds, this
+	//         acts as a handle. In this case, choose a fake address that
+	//         doesn't conflict with any existing pointers. For example, you
+	//         can usually use addresses 1-256.
+	//  flags: See KSND_* above. Typical values for flags are:
+	//            0              Simple non-3D sound
+	//            KSND_3D        Static 3D sound. Updated with setears()
+	//            KSND_MOVE      Moving 3D sound. Updates point3d while playing
+	//            KSND_LOOP      Simple non-3D looping sound
+	//            KSND_LOOP|KSND_3D    Static 3D sound with looping
+	//            KSND_LOOP|KSND_MOVE  Moving 3D sound with looping
+	//
+	//   NOTE: When using KSND_LOOP without KSND_3D or KSND_MOVE), you can pass
+	//         a unique non-zero dummy pointer pos to playsound(). This way,
+	//         you can use playsoundupdate() to stop the individual sound. If
+	//         you pass a NULL pointer, then only way to stop the sound is by
+	//         turning off all sounds (passing -1 to nptr of playsoundupdate())
+void playsound (const char *filnam, long volperc, float frqmul, void *pos,
+					 long flags);
+
+	//Use this function to update a pointer location (if you move around
+	//  memory), turn off an individual sound, or turn off all sounds.
+	//
+	//Special cases:
+	//   if (optr== 0) applies change to all existing pointers/handles
+	//   if (nptr== 0) changes KSND_MOVE to KSND_3D (stops updating position)
+	//   if (nptr==-1) changes KSND_MOVE to KSND_3D and stops sound
+	//                    (using internal flag: KSND_LOOPFADE)
+	//Examples:
+	//      //update pointer location (deleting a sprite on a sequential list)
+	//   playsoundupdate(&spr[delete_me].p,&spr[--numspr].p);
+	//      //stop position updates from pointer (nptr = 0)
+	//   playsoundupdate(&spr[just_before_respawn],0);
+	//      //turn off looping sound (nptr = -1)
+	//   playsoundupdate(&my_looping_sound,(point3d *)-1);
+	//      //stop all position updates
+	//   playsoundupdate(0,0);
+	//      //turn off all sounds
+	//   playsoundupdate(0,(point3d *)-1);
+void playsoundupdate (void *optr, void *nptr)
+
+	//Set listener location (for 3D sounds)
+	//iposx,iposy,iposz: position of listener
+	//iforx,ifory,iforz: FORWARD unit vector of listener
+	//iheix,iheiy,iheiz: DOWN unit vector of listener
+void setears3d (float iposx, float iposy, float iposz,
+					 float iforx, float ifory, float iforz,
+					 float iheix, float iheiy, float iheiz);
+
+	//Set the global volume for future sound calls. Percentmax should be a
+	//   number between 0 and 100, 100 being the loudest.
+void setvolume (long percentmax);
+
+
+	//User mixer function: Useful for background music.
+	//mixfunc: A callback function that you must provide. In this function, you
+	//   must render PCM format samples in the same format as you asked for.
+	//   Here is a very simple (and quite useless) mixing function:
+	//
+	//   void mixfunc(void *snd, long numbytes) { memset(snd,0,numbytes); }
+	//      snd: pointer to first sample
+	//      numbytes: can be any arbitrary size (except for 0), and is always a
+	//                multiple of the sample size.
+	//
+	//samprate: Sample rate in hertz. Typical values are 22050 or 44100.
+	//numspeak: 1=mono, 2=stereo
+	//bytespersamp: 1=8-bit PCM, 2=16-bit PCM
+	//Returns integer handle (pass this number to umixerkill)
+long umixerstart (void mixfunc (void *ptr, long leng), long samprate,
+						long numspeak, long bytespersamp);
+
+	//Stop and kill mixer. Handle should match the return value from a previous
+	//umixerstart call. umixerkill() should be called before quitloop().
+void umixerkill (long handle);
+
+	//You may need to call this periodically if doframe() takes an unusually
+	//long time.
+void umixerbreathe ();
+
+-------------------------- WINMAIN Input functions: --------------------------
+
+	//Readkeyboard() updates the keystatus[]&ext_keystatus[] buffers. With the
+	//keystatus[] buffer, you can tell exactly which buttons on the keyboard
+	//are currently pressed. The index into the array is a keyboard scancode.
+	//For special keys (like arrow keys) that have 2-byte scancodes, I add 128
+	//to the index and just use the 2nd byte of the scancode. To see if a given
+	//key is currently down, all you need to do is check if keystatus[scancode]
+	//is non-zero. ext_keystatus[] is similar to keystatus[] except it sets the
+	//2nd lowest bit to 1 whenever a key is pressed and never clears it. This
+	//is useful for preventing you from missing keystrokes. It is only a
+	//partial solution though. Use keyread() for standard typing style input.
+char keystatus[256];
+char ext_keystatus[256];
+void readkeyboard ();
+
+	//This returns buffered keystrokes. If you check keys using the keystatus
+	//   array, then you are likely to miss keystrokes if you type fast and
+	//   have a slow frame rate. Even ext_keystatus isn't good for preserving
+	//   key order. Use this function when you don't want to miss any keys -
+	//   and get them in the correct order. It returns key information in this
+	//   format:
+	//
+	//   Byte 0: ASCII character, or 0 if non-ASCII key such as arrows, etc...
+	//   Byte 1: Scan code: same format as keystatus[]. Always written.
+	//   Byte 2: 6 lower bits used for CTRL,SHIFT,ALT in this format:
+	//       Bit 16 (mask 0x00010000): 1= Left Shift down
+	//       Bit 17 (mask 0x00020000): 1=Right Shift down
+	//       Bit 18 (mask 0x00040000): 1= Left Ctrl down
+	//       Bit 19 (mask 0x00080000): 1=Right Ctrl down
+	//       Bit 20 (mask 0x00100000): 1= Left Alt down
+	//       Bit 21 (mask 0x00200000): 1=Right Alt down
+	//   Byte 3: 0 (unused)
+	//
+	//   If buffer is empty, then the value returned is 0. Check this first!
+long keyread ();
+
+	//Similar to ext_keystatus[], but for mouse buttons
+	//bit0=1:down, bit1=1:was down, bits6&7=mouse wheel
+char ext_mbstatus[8];
+
+	//1:mouse smoothing (default), 0 otherwise
+	//I like mouse smoothing - I use an unsually fancy algorithm. :) Be aware
+	//that any kind of mouse smoothing increases apparent lag to the user.
+long mousmoth;
+
+	//Read-only variable. Estimated mouse interrupt rate (valid after moving
+	//the mouse for a few seconds) 60hz on most machines; 40 on my trackball :P
+float mousper;
+
+	//Read the CHANGE in mouse position and button status since the last call
+	//   to readmouse(). Values are interpolated by the engine to provide extra
+	//   smoothness - that's why fmousx,fmousy are floating point. The left
+	//   mouse button is the lowest bit (&1) in bstatus, and the right mouse
+	//   button is the second bit (&2) in bstatus.
+void readmouse (float *fmousx, float *fmousy, long *bstatus);
+
+	//Use this in windowed mode (harmless in fullscreen mode). If you render
+	//your own mouse cursor in directdraw, you can call this to determine if
+	//your private mouse cursor (x,y) is outside the window. Note: x,y is
+	//relative to top-left corner of ghwnd
+long ismouseout (long, long);
+
+	//Call this when your own mouse cursor exits the window area. The callback
+	//function (in) is called when the cursor goes over the window again.
+void setmouseout (void (*in)(long,long), long x, long y);
+
+	//Reads internal clock. tim is in seconds, and very high precision (better
+	//   than microseconds). The counter is initialized to 0 when the
+	//   application begins. This function gives incorrect results on laptops
+	//   that use SpeedStep, so you should use QueryPerformance* instead.
+void readklock (double *tim);
+
+--------------------------  WINMAIN MISC functions: --------------------------
+
+	//Use this function if you need to write some code that needs to stay in
+	//   doframe() for a while. For example, if you want ask the user to "save
+	//   game" and need to wait until the user presses a key, you should call
+	//   this inside your polling loop.
+void breath ();
+
+-------------------------- VX5 structure variables: --------------------------
+
+	//This is modified inside clipmove(). Clipmove() calls findmaxcr()
+	//   internally before doing movement - even when there is no movement. See
+	//   findmaxcr(). I made this global for convenience (and speed) - so you
+	//   don't need to call findmaxcr() again in your code. You can use this
+	//   to detect when the player gets squished.
+double clipmaxcr;
+
+	//This is modified inside clipmove(). Cliphitnum is the number of points
+	//   that are touching the player's collision sphere. Cliphitnum is always
+	//   0-3. Here's what the cases mean:
+	//      0:touching nothing - floating in the air
+	//      1:touching 1 point (for example, touching the floor)
+	//      2:touching 2 points (for example: touching a wall and the floor)
+	//      3:stuck in a corner (for example: touching 2 walls and the floor)
+	//   cliphit[0 to cliphitnum-1]: these are the 3D points on the surface
+	//       of the collision sphere (in world VXL coordinates)
+dpoint3d cliphit[3];
+long cliphitnum;
+
+	//Read-only variables. Bounding box written by last set* VXL writing call
+	//These are used when you next call updatevxl().
+long minx, miny, minz, maxx, maxy, maxz;
+
+	//Falling voxels shared data; written after calling startfalls(). Used
+	//by dofalls(). See description of flstboxtype in VOXLAP5.H.
+long flstnum;
+flstboxtype flstcnt[FLPIECES];
+
+	//Current mass of .VXL board. This is the number of total solid voxels -
+	//   including surface voxels and unexposed interior voxels. It is updated
+	//   internally during set* functions.
+long globalmass;
+
+	//Temporary global workspace for .KFA animation. These are the hinge
+	//   angles. They are stored as 16-bit angles, where 0 is 0 degrees, 16384
+	//   or 0x4000 is 90 degrees, -16384/49152/0xc000 is -90 degrees, etc...
+	//   Animsprite() writes these values (one for each hinge - use "numhin"
+	//   from the .KFA structure to find the number of hinges). You may modify
+	//   these values before drawsprite() if you want to do manual animation.
+short kfaval[MAXFRM];
+
+	//This affects the raycast density (number of vertical planes) to use in
+	//   opticast(). It has great influence over speed and detail. Higher
+	//   numbers here represent more speed (and less detail).
+	//      1: Full detail (worst speed). Do NOT attempt to set this below 1!
+	//      2: 1/2 detail
+	//      3: 1/3 detail
+	//      4: 1/4 detail
+	//      etc...
+long anginc;
+
+	//This is set to 0 when you make this call setsideshades() with all 0's.
+	//   Otherwise it's set to 1.
+long sideshademode;
+
+	//This is the x-y Euclidian distance where full detail ends for .VXL
+	//rendering. For example, if you set mipscandist=128, here's what happens:
+	//      MIP#0:   0- 128 (full detail)
+	//      MIP#1: 128- 256 ( 1/2 detail)
+	//      MIP#2: 256- 512 ( 1/4 detail)
+	//      MIP#3: 512-1024 ( 1/8 detail)
+	//      etc...
+long mipscandist;
+
+	//This is the maximum raycasting distance for .VXL rendering. Typical
+	//   values are 256 for limited view or 1536 to view the entire board.
+	//   There's no need to set this value any higher than the corner-to-corner
+	//   distance of the .VXL board (which is VSID*sqrt(2)).
+long maxscandist;
+
+	//This is the number of MIP levels allocated/allowed during .VXL
+	//   rendering. This is 0 when no .VXL map is loaded. When you use
+	//   loadnul(), loadvxl(), etc... it sets vxlmipuse to 1. When you call
+	//   genmipvxl() on the entire board, it sets this to the total number
+	//   of mip levels (including the full detail level) - usually 9.
+long vxlmipuse;
+
+	//When fog is enabled, it fades to this RGB color in the distance.
+	//4th byte is ignored.
+long fogcol;
+
+	//This is the x-y-z distance where full detail ends for .KV6 rendering.
+	//   For example, if you set kv6mipfactor=128, here's what happens:
+	//      MIP#0:   0- 128 (   full detail)
+	//      MIP#1: 128- 256 (   half detail)
+	//      MIP#2: 256- 512 (quarter detail)
+	//      MIP#3: 512-1024 ( eighth detail)
+	//      etc...
+long kv6mipfactor;
+
+	//RGB color scaling for .KV6 sprites. The default value is 0x808080.
+	//You can scale each color component individually. 0xff for 2x brighter
+	//(with unsigned saturation) or 0x00 for all the way down to black.
+long kv6col;
+
+	//These global variables are used by drawsprite(). Use these to clip
+	//   the rendering of .KV6 objects so it only renders a specific range of
+	//   x-axis planes. Xplanemin is inclusive while xplanemax is exclusive.
+	//   For example xplanemin=8,xplanemax=12 permits only planes 8,9,10,11
+	//   to draw. Since this affects all sprites, make sure to reset xplanemin
+	//   and xplanemax to 0 and a high integer (0x7fffffff) respectively.
+	//If you're willing to do some math, you can do some very cool sprite
+	//   effects with these variables! See drawspritebendx(), drawspritebendy()
+	//   and drawspritetwist() in GAME.C. You must use the "curvy=[filename]"
+	//   console command in GAME.C to see the effect in the GAME demo.
+long xplanemin, xplanemax;
+
+	//For my global procedural texture functions - (curcolfunc(), etc...),
+	//   this is the base 32-bit color.
+long curcol;
+
+	//Currently used only by setblobs() for limiting size. Fairly useless.
+long currad;
+
+	//Not used by the engine. I don't remember why I left it in there. Ignore.
+long curhei;
+
+	//Used by setsphere() and meltsphere(). This defines the "superquadric"
+	//   value. Default is 2.0 for sphere. Change the value for other
+	//   interesting shapes :)
+float curpow;
+
+	//All set* functions (setsphere, etc...) use a function(x,y,z) to generate
+	//   the colors of exposed surface voxels. This function determines which
+	//   procedural texture to use. For example, to use a solid color, do:
+	//      vx5.colfunc = curcolfunc;
+	//   NOTE: you should also set the base color (vx5.curcol)
+long (*colfunc)(lpoint3d *);
+
+	//MISC procedural texture variables used by built-in colfunc() functions.
+	//They can be ignored if you write your own functions. These are used
+	//mostly by Voxed and probably should be private :)
+	//See "Procedural texture functions" for more clues about what they do.
+long cen, amount, *pic, bpl, xsiz, ysiz, xoru, xorv, picmode;
+point3d fpico, fpicu, fpicv, fpicw;
+lpoint3d pico, picu, picv;
+float daf;
+
+	//Global lighting mode: (used by updatelighting())
+	//   0: No special lighting.
+	//   1: Use simple estimated normal lighting.
+	//   2: Multiple point source lighting (up to MAXLIGHTS lights supported)
+long lightmode;
+
+	//Used in (lightmode == 2) only. You must specify the light sources.
+	//lightsrctype structure:
+	//   point3d p: position of light source
+	//   float r2: radius (squared) of maximum radius affected. Try: 128*128
+	//   float sc: light intensity. Try: 262144
+lightsrctype lightsrc[MAXLIGHTS];
+long numlights;
+
+	//Enable fall checking code (startfalls(),dofalls(),etc...) Default:0
+	//updatevxl() is slower when this is enabled.
+long fallcheck;
+
+------------------------------------------------------------------------------
+
+HISTORY:
+01/28/2002: Started documentation
+03/05/2002: Changes: printsmall -> print4x6, loadkv6 -> getkv6
+				New functions: print6x8, loadsxl, parspr, getkv6name, sprhitscan
+03/07/2002: Added return value info & keyread()
+04/25/2002: Added getspr, animsprite, meltfall
+08/18/2002: Added kzfindfile*, freekv6, savekv6, genmipkv6, meltspans
+11/03/2004: Did significant updating to documentation.
+11/04/2004: First public release of Voxlap library!
+11/09/2004: Corrected a few typos in VOXLIB.TXT.
+07/15/2005: Removed voxredraw() declaration because it's local to VOXED.C.
+
+VOXLAP5 engine by Ken Silverman (http://www.advsys.net/ken)
