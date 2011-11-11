@@ -1,6 +1,6 @@
 @rem SETUP Visual C 6.0 (SP5) environment for command line
 @rem Fix directory name if incorrect!
-rem call "\Program Files\Microsoft Visual Studio\vc98\bin\vcvars32.bat"
+call "C:\Program Files\Microsoft Visual Studio 10.0\VC\bin\vcvars32.bat"
 
 @rem SETUP DirectX 8.x environment for command line
 @rem Fix directory name if incorrect!
@@ -20,3 +20,4 @@ nmake voxed.c
 
 @rem compile kwalk
 nmake kwalk.c
+pause
