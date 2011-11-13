@@ -1,0 +1,4 @@
+*.user
+*.suo
+_ReSharper.*
+*.sln.cache
