@@ -9,7 +9,7 @@ winmain.obj: winmain.cpp;                 cl /c /J /TP winmain.cpp /Ox /Ob2 /G6F
 !if 0
 #endif
 
-//VOXLAP engine by Ken Silverman (http://advsys.net/ken)
+// VOXLAP engine by Ken Silverman (http://advsys.net/ken)
 
 // This file has been modified from Ken Silverman's original release
 
