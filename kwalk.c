@@ -1,5 +1,7 @@
-#if 0 //To compile, type: "nmake kwalk.c"
-kwalk.exe: kwalk.obj voxlap5.obj v5.obj kplib.obj winmain.obj; link kwalk voxlap5 v5 kplib winmain ddraw.lib dinput.lib ole32.lib dxguid.lib user32.lib gdi32.lib comdlg32.lib
+/*#if 0 //To compile, type: "nmake kwalk.c"
+kwalk.exe: delwinmain kwalk.obj voxlap5.obj v5.obj kplib.obj winmain.obj
+	link kwalk voxlap5 v5 kplib winmain ddraw.lib dinput.lib ole32.lib dxguid.lib user32.lib gdi32.lib comdlg32.lib
+delwinmain:
 	del winmain.obj
 kwalk.obj:   kwalk.c voxlap5.h sysmain.h; cl /c /J /TP kwalk.c     /Ox /Ob2 /G6Fy /Gs /MD
 voxlap5.obj: voxlap5.c voxlap5.h;         cl /c /J /TP voxlap5.c   /Ox /Ob2 /G6Fy /Gs /MD
@@ -7,7 +9,7 @@ v5.obj:      v5.asm;                      ml /c /coff v5.asm
 kplib.obj:   kplib.c;                     cl /c /J /TP kplib.c     /Ox /Ob2 /G6Fy /Gs /MD
 winmain.obj: winmain.cpp;                 cl /c /J /TP winmain.cpp /Ox /Ob2 /G6Fy /Gs /MD /DNOSOUND
 !if 0
-#endif
+#endif  */
 
 // VOXLAP engine by Ken Silverman (http://advsys.net/ken)
 

@@ -7,13 +7,18 @@ call "C:\Program Files\Microsoft Visual Studio 10.0\VC\bin\vcvars32.bat"
 rem set include=\dxsdk\include;%include%
 set lib=%ProgramFiles%\Microsoft DirectX SDK (June 2010)\Lib\x86;%lib%
 
+@rem adding ./inbin to paths
+set include=%cd%\inbin;%include%
+set lib=%cd%\inbin;%lib%
+set path=%cd%\inbin;%path%
+
 @rem compile game
 nmake game.c
 
 @rem compile simple (must do this after game.c)
 nmake simple.c
 
-if exist winmain.obj del winmain.obj
+REM if exist winmain.obj del winmain.obj
 
 @rem compile voxed
 nmake voxed.c
