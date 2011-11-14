@@ -1,6 +1,7 @@
-#if 0
-voxed.exe: voxed.obj voxlap5.obj v5.obj kplib.obj winmain.obj voxed.c
+/* #if 0
+voxed.exe: delwinmain voxed.obj voxlap5.obj v5.obj kplib.obj winmain.obj voxed.c
 	link voxed voxlap5 v5 kplib winmain ddraw.lib dinput.lib dxguid.lib user32.lib gdi32.lib comdlg32.lib
+delwinmain:
 	del winmain.obj
 voxed.obj:   voxed.c voxlap5.h sysmain.h; cl /c /J /TP voxed.c     /Ox /Ob2 /G6Fy /Gs /MD
 voxlap5.obj: voxlap5.c voxlap5.h;         cl /c /J /TP voxlap5.c   /Ox /Ob2 /G6Fy /Gs /MD
@@ -8,7 +9,7 @@ v5.obj:      v5.asm;                      ml /c /coff v5.asm
 kplib.obj:   kplib.c;                     cl /c /J /TP kplib.c     /Ox /Ob2 /G6Fy /Gs /MD
 winmain.obj: winmain.cpp;                 cl /c /J /TP winmain.cpp /Ox /Ob2 /G6Fy /Gs /MD /DNOSOUND
 !if 0
-#endif
+#endif */
 
 // VOXLAP engine by Ken Silverman (http://advsys.net/ken)
 // This file has been modified from Ken Silverman's original release

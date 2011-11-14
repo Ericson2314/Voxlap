@@ -13,16 +13,9 @@ set lib=%cd%\inbin;%lib%
 set path=%cd%\inbin;%path%
 
 @rem compile game
-nmake game.c
-
 @rem compile simple (must do this after game.c)
-nmake simple.c
-
-REM if exist winmain.obj del winmain.obj
-
+@rem if exist winmain.obj del winmain.obj
+@rem nmake kwalk.c
 @rem compile voxed
-nmake voxed.c
-
-@rem compile kwalk
-nmake kwalk.c
+nmake -f winbuild.mak
 pause

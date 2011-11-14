@@ -1,3 +1,4 @@
+./outbin/*
 *.user
 *.suo
 _ReSharper.*
