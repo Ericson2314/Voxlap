@@ -1,3 +1,6 @@
+; ERRORS
+; 56
+
 .686
 .XMM
 
@@ -50,7 +53,9 @@ _v5_asm_dep_unlock:
 	sub esp, 4
 	push esp
 	push 40h ;PAGE_EXECUTE_READWRITE
-	push offset _dep_protect_end - offset _v5_asm_dep_unlock
+	mov eax, _dep_protect_end
+	sub eax, _v5_asm_dep_unlock
+	push eax
 	push offset _v5_asm_dep_unlock
 	call dword ptr __imp__VirtualProtect@16
 	add esp, 4
@@ -225,7 +230,7 @@ loop0:
 	dec edx
 	punpcklbw mm5, [edi+eax*4]
 	mov eax, gylookoff
-	movd mm3, [eax+edx*4] ;mm3: [ 0   0   0  -gy]
+	movd mm3, dword ptr [eax+edx*4] ;mm3: [ 0   0   0  -gy]
 	psubusb mm5, mm4
 	pshufw mm2, mm5, 0ffh
 	pmulhuw mm5, mm2
@@ -273,7 +278,7 @@ loop2:
 	inc ecx
 	punpcklbw mm5, [edi+eax*4]
 	mov eax, gylookoff
-	movd mm3, [eax+ecx*4] ;mm3: [ 0   0   0  -gy]
+	movd mm3, dword ptr [eax+ecx*4] ;mm3: [ 0   0   0  -gy]
 	psubusb mm5, mm4
 	pshufw mm2, mm5, 0ffh
 	pmulhuw mm5, mm2
@@ -311,7 +316,7 @@ predrawceil:
 	pshufw mm6, mm6, 04eh       ;swap hi & lo of mm6
 drawceil: ;if (dmulrethigh(gylookup[ecx*4],c->cx0,c->cy0,gx) < 0) jmp drawflor
 	mov eax, gylookoff
-	movd mm3, [eax+ecx*4] ;mm3: [ 0   0   0  -gy]
+	movd mm3, dword ptr [eax+ecx*4] ;mm3: [ 0   0   0  -gy]
 	por mm3, mm6               ;mm3: [ogx  0   gx -gy]
 drawceilloop:
 	pshufw mm7, mm0, 0ddh      ;mm7: [cy0 cx0 cy0 cx0]
@@ -345,7 +350,7 @@ predrawflor:
 	pshufw mm6, mm6, 04eh       ;swap hi & lo of mm6
 drawflor: ;if (dmulrethigh(gylookup[edx*4],c->cx1,c->cy1,gx) >= 0) jmp enddrawflor
 	mov eax, gylookoff
-	movd mm3, [eax+edx*4] ;mm3: [ 0   0   0  -gy]
+	movd mm3, dword ptr [eax+edx*4] ;mm3: [ 0   0   0  -gy]
 	por mm3, mm6               ;mm3: [ogx  0   gx -gy]
 drawflorloop:
 	pshufw mm7, mm1, 0ddh      ;mm7: [cy1 cx1 cy1 cx1]
@@ -429,7 +434,7 @@ intoslabloop:
 	movzx eax, byte ptr [edi+2]
 		;if (dmulrethigh(gylookup[[edi+2]*4+4],c->cx0,c->cy0,ogx) >= 0)
 		;   jmp findslabloopbreak
-	movd mm3, [ebx+eax*4+4]    ;mm3: [ 0   0   0  -gy]
+	movd mm3, dword ptr [ebx+eax*4+4]    ;mm3: [ 0   0   0  -gy]
 	por mm3, mm6               ;mm3: [ gx  0  ogx -gy]
 	pshufw mm7, mm0, 0ddh      ;mm7: [cy0 cx0 cy0 cx0]
 	pmaddwd mm7, mm3           ;mm7: [ 0   0  -decide]
@@ -442,7 +447,7 @@ intoslabloop:
 		;If next slab ALSO intersects, split _cfasm!
 		;if (dmulrethigh(v[v[0]*4+3],c->cx1,c->cy1,ogx) >= 0) jmp drawfwall
 	movzx eax, byte ptr [3+edi+eax*4]
-	movd mm3, [ebx+eax*4]      ;mm3: [ 0   0   0  -gy]
+	movd mm3, dword ptr [ebx+eax*4]      ;mm3: [ 0   0   0  -gy]
 	por mm3, mm6               ;mm3: [ gx  0  ogx -gy]
 	pshufw mm7, mm1, 0ddh      ;mm7: [cy1 cx1 cy1 cx1]
 	pmaddwd mm7, mm3           ;mm7: [ 0   0  -decide]
@@ -462,7 +467,7 @@ intoslabloop:
 
 	mov edx, [eax+4]             ;col = (long)c->i1;
 	movzx eax, byte ptr [edi+2]  ;dax = c->cx1; day = c->cy1;
-	movd mm3, [ebx+eax*4+4]      ;mm3: [ 0   0   0  -gy]
+	movd mm3, dword ptr [ebx+eax*4+4]      ;mm3: [ 0   0   0  -gy]
 	por mm3, mm6                 ;mm3: [ gx  0  ogx -gy]
 
 		;WARNING: NEW CODE!!!!!!!
@@ -684,7 +689,7 @@ preskysearch:
 	psubd mm1, qword ptr _gi
 skysearch:
 	pshufw mm7, mm1, 0ddh      ;mm7: [cy1 cx1 cy1 cx1]
-	movd mm3, [ecx+edi*4]      ;mm3: [       xvi -yvi]
+	movd mm3, dword ptr [ecx+edi*4]      ;mm3: [       xvi -yvi]
 	pmaddwd mm7, mm3           ;mm7: [ 0   0  -decide]
 	movd edx, mm7
 	sar edx, 31
@@ -927,11 +932,11 @@ boundcubenextline:
 	mov ecx, edx
 begstosb:
 ifdef USEZBUFFER
-	ucomiss xmm0, [eax+ecx*4]
+	ucomiss xmm0, dword ptr [eax+ecx*4]
 	jnc short skipdrawpix
-	movss [eax+ecx*4], xmm0
+	movss dword ptr [eax+ecx*4], xmm0
 endif
-	movd [edi+ecx*4], mm5
+	movd dword ptr [edi+ecx*4], mm5
 skipdrawpix:
 	inc ecx
 	jnz begstosb
@@ -997,7 +1002,7 @@ _drawboundcube3dn:
 	pfadd mm0, mm6              ;mm0: [   y0    x0]
 	pfadd mm1, mm6              ;mm1: [   y1    x1]
 	movd mm5, _caddasm[ebx+8]
-	punpckldq mm5, qword ptr _caddasm[edi+8]
+	punpckldq mm5, _caddasm[edi+8]
 	pfadd mm5, mm7              ;mm5: [   z1    z0]
 	pfrcp mm4, mm5              ;mm4: [ 1/z0  1/z0]
 	punpckhdq mm5, mm5          ;mm5: [   z1    z1]
@@ -1015,7 +1020,7 @@ _drawboundcube3dn:
 	pfadd mm2, mm6              ;mm2: [   y2    x2]
 	pfadd mm3, mm6              ;mm3: [   y3    x3]
 	movd mm5, _caddasm[ebx+8]
-	punpckldq mm5, qword ptr _caddasm[edi+8]
+	punpckldq mm5, _caddasm[edi+8]
 	pfadd mm5, mm7              ;mm5: [   z3    z2]
 	pfrcp mm4, mm5              ;mm4: [ 1/z2  1/z2]
 	punpckhdq mm5, mm5          ;mm5: [   z3    z3]
@@ -1040,7 +1045,7 @@ _drawboundcube3dn:
 	pfadd mm2, mm6              ;mm2: [   y4    x4]
 	pfadd mm3, mm6              ;mm3: [   y5    x5]
 	movd mm5, _caddasm[ebx+8]
-	punpckldq mm5, qword ptr _caddasm[edi+8]
+	punpckldq mm5, _caddasm[edi+8]
 	pfadd mm5, mm7              ;mm5: [   z5    z4]
 	pfrcp mm4, mm5              ;mm4: [ 1/z4  1/z4]
 	punpckhdq mm5, mm5          ;mm5: [   z5    z5]
@@ -1100,9 +1105,9 @@ ifdef USEZBUFFER
 	movd edx, mm0
 	test edx, edx
 	jnz short skipdrawpix_3dn
-	movd [eax+ecx*4], mm7
+	movd dword ptr [eax+ecx*4], mm7
 endif
-	movd [edi+ecx*4], mm5
+	movd dword ptr [edi+ecx*4], mm5
 skipdrawpix_3dn:
 	inc ecx
 	jnz begstosb_3dn
