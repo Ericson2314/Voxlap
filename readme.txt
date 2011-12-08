@@ -1,4 +1,32 @@
-Voxlap engine notes by Ken Silverman (http://advsys.net/ken)
+Porting notes by Ericson2314
+------------------------------------------------------------------------------
+Making Ken Silverman's Voxlap voxel graphics engine MinGW compatible, then
+*NIX compatible.
+
+* -- Done | $ -- In Progress | # -- not started
+
+1. Compile with MS Visual Studio 2010 utilities, and June 2010 DirectX sdk (*)
+   * Makefile mead from *.c headers
+   * Old DirectX SDK *.LIBs included
+   * v5.asm modified as per
+     http://natural-satellite.com/2011/06/19/visual-studio-and-voxlap/
+2. Compile with MinGW ($)
+   $ make v5.asm compile in NASM. Thanks, http://www.drpaulcarter.com/pcasm/
+       * Compiles & Links
+	   # Major Bugs
+   # make GCC use NASM for inline asm
+   # clone and update makefile for MinGW
+3. Compile without Direct X
+   # Swap winmain.cpp for sdlmain.cpp (#)
+   # Winelib?
+4. Compile on *NIX (Linux in my case) (#)
+Misc
+   * Heirarchy implemented. (makefile ready, code needs to be adjusted so bin
+     and data don't need to be in same folder
+   # .c to .cpp, accuracy is great.
+   # CMake? autobuild?
+   
+[Original] Voxlap engine notes by Ken Silverman (http://advsys.net/ken)
 ------------------------------------------------------------------------------
 Introduction:
 
