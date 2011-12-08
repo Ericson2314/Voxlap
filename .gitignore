@@ -3,3 +3,5 @@
 *.suo
 _ReSharper.*
 *.sln.cache
+*~
+desktop.ini
