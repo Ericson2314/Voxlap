@@ -11,9 +11,10 @@ Making Ken Silverman's Voxlap voxel graphics engine MinGW compatible, then
    * v5.asm modified as per
      http://natural-satellite.com/2011/06/19/visual-studio-and-voxlap/
 2. Compile with MinGW ($)
-   $ make v5.asm compile in NASM. Thanks, http://www.drpaulcarter.com/pcasm/
+   $ make v5.asm compile in NASM. Thanks, http://www.drpaulcarter.com/pcasm/ &
+     http://www.devoresoftware.com/nomyso/
        * Compiles & Links
-	   # Major Bugs
+       # Major Bugs
    # make GCC use NASM for inline asm
    # clone and update makefile for MinGW
 3. Compile without Direct X
@@ -23,7 +24,7 @@ Making Ken Silverman's Voxlap voxel graphics engine MinGW compatible, then
 Misc
    * Heirarchy implemented. (makefile ready, code needs to be adjusted so bin
      and data don't need to be in same folder
-   # .c to .cpp, accuracy is great.
+   * .c to .cpp, accuracy is great.
    # CMake? autobuild?
    
 [Original] Voxlap engine notes by Ken Silverman (http://advsys.net/ken)
