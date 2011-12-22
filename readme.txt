@@ -15,7 +15,7 @@ Making Ken Silverman's Voxlap voxel graphics engine MinGW compatible, then
      http://www.devoresoftware.com/nomyso/
        * Compiles & Links
        # Major Bugs
-   # make GCC use NASM for inline asm
+   # inline asm: convert to at&t syntax are make seperate and nasm
    # clone and update makefile for MinGW
 3. Compile without Direct X
    # Swap winmain.cpp for sdlmain.cpp (#)
