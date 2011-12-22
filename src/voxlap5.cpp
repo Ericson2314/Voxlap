@@ -1,9 +1,10 @@
+// VOXLAP engine by Ken Silverman (http://advsys.net/ken)
+// This file has been modified from Ken Silverman's original release
+
 #include <math.h>
 #include <stdio.h>
 #define VOXLAP5
 #include "voxlap5.h"
-
-//VOXLAP engine by Ken Silverman (http://advsys.net/ken)
 
 #define USEZBUFFER 1
 
