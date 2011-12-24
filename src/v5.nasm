@@ -1,28 +1,28 @@
 ;CPU 686
 CPU P3
 
-USEZBUFFER EQU 1       ;To disable, put ; in front of line
-LVSID EQU 10           ;log2(VSID) - used for mip-mapping index adjustment
-%DEFINE	VSID	(1 << LVSID) ;should match VSID in VOXLAP5.H (adjust LVSID, not this)
+USEZBUFFER EQU 1          ;To disable, put ; in front of line
+LVSID EQU 10              ;log2(VSID) - used for mip-mapping index adjustment
+%DEFINE	VSID (1 << LVSID) ;should match VSID in VOXLAP5.H (adjust LVSID, not this)
 %DEFINE	LOGPREC	(8+12)
 
-EXTERN _gi
-EXTERN _gpixy
-EXTERN _gixy     ;long[2]
-EXTERN _gpz      ;long[2]
-EXTERN _gdz      ;long[2]
-EXTERN _gxmip
-EXTERN _gxmax
-EXTERN _gcsub    ;long[4]
-EXTERN _gylookup ;long[256+4+128+4+...]
-EXTERN _gmipnum
-;EXTRN _cf        ;{ long i0,i1,z0,z1,cx0,cy0,cx1,cy1; }[128]
+EXTERN _gi       ; dword
+EXTERN _gpixy    ; dword
+EXTERN _gixy     ; dword      ;long[2]
+EXTERN _gpz      ; dword      ;long[2]
+EXTERN _gdz      ; dword      ;long[2]
+EXTERN _gxmip    ; dword
+EXTERN _gxmax    ; dword
+EXTERN _gcsub    ; dword      ;long[4]
+EXTERN _gylookup ; dword      ;long[256+4+128+4+...]
+EXTERN _gmipnum  ; dword
+;EXTRN _cf        ; dword      ;{ long i0,i1,z0,z1,cx0,cy0,cx1,cy1; }[128]
 
 EXTERN _sptr
 
-EXTERN _skyoff   ;Memory offset to start of longitude line
-EXTERN _skyxsiz  ;Size of longitude line
-EXTERN _skylat   ;long[_skyxsiz] : latitude's unit dir. vector
+EXTERN _skyoff   ; dword      ;Memory offset to start of longitude line
+EXTERN _skyxsiz  ; dword      ;Size of longitude line
+EXTERN _skylat   ; dword      ;long[_skyxsiz] : latitude's unit dir. vector
 
 ;How to declare C-ASM shared variables in the ASM code:
 ;ASM:                    C:
@@ -31,36 +31,36 @@ EXTERN _skylat   ;long[_skyxsiz] : latitude's unit dir. vector
 ;   _xr0: dd 0,0,0,0        #define fxr0 ((float *)&xr0)
 ;   Use: _xr0               Use: lxr0[0-3]  or:  fxr0[0-3]
 
-;EXTRN _reax
-;EXTRN _rebx
-;EXTRN _recx
-;EXTRN _redx
-;EXTRN _resi
-;EXTRN _redi
-;EXTRN _rebp
-;EXTRN _resp
-;EXTRN _remm  ;long[16]
+;EXTRN _reax; dword
+;EXTRN _rebx; dword
+;EXTRN _recx; dword
+;EXTRN _redx; dword
+;EXTRN _resi; dword
+;EXTRN _redi; dword
+;EXTRN _rebp; dword
+;EXTRN _resp; dword
+;EXTRN _remm; dword  ;long[16]
 
 SEGMENT	.text	PUBLIC	USE32	CLASS=CODE
 
 
 GLOBAL	_v5_asm_dep_unlock ;Data Execution Prevention unlock (works under XP2 SP2)
 _v5_asm_dep_unlock:
-	EXTERN __imp__VirtualProtect@16
+	EXTERN __imp__VirtualProtect@16 ; near
 	sub esp, 4
-	push esp
-	push WORD 40h ;PAGE_EXECUTE_READWRITE
+	push dword esp
+	push dword 40h ;PAGE_EXECUTE_READWRITE ; _MANUAL FIX_ word to dword
 	mov eax, _dep_protect_end
 	sub eax, _v5_asm_dep_unlock
-	push eax
-	push _v5_asm_dep_unlock
-	call dword NEAR __imp__VirtualProtect@16
+	push dword eax
+	push dword _v5_asm_dep_unlock
+	call dword 0:__imp__VirtualProtect@16
 	add esp, 4
 	retn
 
 GLOBAL	_cfasm, _skycast
 ALIGN 16
-_cfasm times	256*32	db 0
+_cfasm times 256*32 db 0
 w8bmask0 dq 000ff00ff00ff00ffh
 w8bmask1 dq 000f000f000f000f0h
 w8bmask2 dq 000e000e000e000e0h
