@@ -1,74 +1,115 @@
-# Macros
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX=BEGIN MACROS=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-# programs
-CC						=cl
-LINK					=link
-AS						=ml
-
-# SETUP DirectX 8.x environment for command line
-# Fix directory name if incorrect!
-# include				=/dxsdk/include;$(include)
-LIB						=C:/Program Files/Microsoft DirectX SDK (June 2010)/Lib/x86;$(LIB)
-
-# adding sub-directories
-SRC						=$(MAKEDIR)/src
-iBN						=$(MAKEDIR)/inbin
-oBN						=$(MAKEDIR)/outbin
-
-OSdep					=win
-#OSdep					=sdl
-
-# FOSS			
-MinGW					=C:/Mingw
-NASM					="C:/Program Files/nasm/nasm.exe"
-PATH					=$(PATH);$(MinGW)/bin;
-
-# adding sub-directories to paths
+# adding inbin directory to paths
 PATH					=$(iBN);$(PATH)
 INCLUDE					=$(iBN);$(INCLUDE)
 LIB						=$(iBN);$(LIB)
 
+# sub-directory macros
+SRC						=$(MAKEDIR)/src
+iBN						=$(MAKEDIR)/inbin
+oBN						=$(MAKEDIR)/outbin
+
+# DirectX directories (OLD: SETUP DirectX 8.x environment for command line. Fix directory name if incorrect!)
+# include				  =/dxsdk/include;$(include)
+LIB						=C:/Program Files/Microsoft DirectX SDK (June 2010)/Lib/x86;$(LIB)
+
+# FOSS complation directories
+PATH					=C:/Mingw;$(PATH)
+
+# Per-Program Flags
+masmFLAGS				=/Fo$(@R) /c /coff 
+nasmFLAGS				=-o $(@) -f win32
+
+clFLAGS					=/Fo$(@R) /c /J /Tp 
+gppFLAGS				=
+
+# Compiler Choices [XXXXXXXXXXXXXXXX=CHANGE THIS FOR UNIX COMPILE:XXXXXXXXXXXXXXXX]
+AsmName					=masm #winSDK: =masm #GCC: =nasm NOT gas
+CPP						=cl   #winSDK: =cl   #GCC: =gpp 
+LNK						=link #winSDK: =LNK  #GCC: =gLNK
+
+
+
+#  Graphics Codepath [XXXXXXXXXXXXXXXX=CHANGE THIS FOR UNIX COMPILE=XXXXXXXXXXXXXXXX]
+GFXdep					=win #DirectX: =win SDL: =sdl
+
+# Conditionl Hacks
+!IF "$(AsmName)"=="masm"
+AS=ml
+AFLAGS					=$(masmFLAGS) #$($(AsmName)FLAGS)
+!ELSE
+AS=$(AsmName)
+!IF "$(AsmName)"=="nasm"
+AFLAGS					=$(nasmFLAGS) #$($(AsmName)FLAGS)
+!ENDIF
+!ENDIF
+
+!IF "$(CPP)"=="cl"
+CPPFLAGS				=$(clFLAGS) #$($(CPP)FLAGS)
+!ELSEIF "$(CPP)"=="gpp"
+CPPFLAGS				=$(gppFLAGS) #$($(CPP)FLAGS)
+!ENDIF
+
+!IF "$(LNK)"=="link"
+LNKFLAGS				=$(linkFLAGS) #$($(LNK)FLAGS)
+!ELSEIF "$(LNK)"=="glink"
+CPPFLAGS				=$(glinkFLAGS) #$($(LNK)FLAGS)
+!ENDIF
+
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX=END MACROS=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+# XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 default:	$(oBN)/game.exe	$(oBN)/simple.exe $(oBN)/voxed.exe $(oBN)/kwalk.exe
 # $(oBN)/ $(**B)
 
 # executable (.exe) (meta)targets
-$(oBN)/game.exe:		$(oBN)/game.obj   $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kplib.obj $(oBN)/$(OSdep)main1.obj;
-	$(LINK) /out:$(@)	$(oBN)/game.obj   $(oBN)/voxlap5     $(oBN)/v5     $(oBN)/kplib     $(oBN)/$(OSdep)main1     ddraw.lib dinput.lib ole32.lib dxguid.lib user32.lib gdi32.lib
+$(oBN)/game.exe:		$(oBN)/game.obj   $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kplib.obj $(oBN)/$(GFXdep)main1.obj;
+	$(LNK) /out:$(@)	$(oBN)/game.obj   $(oBN)/voxlap5     $(oBN)/v5     $(oBN)/kplib     $(oBN)/$(GFXdep)main1     ddraw.lib dinput.lib ole32.lib dxguid.lib user32.lib gdi32.lib
 											
-$(oBN)/simple.exe:		$(oBN)/simple.obj $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kplib.obj $(oBN)/$(OSdep)main1.obj;
-	$(LINK) /out:$(@)	$(oBN)/simple     $(oBN)/voxlap5     $(oBN)/v5     $(oBN)/kplib     $(oBN)/$(OSdep)main1     ddraw.lib dinput.lib ole32.lib dxguid.lib user32.lib gdi32.lib
+$(oBN)/simple.exe:		$(oBN)/simple.obj $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kplib.obj $(oBN)/$(GFXdep)main1.obj;
+	$(LNK) /out:$(@)	$(oBN)/simple     $(oBN)/voxlap5     $(oBN)/v5     $(oBN)/kplib     $(oBN)/$(GFXdep)main1     ddraw.lib dinput.lib ole32.lib dxguid.lib user32.lib gdi32.lib
 											
-$(oBN)/voxed.exe:		$(oBN)/voxed.obj  $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kplib.obj $(oBN)/$(OSdep)main2.obj;
-	$(LINK) /out:$(@)	$(oBN)/voxed      $(oBN)/voxlap5     $(oBN)/v5     $(oBN)/kplib     $(oBN)/$(OSdep)main2     ddraw.lib dinput.lib           dxguid.lib user32.lib gdi32.lib comdlg32.lib
+$(oBN)/voxed.exe:		$(oBN)/voxed.obj  $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kplib.obj $(oBN)/$(GFXdep)main2.obj;
+	$(LNK) /out:$(@)	$(oBN)/voxed      $(oBN)/voxlap5     $(oBN)/v5     $(oBN)/kplib     $(oBN)/$(GFXdep)main2     ddraw.lib dinput.lib           dxguid.lib user32.lib gdi32.lib comdlg32.lib
 											
-$(oBN)/kwalk.exe:		$(oBN)/kwalk.obj  $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kplib.obj $(oBN)/$(OSdep)main2.obj;
-	$(LINK) /out:$(@)	$(oBN)/kwalk      $(oBN)/voxlap5     $(oBN)/v5     $(oBN)/kplib     $(oBN)/$(OSdep)main2     ddraw.lib dinput.lib ole32.lib dxguid.lib user32.lib gdi32.lib comdlg32.lib
+$(oBN)/kwalk.exe:		$(oBN)/kwalk.obj  $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kplib.obj $(oBN)/$(GFXdep)main2.obj;
+	$(LNK) /out:$(@)	$(oBN)/kwalk      $(oBN)/voxlap5     $(oBN)/v5     $(oBN)/kplib     $(oBN)/$(GFXdep)main2     ddraw.lib dinput.lib ole32.lib dxguid.lib user32.lib gdi32.lib comdlg32.lib
 											
 
 # binary object (.obj) targets
-$(oBN)/game.obj:              $(SRC)/game.cpp   $(SRC)/voxlap5.h $(SRC)/sysmain.h;
-	$(CC) /Fo$(@R) /c /J /TP  $(SRC)/game.cpp    /Ox /Ob2 /G6Fy /Gs /MD /QIfist
-$(oBN)/simple.obj:            $(SRC)/simple.cpp $(SRC)/voxlap5.h $(SRC)/sysmain.h;
-	$(CC) /Fo$(@R) /c /J /TP  $(SRC)/simple.cpp  /Ox /Ob2 /G6Fy /Gs /MD /QIfist
-$(oBN)/voxed.obj:             $(SRC)/voxed.cpp  $(SRC)/voxlap5.h $(SRC)/sysmain.h;
-	$(CC) /Fo$(@R) /c /J /TP  $(SRC)/voxed.cpp   /Ox /Ob2 /G6Fy /Gs /MD
-$(oBN)/kwalk.obj:             $(SRC)/kwalk.cpp  $(SRC)/voxlap5.h $(SRC)/sysmain.h;
-	$(CC) /Fo$(@R) /c /J /TP  $(SRC)/kwalk.cpp   /Ox /Ob2 /G6Fy /Gs /MD
-                                     
-                                     
-$(oBN)/voxlap5.obj:           $(SRC)/voxlap5.cpp $(SRC)/voxlap5.h;
-	$(CC) /Fo$(@R) /c /J /TP  $(SRC)/voxlap5.cpp /Ox /Ob2 /G6Fy /Gs /MD
-$(oBN)/v5.obj:                $(SRC)/v5.masm;
-	$(AS) /Fo$(@R) /c /coff   $(SRC)/v5.masm
-#$(oBN)/v5.obj:               $(SRC)/v5.nasm;
-#    $(NASM) -o $(@) -f win32 $(SRC)/v5.nasm
-$(oBN)/kplib.obj:             $(SRC)/kplib.cpp;
-	$(CC) /Fo$(@R) /c /J /TP  $(SRC)/kplib.cpp   /Ox /Ob2 /G6Fy /Gs /MD
-$(oBN)/winmain1.obj:          $(SRC)/winmain.cpp $(SRC)/sysmain.h;
-	$(CC) /Fo$(@R) /c /J /TP  $(SRC)/winmain.cpp /Ox /Ob2 /G6Fy /Gs /MD /DUSEKZ /DZOOM_TEST                                        
-$(oBN)/winmain2.obj:          $(SRC)/winmain.cpp $(SRC)/sysmain.h;
-	$(CC) /Fo$(@R) /c /J /TP  $(SRC)/winmain.cpp /Ox /Ob2 /G6Fy /Gs /MD /DNOSOUND
+
+# Primary Objects
+$(oBN)/game.obj:       $(SRC)/game.cpp   $(SRC)/voxlap5.h $(SRC)/sysmain.h;
+	$(CPP) $(CPPFLAGS) $(SRC)/game.cpp   /QIfist
+
+$(oBN)/simple.obj:     $(SRC)/simple.cpp $(SRC)/voxlap5.h $(SRC)/sysmain.h;
+	$(CPP) $(CPPFLAGS) $(SRC)/simple.cpp /QIfist
+
+$(oBN)/voxed.obj:      $(SRC)/voxed.cpp  $(SRC)/voxlap5.h $(SRC)/sysmain.h;
+	$(CPP) $(CPPFLAGS) $(SRC)/voxed.cpp
+	
+$(oBN)/kwalk.obj:      $(SRC)/kwalk.cpp  $(SRC)/voxlap5.h $(SRC)/sysmain.h;
+	$(CPP) $(CPPFLAGS) $(SRC)/kwalk.cpp
+
+# Secondary Objects
+$(oBN)/voxlap5.obj:    $(SRC)/voxlap5.cpp $(SRC)/voxlap5.h;
+	$(CPP) $(CPPFLAGS) $(SRC)/voxlap5.cpp
+
+$(oBN)/v5.obj:         $(SRC)/v5.$(AsmName);
+	$(AS)  $(AFLAGS)   $(SRC)/v5.$(AsmName)
+
+$(oBN)/kplib.obj:      $(SRC)/kplib.cpp;
+	$(CPP) $(CPPFLAGS) $(SRC)/kplib.cpp
+
+$(oBN)/winmain1.obj:   $(SRC)/winmain.cpp $(SRC)/sysmain.h;
+	$(CPP) $(CPPFLAGS) $(SRC)/winmain.cpp /DUSEKZ /DZOOM_TEST 
+
+$(oBN)/winmain2.obj:   $(SRC)/winmain.cpp $(SRC)/sysmain.h;
+	$(CPP) $(CPPFLAGS) $(SRC)/winmain.cpp /DNOSOUND
 
 # Clearn Script
 clean:
