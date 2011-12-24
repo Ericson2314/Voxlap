@@ -10,5 +10,5 @@ call "C:\Program Files\Microsoft Visual Studio 10.0\VC\bin\vcvars32.bat"
 @rem if exist winmain.obj del winmain.obj
 @rem nmake kwalk.c
 @rem compile voxed
-nmake -f winbuild.mak /d /n /p > nmakestout.txt
+nmake -y -f winbuild.mak /d /n /p > "winbuild - debug.txt"
 pause
