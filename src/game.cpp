@@ -364,7 +364,21 @@ void botinit ()
 			if (bothei[i] < botheimin) botheimin = bothei[i];
 		}
 }
-
+#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+static inline void fcossin (float a, float *c, float *s)
+{
+	__asm__
+	(
+		"fld a\n\t"
+		"fsincos\n\t"
+		"mov c, %eax\n\t"
+		"fstpl (eax)\n\t"
+		"mov s, %eax\n\t"
+		"fstpl (eax)\n\t"
+	);
+}
+#endif
+#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 static _inline void fcossin (float a, float *c, float *s)
 {
 	_asm
@@ -377,6 +391,7 @@ static _inline void fcossin (float a, float *c, float *s)
 		fstp dword ptr [eax]
 	}
 }
+#endif
 
 #define EXTRASLICECOVER 1
 
