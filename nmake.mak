@@ -17,10 +17,11 @@ CPP                    =gcc  #for GNU C++ Compiler
 LNK                    =ld   #for GNU linker
 
 # Flags
-CPPFLAGS               =-o $(@) -c -funsigned-char `sdl-config --cflags` #for GNU C++ Compiler (gcc)
-CMacroPre              =-D" " #for GNU C++ Compiler (gcc)
+CPPFLAGS               =-o $(@) -c -funsigned-char -mwindows #for GNU C++ Compiler (gcc)
+CMacroPre              =-D "" #for GNU C++ Compiler (gcc)
 
-ldFLAGS                =-o $(@) `sdl-config --libs` #for GNU linker (ld)
+ldFLAGS                =-o $(@) #for GNU linker (ld)
+LNKlibPre              =-l "" #for GNU linker (ld)
 !ENDIF
 # END GNU Compiler Collection Macros
 # -----------------------------------
@@ -36,6 +37,7 @@ CPPFLAGS               =/Fo$(@R) /c /J # for Micrsoft Compiler(cl)
 CMacroPre              =/D # for Micrsoft Compiler(cl)
 
 LNKFLAGS               =/out:$(@) # for Microsfoft Linker (link)
+LNKlibSuf              =.lib
 !ENDIF
 # END VMicrososft Visual C Macros
 # -----------------------------------

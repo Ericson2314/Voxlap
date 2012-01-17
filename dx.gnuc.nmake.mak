@@ -11,10 +11,10 @@ PATH     =/mingw/bin/;$(PATH)
 INCLUDE  =/mingw/include/;$(INCLUDE)
 LIB      =/mingw/lib;$(LIB)
         
-# MinGW SDL
+# DirectX
 GFXdep   =win
 #LIB      =/Program Files/Microsoft DirectX SDK (June 2010)/LIB/x86;$(LIB)
 LIB      =/mingw/lib;$(LIB)
-GFXOBJ   =mingw32.lib ddraw.lib dinput.lib dxguid.lib
+GFXOBJ   =-l mingw32 -l ddraw -l dinput -l dxguid
 
 !include nmake.mak

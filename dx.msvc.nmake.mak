@@ -3,8 +3,8 @@
 # DirectX
 
 # Assembler Choice
-AsmName  =nasm
-PATH     =/mingw/bin/;$(PATH)
+AsmName  =masm
+# PATH     =/mingw/bin/;$(PATH)
 
 # Compiler Choice
 __MSVC__ =1
