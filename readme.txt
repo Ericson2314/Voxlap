@@ -1,34 +1,60 @@
+------------------------------------------------------------------------------
 Porting notes by Ericson2314
 ------------------------------------------------------------------------------
 Making Ken Silverman's Voxlap voxel graphics engine MinGW compatible, then
 *NIX compatible.
 
+
+------------------------------------------------------------------------------
+Porting Progress:
+
 * -- Done | $ -- In Progress | # -- not started
 
 1. Compile with MS Visual Studio 2010 utilities, and June 2010 DirectX sdk (*)
-   * Makefile mead from *.c headers
-   * Old DirectX SDK *.LIBs included
-   * v5.asm modified as per
-     http://natural-satellite.com/2011/06/19/visual-studio-and-voxlap/
+    * Makefile mead from *.c headers
+    * Old DirectX SDK *.LIBs included
+    * v5.asm modified as per
+        http://natural-satellite.com/2011/06/19/visual-studio-and-voxlap/
 2. Compile with MinGW ($)
-   $ make v5.asm compile in NASM. Thanks, http://www.drpaulcarter.com/pcasm/ &
-     http://www.devoresoftware.com/nomyso/
-       * Compiles & Links
-       # Major Bugs
-   # inline asm: convert to at&t syntax or make seperate and nasm
-   $ Update makefile for MinGW
-       * Move all program names, directories, and flags to macros
-       # Add Corosponing MinGW macro defs.
-3. Compile without Direct X
-   # Swap winmain.cpp for sdlmain.cpp (#)
-   # Winelib?
+    $ make v5.asm compile in NASM. Thanks, http://www.drpaulcarter.com/pcasm/
+      and http://www.devoresoftware.com/nomyso/
+        * Compiles & Links
+        $ Fix Bugs
+            $ ?Word to Dword
+            $ Incorrect bracketing
+            # Other
+    # Inline asm: convert to at&t syntax or make seperate and nasm
+    * Update makefile for MinGW
+        * Move all program names, directories, and flags to macros
+        * Add Corosponing MinGW macro defs.
+    # Fix Bugs
+3. Compile without Direct X (#)
+    # Swap winmain.cpp for sdlmain.cpp
+    # Winelib?
 4. Compile on *NIX (Linux in my case) (#)
 Misc
-   * Heirarchy implemented. (makefile ready, code needs to be adjusted so bin
-     and data don't need to be in same folder
-   * .c to .cpp, accuracy is great.
-   # CMake? autobuild?
-   
+    * Heirarchy implemented. (Makefile ready; code needs to be adjusted so bin
+      and data don't need to be in same folder.)
+    * .c to .cpp, accuracy is great.
+    # PreMake? CMake? autobuild?
+
+------------------------------------------------------------------------------
+Build Prerequisites:
+
+Build Tools:
+    Option 1
+         MSVS utilities (nmake, ml, cl)
+        Windows SDK (libs)
+    Option 2
+        MinGW/GCC
+        Nasm in %MinGW%/bin
+Graphics
+    Option 1
+        DirectX SDK (libs)
+    Option 2
+        SDL DEV-MinGW/GCC and RUNTIME (libs)
+
+------------------------------------------------------------------------------
 [Original] Voxlap engine notes by Ken Silverman (http://advsys.net/ken)
 ------------------------------------------------------------------------------
 Introduction:
