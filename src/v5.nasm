@@ -16,9 +16,9 @@ EXTERN _gxmax    ; dword
 EXTERN _gcsub    ; dword      ;long[4]
 EXTERN _gylookup ; dword      ;long[256+4+128+4+...]
 EXTERN _gmipnum  ; dword
-;EXTRN _cf        ; dword      ;{ long i0,i1,z0,z1,cx0,cy0,cx1,cy1; }[128]
+;EXTERN _cf       ; dword      ;{ long i0,i1,z0,z1,cx0,cy0,cx1,cy1; }[128]
 
-EXTERN _sptr
+EXTERN _sptr     ; dword
 
 EXTERN _skyoff   ; dword      ;Memory offset to start of longitude line
 EXTERN _skyxsiz  ; dword      ;Size of longitude line
@@ -26,25 +26,25 @@ EXTERN _skylat   ; dword      ;long[_skyxsiz] : latitude's unit dir. vector
 
 ;How to declare C-ASM shared variables in the ASM code:
 ;ASM:                    C:
-;   PUBLIC _xr0             extern void *xr0;
+;   GLOBAL _xr0             extern void *xr0;
 ;   ALIGN 16                #define lxr0 ((long *)&xr0)
 ;   _xr0: dd 0,0,0,0        #define fxr0 ((float *)&xr0)
 ;   Use: _xr0               Use: lxr0[0-3]  or:  fxr0[0-3]
 
-;EXTRN _reax; dword
-;EXTRN _rebx; dword
-;EXTRN _recx; dword
-;EXTRN _redx; dword
-;EXTRN _resi; dword
-;EXTRN _redi; dword
-;EXTRN _rebp; dword
-;EXTRN _resp; dword
-;EXTRN _remm; dword  ;long[16]
+;EXTERN _reax; dword
+;EXTERN _rebx; dword
+;EXTERN _recx; dword
+;EXTERN _redx; dword
+;EXTERN _resi; dword
+;EXTERN _redi; dword
+;EXTERN _rebp; dword
+;EXTERN _resp; dword
+;EXTERN _remm; dword  ;long[16]
 
 SEGMENT	.text	PUBLIC	USE32	CLASS=CODE
 
 
-GLOBAL	_v5_asm_dep_unlock ;Data Execution Prevention unlock (works under XP2 SP2)
+GLOBAL _v5_asm_dep_unlock ;Data Execution Prevention unlock (works under XP2 SP2)
 _v5_asm_dep_unlock:
 	EXTERN __imp__VirtualProtect@16 ; near
 	sub esp, 4
@@ -54,7 +54,7 @@ _v5_asm_dep_unlock:
 	sub eax, _v5_asm_dep_unlock
 	push dword eax
 	push dword _v5_asm_dep_unlock
-	call dword 0:__imp__VirtualProtect@16
+	call dword __imp__VirtualProtect@16
 	add esp, 4
 	retn
 
@@ -183,8 +183,8 @@ _grouscanasm:
 		;      2048-4095  c and ce always sit in this range ((esp = c) <= ce)
 		;      4096-6143  This is where memory for cfasm is actually stored!
 		;      6144-8191  (memory never used - this seems unnecessary?)
-	mov esp, [_cfasm+2048]
-	mov eax, [_cfasm+4096]
+	mov esp, _cfasm+2048 ; _MANUAL FIX_ "offset" in masm means don't bracket
+	mov eax, _cfasm+4096 ; _MANUAL FIX_ "offset" in masm means don't bracket
 	mov ecx, [eax+8]
 	mov edx, [eax+12]
 	movq mm0, [eax+16]
@@ -381,7 +381,7 @@ enddrawflor:
 	mov ebx, esp
 afterdelete:
 	sub esp, 32
-	cmp esp, [_cfasm+2048]
+	cmp esp, _cfasm+2048 ; _MANUAL FIX_ "offset" in masm means don't bracket
 	jae skipixy
 
 	movq mm4, qword [_gcsub+ebp*8]
@@ -505,7 +505,7 @@ begsearchi:
 	mov eax, [ce]            ;ce++;
 	add eax, 32
 
-	cmp eax, [_cfasm+4096] ;VERY BAD!!! - Interrupt would overwrite data!
+	cmp eax, _cfasm+4096 ;VERY BAD!!! - Interrupt would overwrite data! ; _MANUAL FIX_ "offset" in masm means don't bracket
 	ja retsub                    ;Just in case, return early to prevent lockup.
 
 	mov dword [ce], eax
@@ -597,7 +597,7 @@ skipremip1:
 
 	sar DWORD [_gixy+4], 1
 
-	mov eax, [_cfasm+2048]
+	mov eax, _cfasm+2048 ; _MANUAL FIX_ "offset" in masm means don't bracket
 startremip0:
 	shr dword [eax+8+2048], 1
 	inc dword [eax+12+2048]

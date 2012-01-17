@@ -8,16 +8,20 @@ default:                   $(oBN)/game.exe    $(oBN)/simple.exe $(oBN)/voxed.exe
 
 # executable (.exe) (meta)targets
 $(oBN)/game.exe:           $(oBN)/game.obj   $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main1.obj;
-	$(LNK) $(LNKFLAGS)     $(oBN)/game.obj   $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main1.obj $(GFXOBJ) ole32.lib user32.lib gdi32.lib
+	$(LNK) $(LNKFLAGS)     $(oBN)/game.obj   $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main1.obj \
+	                       $(GFXOBJ) $(LNKlibPre)ole32$(LNKlibSuf) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf)
 
-$(oBN)/simple.exe:         $(oBN)/simple.obj $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main1.obj;                     
-	$(LNK) $(LNKFLAGS)     $(oBN)/simple.obj $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main1.obj $(GFXOBJ) ole32.lib user32.lib gdi32.lib
+$(oBN)/simple.exe:         $(oBN)/simple.obj $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main1.obj;
+	$(LNK) $(LNKFLAGS)     $(oBN)/simple.obj $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main1.obj \
+	                       $(GFXOBJ) $(LNKlibPre)ole32$(LNKlibSuf) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf)
 
-$(oBN)/voxed.exe:          $(oBN)/voxed.obj  $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main2.obj;                     
-	$(LNK) $(LNKFLAGS)     $(oBN)/voxed.obj  $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main2.obj $(GFXOBJ)           user32.lib gdi32.lib comdlg32.lib
+$(oBN)/voxed.exe:          $(oBN)/voxed.obj  $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main2.obj;
+	$(LNK) $(LNKFLAGS)     $(oBN)/voxed.obj  $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main2.obj \
+	                       $(GFXOBJ)                               $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf) $(LNKlibPre)comdlg32$(LNKlibSuf)
 
-$(oBN)/kwalk.exe:          $(oBN)/kwalk.obj  $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main2.obj;                     
-	$(LNK) $(LNKFLAGS)     $(oBN)/kwalk.obj  $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main2.obj $(GFXOBJ) ole32.lib user32.lib gdi32.lib comdlg32.lib
+$(oBN)/kwalk.exe:          $(oBN)/kwalk.obj  $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main2.obj;
+	$(LNK) $(LNKFLAGS)     $(oBN)/kwalk.obj  $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main2.obj \
+	                       $(GFXOBJ) $(LNKlibPre)ole32$(LNKlibSuf) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf) $(LNKlibPre)comdlg32$(LNKlibSuf)
 
 
 # binary object (.obj) targets
@@ -54,8 +58,13 @@ $(oBN)/$(GFXdep)main2.obj: $(SRC)/$(GFXdep)main.cpp $(SRC)/sysmain.h;
 	$(CPP) $(CPPFLAGS)     $(SRC)/$(GFXdep)main.cpp $(CMacroPre)NOSOUND
 
 # Clearn Script
+cleanall: clean
+	cd $(oBN)
+	del *.exe *.dll
+	cd ../decomp
+	del v*
 clean:
 	del "* - debug.txt"
 	del asmcompare.txt
 	cd $(oBN)
-	del *.exe *.obj
+	del *.obj

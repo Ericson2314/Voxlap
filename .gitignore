@@ -1,4 +1,7 @@
+./outbin/
 ./outbin/*
+./decomp/
+./decomp/*
 *.user
 *.suo
 _ReSharper.*
