@@ -6,19 +6,19 @@ LVSID EQU 10           ;log2(VSID) - used for mip-mapping index adjustment
 %DEFINE	VSID	(1 << LVSID) ;should match VSID in VOXLAP5.H (adjust LVSID, not this)
 %DEFINE	LOGPREC	(8+12)
 
-EXTERN _gi
-EXTERN _gpixy
-EXTERN _gixy     ;long[2]
-EXTERN _gpz      ;long[2]
-EXTERN _gdz      ;long[2]
-EXTERN _gxmip
-EXTERN _gxmax
-EXTERN _gcsub    ;long[4]
-EXTERN _gylookup ;long[256+4+128+4+...]
-EXTERN _gmipnum
-;EXTRN _cf        ;{ long i0,i1,z0,z1,cx0,cy0,cx1,cy1; }[128]
+EXTERN _gi       ; dword
+EXTERN _gpixy    ; dword
+EXTERN _gixy     ; dword      ;long[2]
+EXTERN _gpz      ; dword      ;long[2]
+EXTERN _gdz      ; dword      ;long[2]
+EXTERN _gxmip    ; dword
+EXTERN _gxmax    ; dword
+EXTERN _gcsub    ; dword      ;long[4]
+EXTERN _gylookup ; dword      ;long[256+4+128+4+...]
+EXTERN _gmipnum  ; dword
+;EXTERN _cf       ; dword      ;{ long i0,i1,z0,z1,cx0,cy0,cx1,cy1; }[128]
 
-EXTERN _sptr
+EXTERN _sptr     ; dword
 
 EXTERN _skyoff   ;Memory offset to start of longitude line
 EXTERN _skyxsiz  ;Size of longitude line
@@ -26,20 +26,20 @@ EXTERN _skylat   ;long[_skyxsiz] : latitude's unit dir. vector
 
 ;How to declare C-ASM shared variables in the ASM code:
 ;ASM:                    C:
-;   PUBLIC _xr0             extern void *xr0;
+;   GLOBAL _xr0             extern void *xr0;
 ;   ALIGN 16                #define lxr0 ((long *)&xr0)
 ;   _xr0: dd 0,0,0,0        #define fxr0 ((float *)&xr0)
 ;   Use: _xr0               Use: lxr0[0-3]  or:  fxr0[0-3]
 
-;EXTRN _reax
-;EXTRN _rebx
-;EXTRN _recx
-;EXTRN _redx
-;EXTRN _resi
-;EXTRN _redi
-;EXTRN _rebp
-;EXTRN _resp
-;EXTRN _remm  ;long[16]
+;EXTERN _reax; dword
+;EXTERN _rebx; dword
+;EXTERN _recx; dword
+;EXTERN _redx; dword
+;EXTERN _resi; dword
+;EXTERN _redi; dword
+;EXTERN _rebp; dword
+;EXTERN _resp; dword
+;EXTERN _remm; dword  ;long[16]
 
 SEGMENT	.text	PUBLIC	USE32	CLASS=CODE
 
@@ -52,9 +52,9 @@ _v5_asm_dep_unlock:
 	push WORD 40h ;PAGE_EXECUTE_READWRITE
 	mov eax, _dep_protect_end
 	sub eax, _v5_asm_dep_unlock
-	push eax
-	push _v5_asm_dep_unlock
-	call dword NEAR __imp__VirtualProtect@16
+	push dword eax
+	push dword _v5_asm_dep_unlock
+	call dword __imp__VirtualProtect@16
 	add esp, 4
 	retn
 
@@ -183,8 +183,8 @@ _grouscanasm:
 		;      2048-4095  c and ce always sit in this range ((esp = c) <= ce)
 		;      4096-6143  This is where memory for cfasm is actually stored!
 		;      6144-8191  (memory never used - this seems unnecessary?)
-	mov esp, [_cfasm+2048]
-	mov eax, [_cfasm+4096]
+	mov esp, _cfasm+2048 ; _MANUAL FIX_ "offset" in masm means don't bracket
+	mov eax, _cfasm+4096 ; _MANUAL FIX_ "offset" in masm means don't bracket
 	mov ecx, [eax+8]
 	mov edx, [eax+12]
 	movq mm0, [eax+16]
@@ -381,7 +381,7 @@ enddrawflor:
 	mov ebx, esp
 afterdelete:
 	sub esp, 32
-	cmp esp, [_cfasm+2048]
+	cmp esp, _cfasm+2048 ; _MANUAL FIX_ "offset" in masm means don't bracket
 	jae skipixy
 
 	movq mm4, qword [_gcsub+ebp*8]
@@ -505,7 +505,7 @@ begsearchi:
 	mov eax, [ce]            ;ce++;
 	add eax, 32
 
-	cmp eax, [_cfasm+4096] ;VERY BAD!!! - Interrupt would overwrite data!
+	cmp eax, _cfasm+4096 ;VERY BAD!!! - Interrupt would overwrite data! ; _MANUAL FIX_ "offset" in masm means don't bracket
 	ja retsub                    ;Just in case, return early to prevent lockup.
 
 	mov dword [ce], eax
@@ -597,7 +597,7 @@ skipremip1:
 
 	sar DWORD [_gixy+4], 1
 
-	mov eax, [_cfasm+2048]
+	mov eax, _cfasm+2048 ; _MANUAL FIX_ "offset" in masm means don't bracket
 startremip0:
 	shr dword [eax+8+2048], 1
 	inc dword [eax+12+2048]

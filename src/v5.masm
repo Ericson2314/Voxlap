@@ -6,23 +6,23 @@ LVSID EQU 10           ;log2(VSID) - used for mip-mapping index adjustment
 VSID EQU (1 SHL LVSID) ;should match VSID in VOXLAP5.H (adjust LVSID, not this)
 LOGPREC EQU (8+12)
 
-EXTRN _gi : dword
-EXTRN _gpixy : dword
-EXTRN _gixy : dword     ;long[2]
-EXTRN _gpz : dword      ;long[2]
-EXTRN _gdz : dword      ;long[2]
-EXTRN _gxmip : dword
-EXTRN _gxmax : dword
-EXTRN _gcsub : dword    ;long[4]
-EXTRN _gylookup : dword ;long[256+4+128+4+...]
-EXTRN _gmipnum : dword
-;EXTRN _cf : dword      ;{ long i0,i1,z0,z1,cx0,cy0,cx1,cy1; }[128]
+EXTERN _gi       : dword
+EXTERN _gpixy    : dword
+EXTERN _gixy     : dword      ;long[2]
+EXTERN _gpz      : dword      ;long[2]
+EXTERN _gdz      : dword      ;long[2]
+EXTERN _gxmip    : dword
+EXTERN _gxmax    : dword
+EXTERN _gcsub    : dword      ;long[4]
+EXTERN _gylookup : dword      ;long[256+4+128+4+...]
+EXTERN _gmipnum  : dword
+;EXTERN _cf       : dword      ;{ long i0,i1,z0,z1,cx0,cy0,cx1,cy1; }[128]
 
-EXTRN _sptr : dword
+EXTERN _sptr     : dword
 
-EXTRN _skyoff : dword   ;Memory offset to start of longitude line
-EXTRN _skyxsiz : dword  ;Size of longitude line
-EXTRN _skylat : dword   ;long[_skyxsiz] : latitude's unit dir. vector
+EXTERN _skyoff   : dword      ;Memory offset to start of longitude line
+EXTERN _skyxsiz  : dword      ;Size of longitude line
+EXTERN _skylat   : dword      ;long[_skyxsiz] : latitude's unit dir. vector
 
 ;How to declare C-ASM shared variables in the ASM code:
 ;ASM:                    C:
@@ -31,22 +31,22 @@ EXTRN _skylat : dword   ;long[_skyxsiz] : latitude's unit dir. vector
 ;   _xr0: dd 0,0,0,0        #define fxr0 ((float *)&xr0)
 ;   Use: _xr0               Use: lxr0[0-3]  or:  fxr0[0-3]
 
-;EXTRN _reax: dword
-;EXTRN _rebx: dword
-;EXTRN _recx: dword
-;EXTRN _redx: dword
-;EXTRN _resi: dword
-;EXTRN _redi: dword
-;EXTRN _rebp: dword
-;EXTRN _resp: dword
-;EXTRN _remm: dword  ;long[16]
+;EXTERN _reax: dword
+;EXTERN _rebx: dword
+;EXTERN _recx: dword
+;EXTERN _redx: dword
+;EXTERN _resi: dword
+;EXTERN _redi: dword
+;EXTERN _rebp: dword
+;EXTERN _resp: dword
+;EXTERN _remm: dword  ;long[16]
 
 text SEGMENT PUBLIC USE32 'CODE'
 ASSUME cs:text,ds:text
 
 PUBLIC _v5_asm_dep_unlock ;Data Execution Prevention unlock (works under XP2 SP2)
 _v5_asm_dep_unlock:
-	EXTRN __imp__VirtualProtect@16:NEAR
+	EXTERN __imp__VirtualProtect@16:NEAR
 	sub esp, 4
 	push esp
 	push 40h ;PAGE_EXECUTE_READWRITE
@@ -774,9 +774,9 @@ deleteloop:
 MAXZSIZ EQU 1024 ;WARNING: THIS IS BAD SINCE KV6 format supports up to 65535!
 
 ifdef USEZBUFFER
-EXTRN _zbufoff : dword
+EXTERN _zbufoff : dword
 endif
-EXTRN _ptfaces16 : dword
+EXTERN _ptfaces16 : dword
 
 PUBLIC _opti4asm, _caddasm, _ztabasm, _scisdist, _kv6colmul, _kv6coladd
 PUBLIC _qsum0, _qsum1, _qbplbpp, _kv6frameplace, _kv6bytesperline

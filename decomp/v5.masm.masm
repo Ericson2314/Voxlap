@@ -1,0 +1,1000 @@
+; Input	MD5   :	FA160CF12C1F7D7BA5932781B74ECC97
+; Input	CRC32 :	62951FA4
+
+; File Name   :	C:\Users\John\Code\git\voxlap-port\outbin\v5.obj
+; Format      :	COFF (X386MAGIC)
+
+		.686p
+		.mmx
+		.model flat
+
+; ===========================================================================
+
+; Segment type:	Pure code
+; Segment permissions: Read/Execute
+text		segment	para public 'CODE' use32
+		assume cs:text
+		assume es:nothing, ss:nothing, ds:nothing, fs:nothing, gs:nothing
+
+; =============== S U B	R O U T	I N E =======================================
+
+
+		public $$000000
+$$000000	proc near		; DATA XREF: $$000000+Bo $$000000+11o
+		sub	esp, 4
+		push	esp		; lpflOldProtect
+		push	40h ; '@'       ; flNewProtect
+		mov	eax, 74C8h
+		sub	eax, offset $$000000
+		push	eax		; dwSize
+		push	offset $$000000	; lpAddress
+		call	dword ptr ds:__imp__VirtualProtect@16 ;	VirtualProtect(x,x,x,x)
+		add	esp, 4
+		retn
+$$000000	endp
+
+; ---------------------------------------------------------------------------
+		public _cfasm
+_cfasm		dd 1F7h	dup(0)
+		db 2 dup(0)
+word_7FE	dw 0			; DATA XREF: text:gxmipko
+		dd 8 dup(0)
+dword_820	dd 200h	dup(0)		; DATA XREF: _grouscanasm+10o
+					; _grouscanasm+258o ...
+dword_1020	dd 400h	dup(0)		; DATA XREF: _grouscanasm+15o
+					; _grouscanasm+3AFo
+		dd 2 dup(0FF00FFh), 2 dup(0F000F0h), 2 dup(0E000E0h)
+mmask		dq 0FFFF0000FFFF0000h	; DATA XREF: _grouscanasm+79r
+					; _grouscanasm+28Dr
+		public _skycast
+_skycast	dq 0			; DATA XREF: _grouscanasm:loc_268Dr
+					; _grouscanasm+5E0r
+gylookoff	dd 0			; DATA XREF: _grouscanasm+2Ew
+					; _grouscanasm+B9r ...
+ngxmax		dd 0			; DATA XREF: _grouscanasm:loc_214Cw
+					; _grouscanasm+294r ...
+ce		dd 0			; DATA XREF: _grouscanasm+28w
+					; _grouscanasm+2AEr ...
+espbak		dd 0			; DATA XREF: _grouscanasm+8w
+					; _grouscanasm+642r
+gylut		dd offset _gylookup	; DATA XREF: _grouscanasm+4EFr
+		dd offset _gylookup+410h
+		dd offset _gylookup+620h
+		dd offset _gylookup+730h
+		dd offset _gylookup+7C0h
+		dd offset _gylookup+810h
+		dd offset _gylookup+840h
+		dd offset _gylookup+860h
+		dd offset _gylookup+878h
+gxmipk		dd offset word_7FE	; DATA XREF: _grouscanasm+4D0r
+		dd offset _cfasm+3DEh
+		dd offset _cfasm+1DEh
+		dd offset _cfasm+0DEh
+		dd offset _cfasm+5Eh
+		dd offset _cfasm+1Eh
+		dd 1Eh,	0Eh, 6
+gymipk		dd 3FF000h		; DATA XREF: _grouscanasm+4D7r
+		dd 0FF800h, 3FC00h, 0FE00h, 3F00h, 0F80h, 3C0h,	0E0h, 30h
+gamipk		dd offset _sptr		; DATA XREF: _grouscanasm+4E1r
+		dd offset _sptr+400000h
+		dd offset _sptr+500000h
+		dd offset _sptr+540000h
+		dd offset _sptr+550000h
+		dd offset _sptr+554000h
+		dd offset _sptr+555000h
+		dd offset _sptr+555400h
+		dd offset _sptr+555500h
+gmipcnt		db 0			; DATA XREF: _grouscanasm+38w
+					; _grouscanasm:loc_252Er ...
+		align 10h
+
+; =============== S U B	R O U T	I N E =======================================
+
+
+		public _grouscanasm
+_grouscanasm	proc near
+
+arg_0		= dword	ptr  4
+arg_7CC		= dword	ptr  7D0h
+arg_7D0		= dword	ptr  7D4h
+arg_7D4		= dword	ptr  7D8h
+arg_7DC		= qword	ptr  7E0h
+arg_7E4		= qword	ptr  7E8h
+arg_7EC		= dword	ptr  7F0h
+arg_7F0		= dword	ptr  7F4h
+
+		mov	eax, [esp+arg_0]
+		push	ebx
+		push	esi
+		push	edi
+		push	ebp
+		mov	ds:espbak, esp
+		mov	edi, eax
+		mov	esp, offset dword_820
+		mov	eax, offset dword_1020
+		mov	ecx, [eax+8]
+		mov	edx, [eax+0Ch]
+		movq	mm0, qword ptr [eax+10h]
+		movq	mm1, qword ptr [eax+18h]
+		mov	ds:ce, esp
+		mov	ds:gylookoff, offset _gylookup
+		mov	ds:gmipcnt, 0
+		mov	ebp, dword ptr ds:_gxmax
+		cmp	byte ptr ds:_gmipnum, 1
+		jle	short loc_214C
+		cmp	ebp, dword ptr ds:_gxmip
+		jle	short loc_214C
+		mov	ebp, dword ptr ds:_gxmip
+
+loc_214C:				; CODE XREF: _grouscanasm+4Cj
+					; _grouscanasm+54j
+		mov	ds:ngxmax, ebp
+		mov	ebp, dword ptr ds:_gpz+4
+		sub	ebp, dword ptr ds:_gpz
+		shr	ebp, 1Fh
+		movd	mm6, dword ptr ds:_gpz[ebp*4]
+		pand	mm6, ds:mmask
+		mov	eax, dword ptr ds:_gdz[ebp*4]
+		add	dword ptr ds:_gpz[ebp*4], eax
+		mov	esi, dword ptr ds:_gpixy
+		cmp	edi, [esi]
+		jz	loc_22E4
+		jmp	loc_2281
+; ---------------------------------------------------------------------------
+
+loc_2191:				; CODE XREF: _grouscanasm+2EAj
+					; _grouscanasm+2FEj ...
+		movzx	eax, byte ptr [edi+1]
+		cmp	eax, edx
+		jge	short loc_2201
+		mov	ebx, [esp+10h+arg_7F0]
+
+loc_21A0:				; CODE XREF: _grouscanasm+108j
+		neg	eax
+		add	eax, edx
+		dec	edx
+		punpcklbw mm5, qword ptr [edi+eax*4]
+		mov	eax, ds:gylookoff
+		movd	mm3, dword ptr [eax+edx*4]
+		psubusb	mm5, mm4
+		pshufw	mm2, mm5, 0FFh
+		pmulhuw	mm5, mm2
+		psrlw	mm5, 7
+		packuswb mm5, mm5
+		punpckldq mm5, mm6
+		por	mm3, mm6
+
+loc_21C9:				; CODE XREF: _grouscanasm+FBj
+		pshufw	mm7, mm1, 0DDh
+		pmaddwd	mm7, mm3
+		movd	eax, mm7
+		test	eax, eax
+		jle	short loc_21F2
+		psubd	mm1, qword ptr ds:_gi
+		movntq	qword ptr [ebx], mm5
+		sub	ebx, 8
+		cmp	ebx, [esp+10h+arg_7EC]
+		jnb	short loc_21C9
+		jmp	loc_273D
+; ---------------------------------------------------------------------------
+
+loc_21F2:				; CODE XREF: _grouscanasm+E5j
+		movzx	eax, byte ptr [edi+1]
+		cmp	eax, edx
+		jnz	short loc_21A0
+		mov	[esp+10h+arg_7F0], ebx
+
+loc_2201:				; CODE XREF: _grouscanasm+A7j
+		cmp	edi, [esi]
+		mov	edx, eax
+		jz	loc_22E0
+		movzx	eax, byte ptr [edi+3]
+		cmp	eax, ecx
+		jle	short loc_227B
+		mov	ebx, [esp+10h+arg_7EC]
+
+loc_221A:				; CODE XREF: _grouscanasm+182j
+		neg	eax
+		add	eax, ecx
+		inc	ecx
+		punpcklbw mm5, qword ptr [edi+eax*4]
+		mov	eax, ds:gylookoff
+		movd	mm3, dword ptr [eax+ecx*4]
+		psubusb	mm5, mm4
+		pshufw	mm2, mm5, 0FFh
+		pmulhuw	mm5, mm2
+		psrlw	mm5, 7
+		packuswb mm5, mm5
+		punpckldq mm5, mm6
+		por	mm3, mm6
+
+loc_2243:				; CODE XREF: _grouscanasm+175j
+		pshufw	mm7, mm0, 0DDh
+		pmaddwd	mm7, mm3
+		movd	eax, mm7
+		test	eax, eax
+		jg	short loc_226C
+		paddd	mm0, qword ptr ds:_gi
+		movntq	qword ptr [ebx], mm5
+		add	ebx, 8
+		cmp	ebx, [esp+10h+arg_7F0]
+		jbe	short loc_2243
+		jmp	loc_273D
+; ---------------------------------------------------------------------------
+
+loc_226C:				; CODE XREF: _grouscanasm+15Fj
+		movzx	eax, byte ptr [edi+3]
+		cmp	eax, ecx
+		jnz	short loc_221A
+		mov	[esp+10h+arg_7EC], ebx
+
+loc_227B:				; CODE XREF: _grouscanasm+121j
+		mov	ecx, eax
+		pshufw	mm6, mm6, 4Eh
+
+loc_2281:				; CODE XREF: _grouscanasm+9Cj
+		mov	eax, ds:gylookoff
+		movd	mm3, dword ptr [eax+ecx*4]
+		por	mm3, mm6
+
+loc_228D:				; CODE XREF: _grouscanasm+1E9j
+		pshufw	mm7, mm0, 0DDh
+		pmaddwd	mm7, mm3
+		movd	eax, mm7
+		test	eax, eax
+		jg	short loc_22E4
+		paddd	mm0, qword ptr ds:_gi
+		mov	eax, [esp+10h+arg_7EC]
+		punpcklbw mm5, qword ptr [edi-4]
+		psubusb	mm5, qword ptr ds:_gcsub+10h
+		pshufw	mm2, mm5, 0FFh
+		pmulhuw	mm5, mm2
+		psrlw	mm5, 7
+		packuswb mm5, mm5
+		punpckldq mm5, mm6
+		movntq	qword ptr [eax], mm5
+		add	eax, 8
+		mov	[esp+10h+arg_7EC], eax
+		cmp	eax, [esp+10h+arg_7F0]
+		jbe	short loc_228D
+		jmp	loc_2741
+; ---------------------------------------------------------------------------
+
+loc_22E0:				; CODE XREF: _grouscanasm+115j
+		pshufw	mm6, mm6, 4Eh
+
+loc_22E4:				; CODE XREF: _grouscanasm+96j
+					; _grouscanasm+1A9j
+		mov	eax, ds:gylookoff
+		movd	mm3, dword ptr [eax+edx*4]
+		por	mm3, mm6
+
+loc_22F0:				; CODE XREF: _grouscanasm+24Cj
+		pshufw	mm7, mm1, 0DDh
+		pmaddwd	mm7, mm3
+		movd	eax, mm7
+		test	eax, eax
+		jle	short loc_2343
+		psubd	mm1, qword ptr ds:_gi
+		mov	eax, [esp+10h+arg_7F0]
+		punpcklbw mm5, qword ptr [edi+4]
+		psubusb	mm5, qword ptr ds:_gcsub+18h
+		pshufw	mm2, mm5, 0FFh
+		pmulhuw	mm5, mm2
+		psrlw	mm5, 7
+		packuswb mm5, mm5
+		punpckldq mm5, mm6
+		movntq	qword ptr [eax], mm5
+		sub	eax, 8
+		mov	[esp+10h+arg_7F0], eax
+		cmp	eax, [esp+10h+arg_7EC]
+		jnb	short loc_22F0
+		jmp	loc_2741
+; ---------------------------------------------------------------------------
+
+loc_2343:				; CODE XREF: _grouscanasm+20Cj
+		mov	ebx, esp
+
+loc_2345:				; CODE XREF: _grouscanasm+66Dj
+					; _grouscanasm+6B4j
+		sub	esp, 20h
+		cmp	esp, offset dword_820
+		jnb	short loc_23A6
+		movq	mm4, qword ptr ds:_gcsub[ebp*8]
+		add	esi, dword ptr ds:_gixy[ebp*4]
+		mov	ebp, dword ptr ds:_gpz+4
+		mov	edi, [esi]
+		sub	ebp, dword ptr ds:_gpz
+		shr	ebp, 1Fh
+		mov	eax, dword ptr ds:_gpz[ebp*4]
+		movd	mm7, eax
+		punpckldq mm6, mm7
+		pand	mm6, ds:mmask
+		cmp	eax, ds:ngxmax
+		ja	loc_252E
+		add	eax, dword ptr ds:_gdz[ebp*4]
+		mov	dword ptr ds:_gpz[ebp*4], eax
+		mov	esp, ds:ce
+		jmp	short loc_23AA
+; ---------------------------------------------------------------------------
+
+loc_23A6:				; CODE XREF: _grouscanasm+25Ej
+		pshufw	mm6, mm6, 4Eh
+
+loc_23AA:				; CODE XREF: _grouscanasm+2B4j
+					; _grouscanasm+57Dj
+		cmp	ebx, esp
+		jz	short loc_23D7
+		add	ebx, 800h
+		mov	[ebx+8], ecx
+		mov	[ebx+0Ch], edx
+		movq	qword ptr [ebx+10h], mm0
+		movq	qword ptr [ebx+18h], mm1
+		lea	ebx, [esp+30h+arg_7CC]
+		mov	ecx, [ebx+8]
+		mov	edx, [ebx+0Ch]
+		movq	mm0, qword ptr [ebx+10h]
+		movq	mm1, qword ptr [ebx+18h]
+
+loc_23D7:				; CODE XREF: _grouscanasm+2BCj
+		cmp	byte ptr [edi],	0
+		jz	loc_2191
+		mov	ebx, ds:gylookoff
+		jmp	short loc_23F4
+; ---------------------------------------------------------------------------
+
+loc_23E8:				; CODE XREF: _grouscanasm+31Fj
+		lea	edi, [edi+eax*4]
+		cmp	byte ptr [edi],	0
+		jz	loc_2191
+
+loc_23F4:				; CODE XREF: _grouscanasm+2F6j
+		movzx	eax, byte ptr [edi+2]
+		movd	mm3, dword ptr [ebx+eax*4+4]
+		por	mm3, mm6
+		pshufw	mm7, mm0, 0DDh
+		pmaddwd	mm7, mm3
+		movd	eax, mm7
+		test	eax, eax
+		movzx	eax, byte ptr [edi]
+		jg	short loc_23E8
+		movzx	eax, byte ptr [edi+eax*4+3]
+		movd	mm3, dword ptr [ebx+eax*4]
+		por	mm3, mm6
+		pshufw	mm7, mm1, 0DDh
+		pmaddwd	mm7, mm3
+		movd	eax, mm7
+		test	eax, eax
+		jle	loc_2191
+		lea	eax, [esp+30h+arg_7CC]
+		mov	[eax+8], ecx
+		mov	[eax+0Ch], edx
+		movq	qword ptr [eax+10h], mm0
+		movq	qword ptr [eax+18h], mm1
+		mov	edx, [eax+4]
+		movzx	eax, byte ptr [edi+2]
+		movd	mm3, dword ptr [ebx+eax*4+4]
+		por	mm3, mm6
+
+loc_2453:				; CODE XREF: _grouscanasm+38Bj
+		movq	mm7, qword ptr ds:_gi
+		pslld	mm7, 4
+		movq	mm5, mm1
+		psubd	mm5, mm7
+		pshufw	mm7, mm5, 0DDh
+		pmaddwd	mm7, mm3
+		movd	eax, mm7
+		test	eax, eax
+		jle	short loc_2489
+		movq	mm1, mm5
+		sub	edx, 80h ; '€'
+		jmp	short loc_2453
+; ---------------------------------------------------------------------------
+		jmp	short loc_2489
+; ---------------------------------------------------------------------------
+
+loc_247F:				; CODE XREF: _grouscanasm+3A5j
+		sub	edx, 8
+		psubd	mm1, qword ptr ds:_gi
+
+loc_2489:				; CODE XREF: _grouscanasm+380j
+					; _grouscanasm+38Dj
+		pshufw	mm7, mm1, 0DDh
+		pmaddwd	mm7, mm3
+		movd	eax, mm7
+		test	eax, eax
+		jg	short loc_247F
+		mov	eax, ds:ce
+		add	eax, 20h ; ' '
+		cmp	eax, offset dword_1020
+		ja	loc_2730
+		mov	ds:ce, eax
+		cmp	eax, esp
+		jbe	short loc_24F2
+
+loc_24B3:				; CODE XREF: _grouscanasm+400j
+		movq	mm5, qword ptr [eax+7F8h]
+		movq	mm7, qword ptr [eax+7F0h]
+		movq	qword ptr [eax+818h], mm5
+		movq	qword ptr [eax+810h], mm7
+		movq	mm5, qword ptr [eax+7E8h]
+		movq	mm7, qword ptr [eax+7E0h]
+		movq	qword ptr [eax+808h], mm5
+		movq	qword ptr [eax+800h], mm7
+		sub	eax, 20h ; ' '
+		cmp	eax, esp
+		ja	short loc_24B3
+
+loc_24F2:				; CODE XREF: _grouscanasm+3C1j
+		movzx	eax, byte ptr [edi]
+		movq	mm7, mm1
+		paddd	mm7, qword ptr ds:_gi
+		movzx	eax, byte ptr [edi+eax*4+3]
+		mov	[esp+30h+arg_7F0], edx
+		add	edx, 8
+		mov	[esp+30h+arg_7CC], edx
+		mov	edx, eax
+		mov	[esp+30h+arg_7D4], eax
+		movq	[esp+30h+arg_7DC], mm7
+		add	esp, 20h
+		jmp	loc_2191
+; ---------------------------------------------------------------------------
+
+loc_252E:				; CODE XREF: _grouscanasm+29Aj
+		mov	al, ds:gmipcnt
+		inc	al
+		cmp	al, byte ptr ds:_gmipnum
+		jge	loc_2672
+		mov	ds:gmipcnt, al
+		sub	esi, offset _sptr
+		mov	eax, esi
+		shl	eax, 1Dh
+		xor	eax, dword ptr ds:_gixy
+		mov	eax, dword ptr ds:_gdz
+		js	short loc_2564
+		add	dword ptr ds:_gpz, eax
+
+loc_2564:				; CODE XREF: _grouscanasm+46Cj
+		add	eax, eax
+		jno	short loc_2574
+		mov	dword ptr ds:_gpz, 7FFFFFFFh
+		xor	eax, eax
+
+loc_2574:				; CODE XREF: _grouscanasm+476j
+		mov	dword ptr ds:_gdz, eax
+		mov	[ebx+808h], ecx
+		mov	eax, esi
+		mov	cl, ds:gmipcnt
+		add	cl, 12h
+		shl	eax, cl
+		xor	eax, dword ptr ds:_gixy+4
+		mov	eax, dword ptr ds:_gdz+4
+		js	short loc_259F
+		add	dword ptr ds:_gpz+4, eax
+
+loc_259F:				; CODE XREF: _grouscanasm+4A7j
+		add	eax, eax
+		jno	short loc_25AF
+		mov	dword ptr ds:_gpz+4, 7FFFFFFFh
+		xor	eax, eax
+
+loc_25AF:				; CODE XREF: _grouscanasm+4B1j
+		mov	dword ptr ds:_gdz+4, eax
+		shr	esi, 2
+		mov	eax, esi
+		movzx	ecx, ds:gmipcnt
+		and	esi, ds:gxmipk[ecx*4]
+		and	eax, ds:gymipk[ecx*4]
+		lea	esi, [eax+esi*2]
+		add	esi, ds:gamipk[ecx*4]
+		movzx	eax, ds:gmipcnt
+		mov	eax, ds:gylut[eax*4]
+		mov	ds:gylookoff, eax
+		sar	dword ptr ds:_gixy+4, 1
+		mov	eax, offset dword_820
+
+loc_25F6:				; CODE XREF: _grouscanasm+521j
+		shr	dword ptr [eax+808h], 1
+		inc	dword ptr [eax+80Ch]
+		shr	dword ptr [eax+80Ch], 1
+		add	eax, 20h ; ' '
+		cmp	eax, ds:ce
+		jbe	short loc_25F6
+		mov	eax, ds:ngxmax
+		cmp	eax, dword ptr ds:_gxmax
+		jnb	short loc_2672
+		add	eax, eax
+		jo	short loc_262C
+		cmp	eax, dword ptr ds:_gxmax
+		jl	short loc_2631
+
+loc_262C:				; CODE XREF: _grouscanasm+532j
+		mov	eax, dword ptr ds:_gxmax
+
+loc_2631:				; CODE XREF: _grouscanasm+53Aj
+		mov	ds:ngxmax, eax
+		mov	ecx, [ebx+808h]
+		shr	ecx, 1
+		inc	edx
+		shr	edx, 1
+		mov	ebp, dword ptr ds:_gpz+4
+		sub	ebp, dword ptr ds:_gpz
+		shr	ebp, 1Fh
+		mov	eax, dword ptr ds:_gpz[ebp*4]
+		add	eax, dword ptr ds:_gdz[ebp*4]
+		mov	dword ptr ds:_gpz[ebp*4], eax
+		mov	edi, [esi]
+		mov	esp, ds:ce
+		jmp	loc_23AA
+; ---------------------------------------------------------------------------
+
+loc_2672:				; CODE XREF: _grouscanasm+44Bj
+					; _grouscanasm+52Ej
+		mov	esp, offset dword_820
+		cmp	esp, ds:ce
+		ja	loc_2730
+		mov	esi, dword ptr ds:_skyoff
+		test	esi, esi
+		jnz	short loc_26BD
+
+loc_268D:				; CODE XREF: _grouscanasm+5C9j
+		movq	mm5, ds:_skycast
+		mov	eax, [esp+30h+arg_7CC]
+		mov	ebx, [esp+30h+arg_7D0]
+		cmp	eax, ebx
+		ja	short loc_26B0
+
+loc_26A6:				; CODE XREF: _grouscanasm+5BEj
+		movntq	qword ptr [eax], mm5
+		add	eax, 8
+		cmp	eax, ebx
+		jbe	short loc_26A6
+
+loc_26B0:				; CODE XREF: _grouscanasm+5B4j
+		add	esp, 20h
+		cmp	esp, ds:ce
+		jbe	short loc_268D
+		jmp	short loc_2730
+; ---------------------------------------------------------------------------
+
+loc_26BD:				; CODE XREF: _grouscanasm+59Bj
+		movq	qword ptr [ebx+818h], mm1
+		mov	esi, dword ptr ds:_skyoff
+		mov	ecx, dword ptr ds:_skylat
+		movd	mm5, dword ptr ds:_skycast+4
+		mov	edi, dword ptr ds:_skyxsiz
+
+loc_26DD:				; CODE XREF: _grouscanasm+63Ej
+		mov	eax, [esp+30h+arg_7CC]
+		mov	ebx, [esp+30h+arg_7D0]
+		cmp	eax, ebx
+		ja	short loc_2725
+		movq	mm1, [esp+30h+arg_7E4]
+
+loc_26F7:				; CODE XREF: _grouscanasm+633j
+		psubd	mm1, qword ptr ds:_gi
+
+loc_26FE:				; CODE XREF: _grouscanasm+622j
+		pshufw	mm7, mm1, 0DDh
+		movd	mm3, dword ptr [ecx+edi*4]
+		pmaddwd	mm7, mm3
+		movd	edx, mm7
+		sar	edx, 1Fh
+		lea	edi, [edx+edi]
+		jnz	short loc_26FE
+		movd	mm6, dword ptr [esi+edi*4]
+		punpckldq mm6, mm5
+		movntq	qword ptr [ebx], mm6
+		sub	ebx, 8
+		cmp	eax, ebx
+		jbe	short loc_26F7
+
+loc_2725:				; CODE XREF: _grouscanasm+5FDj
+		add	esp, 20h
+		cmp	esp, ds:ce
+		jbe	short loc_26DD
+
+loc_2730:				; CODE XREF: _grouscanasm+3B4j
+					; _grouscanasm+58Dj ...
+		emms
+		mov	esp, ds:espbak
+		pop	ebp
+		pop	edi
+		pop	esi
+		pop	ebx
+		retn
+; ---------------------------------------------------------------------------
+
+loc_273D:				; CODE XREF: _grouscanasm+FDj
+					; _grouscanasm+177j
+		pshufw	mm6, mm6, 4Eh
+
+loc_2741:				; CODE XREF: _grouscanasm+1EBj
+					; _grouscanasm+24Ej
+		mov	ebx, ds:ce
+		sub	ebx, 20h ; ' '
+		cmp	ebx, offset dword_820
+		jb	short loc_2730
+		mov	ds:ce, ebx
+		add	ebx, 20h ; ' '
+		cmp	esp, ebx
+		jnb	loc_2345
+		mov	eax, esp
+
+loc_2765:				; CODE XREF: _grouscanasm+6B2j
+		movq	mm5, qword ptr [eax+820h]
+		movq	mm7, qword ptr [eax+828h]
+		movq	qword ptr [eax+800h], mm5
+		movq	qword ptr [eax+808h], mm7
+		movq	mm5, qword ptr [eax+830h]
+		movq	mm7, qword ptr [eax+838h]
+		movq	qword ptr [eax+810h], mm5
+		movq	qword ptr [eax+818h], mm7
+		add	eax, 20h ; ' '
+		cmp	eax, ebx
+		jb	short loc_2765
+		jmp	loc_2345
+_grouscanasm	endp ; sp-analysis failed
+
+; ---------------------------------------------------------------------------
+		align 10h
+		public _opti4asm
+_opti4asm	dd 14h dup(0)
+		public _caddasm
+_caddasm	xmmword	0		; DATA XREF: text:0000715Ar
+					; text:00007164r ...
+		dd 1Ch dup(0)
+		public _ztabasm
+_ztabasm	xmmword	0		; DATA XREF: text:00007134r
+					; text:000072FBr ...
+		dd 0FFCh dup(0)
+xmmword_6880	xmmword	0		; DATA XREF: text:00007126r
+					; text:000072E6r ...
+		dd 8 dup(0)
+		public _scisdist
+_scisdist	dq 40800000h		; DATA XREF: text:0000713Er
+					; text:0000730Er
+		align 10h
+		public _kv6colmul
+_kv6colmul	dq 0			; DATA XREF: text:0000724Dr
+					; text:0000746Fr
+		dd 1FEh	dup(0)
+		public _kv6coladd
+_kv6coladd	dq 0			; DATA XREF: text:00007255r
+					; text:00007477r
+		public _qsum0
+_qsum0		dq 0			; DATA XREF: text:00007436r
+		public _qsum1
+_qsum1		dq 0			; DATA XREF: text:0000743Dr
+		public _qbplbpp
+_qbplbpp	dq 0			; DATA XREF: text:0000722Cr
+					; text:0000744Er
+		public _kv6frameplace
+_kv6frameplace	dd 0			; DATA XREF: _drawboundcubesseinitr
+					; _drawboundcube3dninitr
+		public _kv6bytesperline
+_kv6bytesperline dd 0			; DATA XREF: _drawboundcubesseinit+Ar
+					; _drawboundcube3dninit+Ar
+
+; =============== S U B	R O U T	I N E =======================================
+
+
+		public _drawboundcubesseinit
+_drawboundcubesseinit proc near
+		mov	eax, ds:_kv6frameplace
+		mov	ds:dword_7265, eax
+		mov	eax, ds:_kv6bytesperline
+		mov	ds:dword_728F, eax
+		mov	ds:dword_7289, eax
+		mov	eax, dword ptr ds:_zbufoff
+		mov	ds:dword_7270, eax
+		retn
+_drawboundcubesseinit endp
+
+; ---------------------------------------------------------------------------
+		align 10h
+
+		public _drawboundcubesse
+_drawboundcubesse:
+		mov	eax, [esp+4]
+		mov	ecx, [esp+8]
+		push	ebx
+		push	edi
+		movzx	edi, byte ptr [eax+6]
+		and	ecx, edi
+		jz	loc_729B
+		movaps	xmm7, ds:xmmword_6880
+		movzx	edi, word ptr [eax+4]
+		shl	edi, 4
+		addps	xmm7, ds:_ztabasm[edi]
+		movhlps	xmm0, xmm7
+		ucomiss	xmm0, dword ptr	ds:_scisdist
+		jb	loc_729B
+		lea	ecx, _ptfaces16[ecx*8]
+		movzx	ebx, byte ptr [ecx+1]
+		movzx	edi, byte ptr [ecx+2]
+		movaps	xmm0, ds:_caddasm[ebx]
+		addps	xmm0, xmm7
+		movaps	xmm1, ds:_caddasm[edi]
+		addps	xmm1, xmm7
+		movaps	xmm6, xmm0
+		movhlps	xmm0, xmm1
+		movlhps	xmm1, xmm6
+		rcpps	xmm0, xmm0
+		mulps	xmm0, xmm1
+		movzx	ebx, byte ptr [ecx+3]
+		movzx	edi, byte ptr [ecx+4]
+		movaps	xmm2, ds:_caddasm[ebx]
+		addps	xmm2, xmm7
+		movaps	xmm3, ds:_caddasm[edi]
+		addps	xmm3, xmm7
+		movaps	xmm6, xmm2
+		movhlps	xmm2, xmm3
+		movlhps	xmm3, xmm6
+		rcpps	xmm2, xmm2
+		mulps	xmm2, xmm3
+		cvttps2pi mm0, xmm0
+		movhlps	xmm0, xmm0
+		cvttps2pi mm2, xmm2
+		cvttps2pi mm1, xmm0
+		movhlps	xmm2, xmm2
+		packssdw mm0, mm1
+		movq	mm1, mm0
+		cvttps2pi mm3, xmm2
+		packssdw mm2, mm3
+		pminsw	mm0, mm2
+		pmaxsw	mm1, mm2
+		cmp	byte ptr [ecx],	4
+		jz	short loc_720B
+		movzx	ebx, byte ptr [ecx+5]
+		movzx	edi, byte ptr [ecx+6]
+		movaps	xmm4, ds:_caddasm[ebx]
+		addps	xmm4, xmm7
+		movaps	xmm5, ds:_caddasm[edi]
+		addps	xmm5, xmm7
+		movaps	xmm6, xmm4
+		movhlps	xmm4, xmm5
+		movlhps	xmm5, xmm6
+		rcpps	xmm4, xmm4
+		mulps	xmm4, xmm5
+		cvttps2pi mm4, xmm4
+		movhlps	xmm4, xmm4
+		cvttps2pi mm5, xmm4
+		packssdw mm4, mm5
+		pminsw	mm0, mm4
+		pmaxsw	mm1, mm4
+
+loc_720B:				; CODE XREF: text:000071CCj
+		pshufw	mm2, mm0, 0Eh
+		pshufw	mm3, mm1, 0Eh
+		pminsw	mm0, mm2
+		pmaxsw	mm1, mm3
+		punpckldq mm0, mm1
+		paddsw	mm0, mm6
+		pmaxsw	mm0, mm7
+		pshufw	mm1, mm0, 0EEh
+		psubusw	mm1, mm0
+		movd	edx, mm1
+		pmaddwd	mm0, ds:_qbplbpp
+		movd	ebx, mm1
+		and	edx, 0FFFFh
+		jz	short loc_729B
+		sub	ebx, 10000h
+		jb	short loc_729B
+		movzx	edi, byte ptr [eax+7]
+		punpcklbw mm5, qword ptr [eax]
+		pmulhuw	mm5, ds:_kv6colmul[edi*8]
+		paddw	mm5, ds:_kv6coladd
+		packuswb mm5, mm5
+		movd	edi, mm0
+; ---------------------------------------------------------------------------
+		dw 0BC8Dh
+		db 97h
+dword_7265	dd 88888888h		; DATA XREF: _drawboundcubesseinit+5w
+bcmod0		db 0F7h, 0DAh, 0Fh
+		dd 878DC712h
+dword_7270	dd 88888888h		; DATA XREF: _drawboundcubesseinit+1Ew
+bcmod1		dd 2E0FCA8Bh, 9738804h,	4110FF3h, 2C7E0F88h, 0EE75418Fh
+		db 5
+dword_7289	dd 88888888h		; DATA XREF: _drawboundcubesseinit+14w
+bcmod2		db 81h,	0C7h
+dword_728F	dd 88888888h		; DATA XREF: _drawboundcubesseinit+Fw
+bcmod3		db 81h
+; ---------------------------------------------------------------------------
+		jmp	short $+2
+		add	[ecx], al
+		add	[ebx-27h], dh
+
+loc_729B:				; CODE XREF: text:00007120j
+					; text:00007145j ...
+		pop	edi
+		pop	ebx
+		retn
+
+; =============== S U B	R O U T	I N E =======================================
+
+
+		public _drawboundcube3dninit
+_drawboundcube3dninit proc near
+		mov	eax, ds:_kv6frameplace
+		mov	ds:dword_7487, eax
+		mov	eax, ds:_kv6bytesperline
+		mov	ds:dword_74B9, eax
+		mov	ds:dword_74B3, eax
+		mov	eax, dword ptr ds:_zbufoff
+		mov	ds:dword_7492, eax
+		retn
+_drawboundcube3dninit endp
+
+; ---------------------------------------------------------------------------
+		align 10h
+
+		public _drawboundcube3dn
+_drawboundcube3dn:
+		mov	eax, [esp+4]
+		mov	ecx, [esp+8]
+		push	ebx
+		push	edi
+		movzx	edi, byte ptr [eax+6]
+		and	ecx, edi
+		jz	loc_74C5
+		movq	mm6, qword ptr ds:xmmword_6880
+		movq	mm7, qword ptr ds:xmmword_6880+8
+		movzx	edi, word ptr [eax+4]
+		shl	edi, 4
+		pfadd	mm6, qword ptr ds:_ztabasm[edi]
+		pfadd	mm7, qword ptr ds:(_ztabasm+8)[edi]
+		movq	mm0, mm7
+		pcmpgtd	mm0, ds:_scisdist
+		movd	edx, mm0
+		test	edx, edx
+		jz	loc_74C5
+		lea	ecx, _ptfaces16[ecx*8]
+		movzx	ebx, byte ptr [ecx+1]
+		movzx	edi, byte ptr [ecx+2]
+		movq	mm0, qword ptr ds:_caddasm[ebx]
+		movq	mm1, qword ptr ds:_caddasm[edi]
+		pfadd	mm0, mm6
+		pfadd	mm1, mm6
+		movd	mm5, dword ptr ds:(_caddasm+8)[ebx]
+		punpckldq mm5, qword ptr ds:(_caddasm+8)[edi]
+		pfadd	mm5, mm7
+		pfrcp	mm4, mm5
+		punpckhdq mm5, mm5
+		pfrcp	mm5, mm5
+		pfmul	mm0, mm4
+		pfmul	mm1, mm5
+		pf2id	mm0, mm0
+		pf2id	mm1, mm1
+		packssdw mm0, mm1
+		movzx	ebx, byte ptr [ecx+3]
+		movzx	edi, byte ptr [ecx+4]
+		movq	mm2, qword ptr ds:_caddasm[ebx]
+		movq	mm3, qword ptr ds:_caddasm[edi]
+		pfadd	mm2, mm6
+		pfadd	mm3, mm6
+		movd	mm5, dword ptr ds:(_caddasm+8)[ebx]
+		punpckldq mm5, qword ptr ds:(_caddasm+8)[edi]
+		pfadd	mm5, mm7
+		pfrcp	mm4, mm5
+		punpckhdq mm5, mm5
+		pfrcp	mm5, mm5
+		pfmul	mm2, mm4
+		pfmul	mm3, mm5
+		pf2id	mm2, mm2
+		pf2id	mm3, mm3
+		packssdw mm2, mm3
+		movq	mm1, mm0
+		pminsw	mm0, mm2
+		pmaxsw	mm1, mm2
+		cmp	byte ptr [ecx],	4
+		jz	short loc_7425
+		movzx	ebx, byte ptr [ecx+5]
+		movzx	edi, byte ptr [ecx+6]
+		movq	mm2, qword ptr ds:_caddasm[ebx]
+		movq	mm3, qword ptr ds:_caddasm[edi]
+		pfadd	mm2, mm6
+		pfadd	mm3, mm6
+		movd	mm5, dword ptr ds:(_caddasm+8)[ebx]
+		punpckldq mm5, qword ptr ds:(_caddasm+8)[edi]
+		pfadd	mm5, mm7
+		pfrcp	mm4, mm5
+		punpckhdq mm5, mm5
+		pfrcp	mm5, mm5
+		pfmul	mm2, mm4
+		pfmul	mm3, mm5
+		pf2id	mm2, mm2
+		pf2id	mm3, mm3
+		packssdw mm2, mm3
+		pminsw	mm0, mm2
+		pmaxsw	mm1, mm2
+
+loc_7425:				; CODE XREF: text:000073CFj
+		pshufw	mm2, mm0, 0Eh
+		pshufw	mm3, mm1, 0Eh
+		pminsw	mm0, mm2
+		pmaxsw	mm1, mm3
+		punpckldq mm0, mm1
+		paddsw	mm0, ds:_qsum0
+		pmaxsw	mm0, ds:_qsum1
+		pshufw	mm1, mm0, 0EEh
+		psubusw	mm1, mm0
+		movd	edx, mm1
+		pmaddwd	mm0, ds:_qbplbpp
+		movd	ebx, mm1
+		and	edx, 0FFFFh
+		jz	short loc_74C5
+		sub	ebx, 10000h
+		jb	short loc_74C5
+		movzx	edi, byte ptr [eax+7]
+		punpcklbw mm5, qword ptr [eax]
+		pmulhuw	mm5, ds:_kv6colmul[edi*8]
+		paddw	mm5, ds:_kv6coladd
+		packuswb mm5, mm5
+		movd	edi, mm0
+; ---------------------------------------------------------------------------
+		db 8Dh,	0BCh, 97h
+dword_7487	dd 88888888h		; DATA XREF: _drawboundcube3dninit+5w
+bcmod0_3dn	db 0F7h
+		dd 0CA6E0FDAh
+		db 8Dh,	87h
+dword_7492	dd 88888888h		; DATA XREF: _drawboundcube3dninit+1Ew
+bcmod1_3dn	dw 7E0Fh
+		dd 0F87F0FC9h, 8804660Fh, 85C27E0Fh, 0F0875D2h,	0F883C7Eh
+		dd 418F2C7Eh
+		db 75h,	0E7h, 5
+dword_74B3	dd 88888888h		; DATA XREF: _drawboundcube3dninit+14w
+bcmod2_3dn	db 81h
+		db 0C7h
+dword_74B9	dd 88888888h		; DATA XREF: _drawboundcube3dninit+Fw
+bcmod3_3dn	db 81h,	0EBh, 0
+		dd 73000100h
+		db 0D1h
+; ---------------------------------------------------------------------------
+
+loc_74C5:				; CODE XREF: text:000072E0j
+					; text:0000731Aj ...
+		pop	edi
+		pop	ebx
+		retn
+text		ends
+
+; ===========================================================================
+
+; Segment type:	Externs
+; UNDEF
+		extrn _gi:near		; DATA XREF: _grouscanasm+E7r
+					; _grouscanasm+161r ...
+		extrn _gpixy:near	; DATA XREF: _grouscanasm+8Er
+		extrn _gixy:near	; DATA XREF: _grouscanasm+268r
+					; _grouscanasm+461r ...
+		extrn _gpz:near		; DATA XREF: _grouscanasm+62r
+					; _grouscanasm+68r ...
+		extrn _gdz:near		; DATA XREF: _grouscanasm+80r
+					; _grouscanasm+2A0r ...
+		extrn _gxmip:near	; DATA XREF: _grouscanasm+4Er
+					; _grouscanasm+56r
+		extrn _gxmax:near	; DATA XREF: _grouscanasm+3Fr
+					; _grouscanasm+528r ...
+		extrn _gcsub:near	; DATA XREF: _grouscanasm+1BDr
+					; _grouscanasm+220r ...
+		extrn _gylookup:near	; DATA XREF: text:gyluto
+					; text:0000205Co ...
+		extrn _gmipnum:near	; DATA XREF: _grouscanasm+45r
+					; _grouscanasm+445r
+		extrn _sptr:near	; DATA XREF: text:gamipko
+					; text:000020C8o ...
+		extrn _skyoff:near	; DATA XREF: _grouscanasm+593r
+					; _grouscanasm+5D4r
+		extrn _skyxsiz:near	; DATA XREF: _grouscanasm+5E7r
+		extrn _skylat:near	; DATA XREF: _grouscanasm+5DAr
+; BOOL __stdcall VirtualProtect(LPVOID lpAddress, SIZE_T dwSize, DWORD flNewProtect, PDWORD lpflOldProtect)
+		extrn __imp__VirtualProtect@16:near ; CODE XREF: $$000000+16p
+					; DATA XREF: $$000000+16r
+		extrn _zbufoff:near	; DATA XREF: _drawboundcubesseinit+19r
+					; _drawboundcube3dninit+19r
+		extrn _ptfaces16:near	; DATA XREF: text:0000714Bo
+					; text:00007320o
+
+
+		end

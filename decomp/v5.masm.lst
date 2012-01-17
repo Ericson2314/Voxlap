@@ -1,0 +1,1394 @@
+Microsoft (R) Macro Assembler Version 10.00.30319.01	    01/16/12 15:36:01
+./src/v5.masm						     Page 1 - 1
+
+
+				;.686
+				.XMM
+
+ = 0001				USEZBUFFER EQU 1       ;To disable, put ; in front of line
+ = 000A				LVSID EQU 10           ;log2(VSID) - used for mip-mapping index adjustment
+ = 0400				VSID EQU (1 SHL LVSID) ;should match VSID in VOXLAP5.H (adjust LVSID, not this)
+ = 0014				LOGPREC EQU (8+12)
+
+				EXTERN _gi       : dword
+				EXTERN _gpixy    : dword
+				EXTERN _gixy     : dword      ;long[2]
+				EXTERN _gpz      : dword      ;long[2]
+				EXTERN _gdz      : dword      ;long[2]
+				EXTERN _gxmip    : dword
+				EXTERN _gxmax    : dword
+				EXTERN _gcsub    : dword      ;long[4]
+				EXTERN _gylookup : dword      ;long[256+4+128+4+...]
+				EXTERN _gmipnum  : dword
+				;EXTERN _cf       : dword      ;{ long i0,i1,z0,z1,cx0,cy0,cx1,cy1; }[128]
+
+				EXTERN _sptr     : dword
+
+				EXTERN _skyoff   : dword      ;Memory offset to start of longitude line
+				EXTERN _skyxsiz  : dword      ;Size of longitude line
+				EXTERN _skylat   : dword      ;long[_skyxsiz] : latitude's unit dir. vector
+
+				;How to declare C-ASM shared variables in the ASM code:
+				;ASM:                    C:
+				;   PUBLIC _xr0             extern void *xr0;
+				;   ALIGN 16                #define lxr0 ((long *)&xr0)
+				;   _xr0: dd 0,0,0,0        #define fxr0 ((float *)&xr0)
+				;   Use: _xr0               Use: lxr0[0-3]  or:  fxr0[0-3]
+
+				;EXTERN _reax: dword
+				;EXTERN _rebx: dword
+				;EXTERN _recx: dword
+				;EXTERN _redx: dword
+				;EXTERN _resi: dword
+				;EXTERN _redi: dword
+				;EXTERN _rebp: dword
+				;EXTERN _resp: dword
+				;EXTERN _remm: dword  ;long[16]
+
+ 00000000			text SEGMENT PUBLIC USE32 'CODE'
+				ASSUME cs:text,ds:text
+
+				PUBLIC _v5_asm_dep_unlock ;Data Execution Prevention unlock (works under XP2 SP2)
+ 00000000			_v5_asm_dep_unlock:
+					EXTERN __imp__VirtualProtect@16:NEAR
+ 00000000  83 EC 04			sub esp, 4
+ 00000003  54				pushd esp
+ 00000004  6A 40			pushd 40h ;PAGE_EXECUTE_READWRITE
+ 00000006  B8 000074C8 R		mov eax, offset _dep_protect_end
+ 0000000B  2D 00000000 R		sub eax, offset _v5_asm_dep_unlock
+ 00000010  50				pushd eax
+ 00000011  68 00000000 R		pushd offset _v5_asm_dep_unlock
+ 00000016  FF 15 00000000 E		call dword ptr __imp__VirtualProtect@16
+ 0000001C  83 C4 04			add esp, 4
+ 0000001F  C3				ret
+
+				PUBLIC _cfasm, _skycast
+				ALIGN 16
+ 00000020  00002000 [		_cfasm db 256*32 dup(0)
+	    00
+	   ]
+ 00002020			w8bmask0 dq 000ff00ff00ff00ffh
+	   00FF00FF00FF00FF
+ 00002028			w8bmask1 dq 000f000f000f000f0h
+	   00F000F000F000F0
+ 00002030			w8bmask2 dq 000e000e000e000e0h
+	   00E000E000E000E0
+				;gyadd dq ((-1) SHL (LOGPREC-16))
+ 00002038			mmask dq 0ffff0000ffff0000h
+	   FFFF0000FFFF0000
+ 00002040			_skycast dq 0
+	   0000000000000000
+ 00002048 00000000		gylookoff dd 0
+ 0000204C 00000000		ngxmax dd 0
+ 00002050 00000000		ce dd 0
+ 00002054 00000000		espbak dd 0
+
+ 00002058 00000000 E		gylut  dd _gylookup
+ 0000205C  00000410 E				 dd _gylookup+(4*1+256)*4
+ 00002060  00000620 E				 dd _gylookup+(4*2+384)*4
+ 00002064  00000730 E				 dd _gylookup+(4*3+448)*4
+ 00002068  000007C0 E				 dd _gylookup+(4*4+480)*4
+ 0000206C  00000810 E				 dd _gylookup+(4*5+496)*4
+ 00002070  00000840 E				 dd _gylookup+(4*6+504)*4
+ 00002074  00000860 E				 dd _gylookup+(4*7+508)*4
+ 00002078  00000878 E				 dd _gylookup+(4*8+510)*4
+
+ 0000207C 000007FE		gxmipk dd ((1 SHL (LVSID-0))-1)*2
+ 00002080  000003FE				 dd ((1 SHL (LVSID-1))-1)*2
+ 00002084  000001FE				 dd ((1 SHL (LVSID-2))-1)*2
+ 00002088  000000FE				 dd ((1 SHL (LVSID-3))-1)*2
+ 0000208C  0000007E				 dd ((1 SHL (LVSID-4))-1)*2
+ 00002090  0000003E				 dd ((1 SHL (LVSID-5))-1)*2
+ 00002094  0000001E				 dd ((1 SHL (LVSID-6))-1)*2
+ 00002098  0000000E				 dd ((1 SHL (LVSID-7))-1)*2
+ 0000209C  00000006				 dd ((1 SHL (LVSID-8))-1)*2
+
+ 000020A0 003FF000		gymipk dd ((1 SHL (LVSID-0))-1) SHL (LVSID+2)
+ 000020A4  000FF800				 dd ((1 SHL (LVSID-1))-1) SHL (LVSID+1)
+ 000020A8  0003FC00				 dd ((1 SHL (LVSID-2))-1) SHL (LVSID  )
+ 000020AC  0000FE00				 dd ((1 SHL (LVSID-3))-1) SHL (LVSID-1)
+ 000020B0  00003F00				 dd ((1 SHL (LVSID-4))-1) SHL (LVSID-2)
+ 000020B4  00000F80				 dd ((1 SHL (LVSID-5))-1) SHL (LVSID-3)
+ 000020B8  000003C0				 dd ((1 SHL (LVSID-6))-1) SHL (LVSID-4)
+ 000020BC  000000E0				 dd ((1 SHL (LVSID-7))-1) SHL (LVSID-5)
+ 000020C0  00000030				 dd ((1 SHL (LVSID-8))-1) SHL (LVSID-6)
+
+ 000020C4 00000000 E		gamipk dd _sptr
+ 000020C8  00400000 E				 dd _sptr+(VSID*VSID)*4
+ 000020CC  00500000 E				 dd _sptr+(VSID*VSID + (VSID*VSID SHR 2))*4
+ 000020D0  00540000 E				 dd _sptr+(VSID*VSID + (VSID*VSID SHR 2) + (VSID*VSID SHR 4))*4
+ 000020D4  00550000 E				 dd _sptr+(VSID*VSID + (VSID*VSID SHR 2) + (VSID*VSID SHR 4) + (VSID*VSID SHR 6))*4
+ 000020D8  00554000 E				 dd _sptr+(VSID*VSID + (VSID*VSID SHR 2) + (VSID*VSID SHR 4) + (VSID*VSID SHR 6) + (VSID*VSID SHR 8))*4
+ 000020DC  00555000 E				 dd _sptr+(VSID*VSID + (VSID*VSID SHR 2) + (VSID*VSID SHR 4) + (VSID*VSID SHR 6) + (VSID*VSID SHR 8) + (VSID*VSID SHR 10))*4
+ 000020E0  00555400 E				 dd _sptr+(VSID*VSID + (VSID*VSID SHR 2) + (VSID*VSID SHR 4) + (VSID*VSID SHR 6) + (VSID*VSID SHR 8) + (VSID*VSID SHR 10) + (VSID*VSID SHR 12))*4
+ 000020E4  00555500 E				 dd _sptr+(VSID*VSID + (VSID*VSID SHR 2) + (VSID*VSID SHR 4) + (VSID*VSID SHR 6) + (VSID*VSID SHR 8) + (VSID*VSID SHR 10) + (VSID*VSID SHR 12) + (VSID*VSID SHR 14))*4
+
+ 000020E8 00			gmipcnt db 0
+				ALIGN 16
+
+					;THE INNER LOOP:
+					;#ifdef CPU <= PENTIUM II
+					;
+					;   movd mm3, _gylookup[ecx*4] ;mm3: [ 0   0   0  -gy]
+					;   por mm3, mm6               ;mm3: [ogx  0   gx -gy]
+					;      or:
+					;   paddd mm3, gyadd           ;where: gyadd: dq ((-1) SHL (LOGPREC-16))
+					;
+					;   ...
+					;
+					;   movq mm7, mm0           ;mm7: [cy0.... cx0....]
+					;   psrad mm7, 16           ;mm7: [----cy0 ----cx0]
+					;   packssdw mm7, mm7       ;mm7: [cy0 cx0 cy0 cx0]
+					;   pmaddwd mm7, mm3           ;mm7: [ 0   0  -decide]
+					;   movd eax, mm7
+					;   test eax, eax
+					;   j ?
+					;   ...
+					;   paddd mm0, _gi
+					;
+					;#else
+					;      ;Do this only when gx/ogx changes
+					;   movd mm3, ogx                   ;mm3: [ 0   0  ogx  0 ]
+					;      or:
+					;   pshufw mm3, mm3, 0e8h            ;mm3: [ gx ogx ogx  0 ]
+					;
+					;      ;Do this only when ecx/edx changes
+					;   pinsrw mm3, _gylookup[ecx*2], 0 ;mm3: [ 0   0  ogx -gy]
+					;      or:
+					;   paddd mm3, gyadd                ;where: gyadd: dq (1 SHL LOGPREC)
+					;
+					;   ...
+					;
+					;   pshufw mm7, mm0, 0ddh      ;mm7: [cy0 cx0 cy0 cx0]
+					;   pmaddwd mm7, mm3           ;mm7: [ 0   0  -decide]
+					;   movd eax, mm7
+					;   test eax, eax
+					;   j ?
+					;   ...
+					;   paddd mm0, _gi
+					;
+					;#endif
+
+
+					;   Register allocation:
+					;eax: [.temp1.]     mm0: [cy0.... cx0....]
+					;ebx: [.temp2.]     mm1: [cy1.... cx1....]
+					;ecx: [.....z0]     mm2: [    temp!!!    ]   //gi[1].. gi[0]..]
+					;edx: [.....z1]     mm3: [     temp      ]
+					;esi: [..ixy..]     mm4: [??????? csub...]
+					;edi: [..v[]..]     mm5: [??????? coltemp]
+					;ebp: [...bakj]     mm6: [gx. 0.. ogx 0..]
+					;esp: [..c->..]     mm7: [     temp      ]
+				PUBLIC _grouscanasm ;Visual C entry point (passes parameters by stack)
+ 000020F0			_grouscanasm:
+ 000020F0  8B 44 24 04			mov eax, [esp+4]
+ 000020F4  53				push ebx   ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
+ 000020F5  56				push esi
+ 000020F6  57				push edi
+ 000020F7  55				push ebp
+ 000020F8  89 25 00002054 R		mov dword ptr espbak, esp
+
+ 000020FE  8B F8			mov edi, eax
+
+						;cfasm:   0-2047  (extra memory for stack)
+						;      2048-4095  c and ce always sit in this range ((esp = c) <= ce)
+						;      4096-6143  This is where memory for cfasm is actually stored!
+						;      6144-8191  (memory never used - this seems unnecessary?)
+ 00002100  BC 00000820 R		mov esp, offset _cfasm[2048]
+ 00002105  B8 00001020 R		mov eax, offset _cfasm[4096]
+ 0000210A  8B 48 08			mov ecx, [eax+8]
+ 0000210D  8B 50 0C			mov edx, [eax+12]
+ 00002110  0F 6F 40 10			movq mm0, [eax+16]
+ 00002114  0F 6F 48 18			movq mm1, [eax+24]
+ 00002118  89 25 00002050 R		mov dword ptr ce, esp
+
+ 0000211E  C7 05 00002048 R		mov gylookoff, offset _gylookup
+	   00000000 E
+ 00002128  C6 05 000020E8 R		mov byte ptr gmipcnt, 0
+	   00
+
+ 0000212F  8B 2D 00000000 E		mov ebp, _gxmax
+ 00002135  80 3D 00000000 E		cmp byte ptr _gmipnum, 1
+	   01
+ 0000213C  7E 0E			jle short skipngxmax0
+ 0000213E  3B 2D 00000000 E		cmp ebp, _gxmip
+ 00002144  7E 06			jle short skipngxmax0
+ 00002146  8B 2D 00000000 E		mov ebp, _gxmip
+ 0000214C			skipngxmax0:
+ 0000214C  89 2D 0000204C R		mov ngxmax, ebp
+
+ 00002152  8B 2D 00000004 E		mov ebp, _gpz[4]
+ 00002158  2B 2D 00000000 E		sub ebp, _gpz[0]
+ 0000215E  C1 ED 1F			shr ebp, 31
+ 00002161  0F 6E 34 AD			movd mm6, _gpz[ebp*4]        ;update gx in mm6
+	   00000000 E
+ 00002169  0F DB 35			pand mm6, qword ptr mmask
+	   00002038 R
+ 00002170  8B 04 AD			mov eax, _gdz[ebp*4]
+	   00000000 E
+ 00002177  01 04 AD			add _gpz[ebp*4], eax
+	   00000000 E
+
+ 0000217E  8B 35 00000000 E		mov esi, _gpixy
+ 00002184  3B 3E			cmp edi, [esi]
+ 00002186  0F 84 00000158		je drawflor
+ 0000218C  E9 000000F0			jmp drawceil
+
+ 00002191			drawfwall:
+ 00002191  0F B6 47 01			movzx eax, byte ptr [edi+1]
+ 00002195  3B C2			cmp eax, edx
+ 00002197  7D 68			jge drawcwall
+ 00002199  8B 9C 24			mov ebx, [esp+4+2048]
+	   00000804
+ 000021A0			loop0:
+ 000021A0  F7 D8			neg eax
+ 000021A2  03 C2			add eax, edx
+ 000021A4  4A				dec edx
+ 000021A5  0F 60 2C 87			punpcklbw mm5, [edi+eax*4]
+ 000021A9  A1 00002048 R		mov eax, gylookoff
+ 000021AE  0F 6E 1C 90			movd mm3, dword ptr [eax+edx*4] ;mm3: [ 0   0   0  -gy]
+ 000021B2  0F D8 EC			psubusb mm5, mm4
+ 000021B5  0F 70 D5 FF			pshufw mm2, mm5, 0ffh
+ 000021B9  0F E4 EA			pmulhuw mm5, mm2
+ 000021BC  0F 71 D5 07			psrlw mm5, 7
+ 000021C0  0F 67 ED			packuswb mm5, mm5
+				ifdef USEZBUFFER
+ 000021C3  0F 62 EE			punpckldq mm5, mm6         ;Stuff ogx into hi part of color for Z buffer
+				endif
+ 000021C6  0F EB DE			por mm3, mm6               ;mm3: [ gx  0  ogx -gy]
+ 000021C9			loop1: ;if (dmulrethigh(gylookup[edx*4],c->cx1,c->cy1,ogx) >= 0) jmp endloop1
+ 000021C9  0F 70 F9 DD			pshufw mm7, mm1, 0ddh      ;mm7: [cy1 cx1 cy1 cx1]
+ 000021CD  0F F5 FB			pmaddwd mm7, mm3           ;mm7: [ 0   0  -decide]
+ 000021D0  0F 7E F8			movd eax, mm7
+ 000021D3  85 C0			test eax, eax              ;if (cy1*ogx ? gy*cx1)
+ 000021D5  7E 1B			jle endloop1
+ 000021D7  0F FA 0D			psubd mm1, qword ptr _gi
+	   00000000 E
+				ifdef USEZBUFFER
+ 000021DE  0F E7 2B			movntq [ebx], mm5
+ 000021E1  83 EB 08			sub ebx, 8
+				else
+				endif
+ 000021E4  3B 9C 24			cmp ebx, [esp+2048]
+	   00000800
+ 000021EB  73 DC			jnb loop1
+ 000021ED  E9 0000054B			jmp predeletez
+ 000021F2			endloop1:
+ 000021F2  0F B6 47 01			movzx eax, byte ptr [edi+1]
+ 000021F6  3B C2			cmp eax, edx
+ 000021F8  75 A6			jne loop0
+ 000021FA  89 9C 24			mov [esp+4+2048], ebx
+	   00000804
+
+ 00002201			drawcwall:
+ 00002201  3B 3E			cmp edi, [esi]
+ 00002203  8B D0			mov edx, eax
+ 00002205  0F 84 000000D5		je predrawflor
+
+ 0000220B  0F B6 47 03			movzx eax, byte ptr [edi+3]
+ 0000220F  3B C1			cmp eax, ecx
+ 00002211  7E 68			jle predrawceil
+ 00002213  8B 9C 24			mov ebx, [esp+2048]
+	   00000800
+ 0000221A			loop2:
+ 0000221A  F7 D8			neg eax
+ 0000221C  03 C1			add eax, ecx
+ 0000221E  41				inc ecx
+ 0000221F  0F 60 2C 87			punpcklbw mm5, [edi+eax*4]
+ 00002223  A1 00002048 R		mov eax, gylookoff
+ 00002228  0F 6E 1C 88			movd mm3, dword ptr [eax+ecx*4] ;mm3: [ 0   0   0  -gy]
+ 0000222C  0F D8 EC			psubusb mm5, mm4
+ 0000222F  0F 70 D5 FF			pshufw mm2, mm5, 0ffh
+ 00002233  0F E4 EA			pmulhuw mm5, mm2
+ 00002236  0F 71 D5 07			psrlw mm5, 7
+ 0000223A  0F 67 ED			packuswb mm5, mm5
+				ifdef USEZBUFFER
+ 0000223D  0F 62 EE			punpckldq mm5, mm6         ;Stuff ogx into hi part of color for Z buffer
+				endif
+ 00002240  0F EB DE			por mm3, mm6               ;mm3: [ gx  0  ogx -gy]
+ 00002243			loop3: ;if (dmulrethigh(gylookup[ecx*4],c->cx0,c->cy0,ogx) < 0) jmp endloop3
+ 00002243  0F 70 F8 DD			pshufw mm7, mm0, 0ddh      ;mm7: [cy0 cx0 cy0 cx0]
+ 00002247  0F F5 FB			pmaddwd mm7, mm3           ;mm7: [ 0   0  -decide]
+ 0000224A  0F 7E F8			movd eax, mm7
+ 0000224D  85 C0			test eax, eax              ;if (cy0*ogx ? gy*cx0)
+ 0000224F  7F 1B			jg endloop3
+ 00002251  0F FE 05			paddd mm0, qword ptr _gi
+	   00000000 E
+				ifdef USEZBUFFER
+ 00002258  0F E7 2B			movntq [ebx], mm5
+ 0000225B  83 C3 08			add ebx, 8
+				else
+				endif
+ 0000225E  3B 9C 24			cmp ebx, [esp+4+2048]
+	   00000804
+ 00002265  76 DC			jna loop3
+ 00002267  E9 000004D1			jmp predeletez
+ 0000226C			endloop3:
+ 0000226C  0F B6 47 03			movzx eax, byte ptr [edi+3]
+ 00002270  3B C1			cmp eax, ecx
+ 00002272  75 A6			jne loop2
+ 00002274  89 9C 24			mov [esp+2048], ebx
+	   00000800
+
+ 0000227B			predrawceil:
+ 0000227B  8B C8			mov ecx, eax
+ 0000227D  0F 70 F6 4E			pshufw mm6, mm6, 04eh       ;swap hi & lo of mm6
+ 00002281			drawceil: ;if (dmulrethigh(gylookup[ecx*4],c->cx0,c->cy0,gx) < 0) jmp drawflor
+ 00002281  A1 00002048 R		mov eax, gylookoff
+ 00002286  0F 6E 1C 88			movd mm3, dword ptr [eax+ecx*4] ;mm3: [ 0   0   0  -gy]
+ 0000228A  0F EB DE			por mm3, mm6               ;mm3: [ogx  0   gx -gy]
+ 0000228D			drawceilloop:
+ 0000228D  0F 70 F8 DD			pshufw mm7, mm0, 0ddh      ;mm7: [cy0 cx0 cy0 cx0]
+ 00002291  0F F5 FB			pmaddwd mm7, mm3           ;mm7: [ 0   0  -decide]
+ 00002294  0F 7E F8			movd eax, mm7
+ 00002297  85 C0			test eax, eax              ;if (cy0*gx ? gy*cx0)
+ 00002299  7F 49			jg drawflor
+ 0000229B  0F FE 05			paddd mm0, qword ptr _gi
+	   00000000 E
+ 000022A2  8B 84 24			mov eax, [esp+2048]
+	   00000800
+
+ 000022A9  0F 60 6F FC			punpcklbw mm5, [edi-4]
+ 000022AD  0F D8 2D			psubusb mm5, qword ptr _gcsub[16]
+	   00000010 E
+ 000022B4  0F 70 D5 FF			pshufw mm2, mm5, 0ffh
+ 000022B8  0F E4 EA			pmulhuw mm5, mm2
+ 000022BB  0F 71 D5 07			psrlw mm5, 7
+ 000022BF  0F 67 ED			packuswb mm5, mm5
+				ifdef USEZBUFFER
+ 000022C2  0F 62 EE			punpckldq mm5, mm6         ;Stuff gx into hi part of color for Z buffer
+ 000022C5  0F E7 28			movntq [eax], mm5
+ 000022C8  83 C0 08			add eax, 8
+				else
+				endif
+ 000022CB  89 84 24			mov [esp+2048], eax
+	   00000800
+ 000022D2  3B 84 24			cmp eax, [esp+4+2048]
+	   00000804
+ 000022D9  76 B2			jna drawceilloop
+ 000022DB  E9 00000461			jmp deletez
+
+ 000022E0			predrawflor:
+ 000022E0  0F 70 F6 4E			pshufw mm6, mm6, 04eh       ;swap hi & lo of mm6
+ 000022E4			drawflor: ;if (dmulrethigh(gylookup[edx*4],c->cx1,c->cy1,gx) >= 0) jmp enddrawflor
+ 000022E4  A1 00002048 R		mov eax, gylookoff
+ 000022E9  0F 6E 1C 90			movd mm3, dword ptr [eax+edx*4] ;mm3: [ 0   0   0  -gy]
+ 000022ED  0F EB DE			por mm3, mm6               ;mm3: [ogx  0   gx -gy]
+ 000022F0			drawflorloop:
+ 000022F0  0F 70 F9 DD			pshufw mm7, mm1, 0ddh      ;mm7: [cy1 cx1 cy1 cx1]
+ 000022F4  0F F5 FB			pmaddwd mm7, mm3           ;mm7: [ 0   0  -decide]
+ 000022F7  0F 7E F8			movd eax, mm7
+ 000022FA  85 C0			test eax, eax              ;if (cy1*gx ? gy*cx1)
+ 000022FC  7E 45			jle enddrawflor
+ 000022FE  0F FA 0D			psubd mm1, qword ptr _gi
+	   00000000 E
+ 00002305  8B 84 24			mov eax, [esp+4+2048]
+	   00000804
+
+ 0000230C  0F 60 6F 04			punpcklbw mm5, [edi+4]
+ 00002310  0F D8 2D			psubusb mm5, qword ptr _gcsub[24]
+	   00000018 E
+ 00002317  0F 70 D5 FF			pshufw mm2, mm5, 0ffh
+ 0000231B  0F E4 EA			pmulhuw mm5, mm2
+ 0000231E  0F 71 D5 07			psrlw mm5, 7
+ 00002322  0F 67 ED			packuswb mm5, mm5
+				ifdef USEZBUFFER
+ 00002325  0F 62 EE			punpckldq mm5, mm6         ;Stuff gx into hi part of color for Z buffer
+ 00002328  0F E7 28			movntq [eax], mm5
+ 0000232B  83 E8 08			sub eax, 8
+				else
+				endif
+ 0000232E  89 84 24			mov [esp+4+2048], eax
+	   00000804
+ 00002335  3B 84 24			cmp eax, [esp+2048]
+	   00000800
+ 0000233C  73 B2			jnb drawflorloop
+ 0000233E  E9 000003FE			jmp deletez
+
+ 00002343			enddrawflor:
+ 00002343  8B DC			mov ebx, esp
+ 00002345			afterdelete:
+ 00002345  83 EC 20			sub esp, 32
+ 00002348  81 FC 00000820 R		cmp esp, offset _cfasm[2048]
+ 0000234E  73 56			jae skipixy
+
+ 00002350  0F 6F 24 ED			movq mm4, qword ptr _gcsub[ebp*8]
+	   00000000 E
+ 00002358  03 34 AD			add esi, _gixy[ebp*4]
+	   00000000 E
+ 0000235F  8B 2D 00000004 E		mov ebp, _gpz[4]
+ 00002365  8B 3E			mov edi, [esi]
+ 00002367  2B 2D 00000000 E		sub ebp, _gpz[0]
+ 0000236D  C1 ED 1F			shr ebp, 31
+ 00002370  8B 04 AD			mov eax, _gpz[ebp*4]
+	   00000000 E
+ 00002377  0F 6E F8			movd mm7, eax
+ 0000237A  0F 62 F7			punpckldq mm6, mm7
+ 0000237D  0F DB 35			pand mm6, qword ptr mmask
+	   00002038 R
+ 00002384  3B 05 0000204C R		cmp eax, ngxmax
+ 0000238A  0F 87 0000019E		ja remiporend
+ 00002390  03 04 AD			add eax, _gdz[ebp*4]
+	   00000000 E
+ 00002397  89 04 AD			mov _gpz[ebp*4], eax
+	   00000000 E
+ 0000239E  8B 25 00002050 R		mov esp, ce
+ 000023A4  EB 04			jmp skipixy2
+
+ 000023A6			skipixy:
+ 000023A6  0F 70 F6 4E			pshufw mm6, mm6, 04eh       ;swap hi & lo of mm6
+ 000023AA			skipixy2:
+ 000023AA  3B DC			cmp ebx, esp
+ 000023AC  74 29			je skipixy3
+ 000023AE  81 C3 00000800		add ebx, 2048
+ 000023B4  89 4B 08			mov [ebx+8], ecx
+ 000023B7  89 53 0C			mov [ebx+12], edx
+ 000023BA  0F 7F 43 10			movq [ebx+16], mm0
+ 000023BE  0F 7F 4B 18			movq [ebx+24], mm1
+ 000023C2  8D 9C 24			lea ebx, [esp+2048]
+	   00000800
+ 000023C9  8B 4B 08			mov ecx, [ebx+8]
+ 000023CC  8B 53 0C			mov edx, [ebx+12]
+ 000023CF  0F 6F 43 10			movq mm0, [ebx+16]
+ 000023D3  0F 6F 4B 18			movq mm1, [ebx+24]
+ 000023D7			skipixy3:
+
+						;Find highest intersecting vbuf slab
+ 000023D7  80 3F 00			cmp byte ptr [edi], 0
+ 000023DA  0F 84 FFFFFDB1		je drawfwall
+ 000023E0  8B 1D 00002048 R		mov ebx, gylookoff
+ 000023E6  EB 0C			jmp intoslabloop
+ 000023E8			findslabloop:
+ 000023E8  8D 3C 87			lea edi, [edi+eax*4]
+ 000023EB  80 3F 00			cmp byte ptr [edi], 0
+ 000023EE  0F 84 FFFFFD9D		je drawfwall
+ 000023F4			intoslabloop:
+ 000023F4  0F B6 47 02			movzx eax, byte ptr [edi+2]
+						;if (dmulrethigh(gylookup[[edi+2]*4+4],c->cx0,c->cy0,ogx) >= 0)
+						;   jmp findslabloopbreak
+ 000023F8  0F 6E 5C 83 04		movd mm3, dword ptr [ebx+eax*4+4]    ;mm3: [ 0   0   0  -gy]
+ 000023FD  0F EB DE			por mm3, mm6               ;mm3: [ gx  0  ogx -gy]
+ 00002400  0F 70 F8 DD			pshufw mm7, mm0, 0ddh      ;mm7: [cy0 cx0 cy0 cx0]
+ 00002404  0F F5 FB			pmaddwd mm7, mm3           ;mm7: [ 0   0  -decide]
+ 00002407  0F 7E F8			movd eax, mm7
+ 0000240A  85 C0			test eax, eax              ;if (cy0*ogx ? ?y*cx0)
+
+ 0000240C  0F B6 07			movzx eax, byte ptr [edi]
+ 0000240F  7F D7			jg findslabloop
+
+						;If next slab ALSO intersects, split _cfasm!
+						;if (dmulrethigh(v[v[0]*4+3],c->cx1,c->cy1,ogx) >= 0) jmp drawfwall
+ 00002411  0F B6 44 87 03		movzx eax, byte ptr [3+edi+eax*4]
+ 00002416  0F 6E 1C 83			movd mm3, dword ptr [ebx+eax*4]      ;mm3: [ 0   0   0  -gy]
+ 0000241A  0F EB DE			por mm3, mm6               ;mm3: [ gx  0  ogx -gy]
+ 0000241D  0F 70 F9 DD			pshufw mm7, mm1, 0ddh      ;mm7: [cy1 cx1 cy1 cx1]
+ 00002421  0F F5 FB			pmaddwd mm7, mm3           ;mm7: [ 0   0  -decide]
+ 00002424  0F 7E F8			movd eax, mm7
+ 00002427  85 C0			test eax, eax              ;if (cy1*ogx ? ?y*cx1)
+ 00002429  0F 8E FFFFFD62		jle drawfwall
+
+
+						;Make sure everything is in memory at this point
+ 0000242F  8D 84 24			lea eax, [esp+2048]
+	   00000800
+ 00002436  89 48 08			mov [eax+8], ecx
+ 00002439  89 50 0C			mov [eax+12], edx
+ 0000243C  0F 7F 40 10			movq [eax+16], mm0
+ 00002440  0F 7F 48 18			movq [eax+24], mm1
+
+						;(ecx and edx are free registers at this point)
+
+ 00002444  8B 50 04			mov edx, [eax+4]             ;col = (long)c->i1;
+ 00002447  0F B6 47 02			movzx eax, byte ptr [edi+2]  ;dax = c->cx1; day = c->cy1;
+ 0000244B  0F 6E 5C 83 04		movd mm3, dword ptr [ebx+eax*4+4]      ;mm3: [ 0   0   0  -gy]
+ 00002450  0F EB DE			por mm3, mm6                 ;mm3: [ gx  0  ogx -gy]
+
+						;WARNING: NEW CODE!!!!!!!
+ 00002453			prebegsearchi16:
+ 00002453  0F 6F 3D			movq mm7, qword ptr _gi
+	   00000000 E
+ 0000245A  0F 72 F7 04			pslld mm7, 4
+ 0000245E  0F 7F CD			movq mm5, mm1
+ 00002461  0F FA EF			psubd mm5, mm7             ;mm7: [day.... dax....]
+ 00002464  0F 70 FD DD			pshufw mm7, mm5, 0ddh      ;mm7: [day dax day dax]
+ 00002468  0F F5 FB			pmaddwd mm7, mm3           ;mm7: [ 0   0  -decide]
+ 0000246B  0F 7E F8			movd eax, mm7
+ 0000246E  85 C0			test eax, eax              ;if (day*ogx ? gy*dax)
+ 00002470  7E 17			jle begsearchi
+ 00002472  0F 7F E9			movq mm1, mm5
+				ifdef USEZBUFFER
+ 00002475  81 EA 00000080		sub edx, 16 SHL 3
+				else
+				endif
+ 0000247B  EB D6			jmp prebegsearchi16
+
+ 0000247D  EB 0A			jmp begsearchi
+						;while (dmulrethigh(gylookup[v[2]+1],dax,day,ogx) < 0)
+ 0000247F			prebegsearchi:
+				ifdef USEZBUFFER
+ 0000247F  83 EA 08			sub edx, 4 SHL 1             ;col -= 8;
+				else
+				endif
+ 00002482  0F FA 0D			psubd mm1, qword ptr _gi     ;dax -= gi[0]; day -= gi[1];
+	   00000000 E
+ 00002489			begsearchi:
+ 00002489  0F 70 F9 DD			pshufw mm7, mm1, 0ddh      ;mm7: [day dax day dax]
+ 0000248D  0F F5 FB			pmaddwd mm7, mm3           ;mm7: [ 0   0  -decide]
+ 00002490  0F 7E F8			movd eax, mm7
+ 00002493  85 C0			test eax, eax              ;if (day*ogx ? gy*dax)
+ 00002495  7F E8			jg prebegsearchi
+
+ 00002497  A1 00002050 R		mov eax, ce            ;ce++;
+ 0000249C  83 C0 20			add eax, 32
+
+ 0000249F  3D 00001020 R		cmp eax, offset _cfasm[4096] ;VERY BAD!!! - Interrupt would overwrite data!
+ 000024A4  0F 87 00000286		ja retsub                    ;Just in case, return early to prevent lockup.
+
+ 000024AA  A3 00002050 R		mov dword ptr ce, eax
+ 000024AF  3B C4			cmp eax, esp           ;for(c2=ce;c2>c;c2--)   //(c2 = eax)
+ 000024B1  76 3F			jbe skipinsertloop
+ 000024B3			beginsertloop:
+ 000024B3  0F 6F A8			movq mm5, [eax-32+24+2048]  ;c2[0] = c2[-1];
+	   000007F8
+ 000024BA  0F 6F B8			movq mm7, [eax-32+16+2048]
+	   000007F0
+ 000024C1  0F 7F A8			movq [eax+24+2048], mm5
+	   00000818
+ 000024C8  0F 7F B8			movq [eax+16+2048], mm7
+	   00000810
+ 000024CF  0F 6F A8			movq mm5, [eax-32+8+2048]
+	   000007E8
+ 000024D6  0F 6F B8			movq mm7, [eax-32+0+2048]
+	   000007E0
+ 000024DD  0F 7F A8			movq [eax+8+2048], mm5
+	   00000808
+ 000024E4  0F 7F B8			movq [eax+0+2048], mm7
+	   00000800
+ 000024EB  83 E8 20			sub eax, 32
+ 000024EE  3B C4			cmp eax, esp
+ 000024F0  77 C1			ja beginsertloop
+ 000024F2			skipinsertloop:
+
+ 000024F2  0F B6 07			movzx eax, byte ptr [edi]
+ 000024F5  0F 7F CF			movq mm7, mm1              ;c[1].cx1 = dax; c[1].cy1 = day;
+ 000024F8  0F FE 3D			paddd mm7, qword ptr _gi
+	   00000000 E
+ 000024FF  0F B6 44 87 03		movzx eax, byte ptr [3+edi+eax*4]
+ 00002504  89 94 24			mov [esp+32+4+2048], edx        ;c[1].i1 = (long *)col;
+	   00000824
+				ifdef USEZBUFFER
+ 0000250B  83 C2 08			add edx, 8                      ;c[0].i0 = (long *)(col+(4<<1));
+				else
+				endif
+ 0000250E  89 94 24			mov [esp+2048], edx
+	   00000800
+ 00002515  8B D0			mov edx, eax               ;c[1].z1 = c[0].z0 = v[(v[0]<<2)+3];
+ 00002517  89 84 24			mov [esp+8+2048], eax
+	   00000808
+ 0000251E  0F 7F BC 24			movq [esp+16+2048], mm7         ;c[0].cx0 = dax+gi[0]; c[0].cy0 = day+gi[1];
+	   00000810
+ 00002526  83 C4 20			add esp, 32                ;c++;
+ 00002529  E9 FFFFFC63			jmp drawfwall
+
+ 0000252E			remiporend:
+ 0000252E  A0 000020E8 R		mov al, gmipcnt
+ 00002533  FE C0			inc al
+ 00002535  3A 05 00000000 E		cmp al, byte ptr _gmipnum
+ 0000253B  0F 8D 00000131		jge startsky
+ 00002541  A2 000020E8 R		mov gmipcnt, al
+
+ 00002546  81 EE 00000000 E		sub esi, offset _sptr
+
+ 0000254C  8B C6			mov eax, esi
+ 0000254E  C1 E0 1D			shl eax, 29
+ 00002551  33 05 00000000 E		xor eax, _gixy[0]
+ 00002557  A1 00000000 E		mov eax, _gdz[0]
+ 0000255C  78 06			js short skipbladd0
+ 0000255E  01 05 00000000 E		add _gpz[0], eax
+ 00002564			skipbladd0:
+ 00002564  03 C0			add eax, eax
+ 00002566  71 0C			jno short skipremip0
+ 00002568  C7 05 00000000 E		mov _gpz[0], 7fffffffh
+	   7FFFFFFF
+ 00002572  33 C0			xor eax, eax
+ 00002574			skipremip0:
+ 00002574  A3 00000000 E		mov _gdz[0], eax
+
+ 00002579  89 8B 00000808		mov [ebx+8+2048], ecx ;this is the official place to backup ecx
+
+ 0000257F  8B C6			mov eax, esi
+ 00002581  8A 0D 000020E8 R		mov cl, byte ptr gmipcnt
+ 00002587  80 C1 12			add cl, 31-1-2-LVSID
+ 0000258A  D3 E0			shl eax, cl
+ 0000258C  33 05 00000004 E		xor eax, _gixy[4]
+ 00002592  A1 00000004 E		mov eax, _gdz[4]
+ 00002597  78 06			js short skipbladd1
+ 00002599  01 05 00000004 E		add _gpz[4], eax
+ 0000259F			skipbladd1:
+ 0000259F  03 C0			add eax, eax
+ 000025A1  71 0C			jno short skipremip1
+ 000025A3  C7 05 00000004 E		mov _gpz[4], 7fffffffh
+	   7FFFFFFF
+ 000025AD  33 C0			xor eax, eax
+ 000025AF			skipremip1:
+ 000025AF  A3 00000004 E		mov _gdz[4], eax
+
+ 000025B4  C1 EE 02			shr esi, 2
+ 000025B7  8B C6			mov eax, esi
+ 000025B9  0F B6 0D			movzx ecx, byte ptr gmipcnt
+	   000020E8 R
+ 000025C0  23 34 8D			and esi, gxmipk[ecx*4] ;mask for x (1:1024->512, etc...)
+	   0000207C R
+ 000025C7  23 04 8D			and eax, gymipk[ecx*4] ;mask for y (1:1024->512, etc...)
+	   000020A0 R
+ 000025CE  8D 34 70			lea esi, [eax+esi*2]
+ 000025D1  03 34 8D			add esi, gamipk[ecx*4] ;add offset (1:sptr+1024*1024*4, etc...)
+	   000020C4 R
+
+ 000025D8  0F B6 05			movzx eax, byte ptr gmipcnt
+	   000020E8 R
+ 000025DF  8B 04 85			mov eax, gylut[eax*4]
+	   00002058 R
+ 000025E6  A3 00002048 R		mov gylookoff, eax
+
+ 000025EB  D1 3D 00000004 E		sar _gixy[4], 1
+
+ 000025F1  B8 00000820 R		mov eax, offset _cfasm[2048]
+ 000025F6			startremip0:
+ 000025F6  D1 A8 00000808		shr dword ptr [eax+8+2048], 1
+ 000025FC  FF 80 0000080C		inc dword ptr [eax+12+2048]
+ 00002602  D1 A8 0000080C		shr dword ptr [eax+12+2048], 1
+ 00002608  83 C0 20			add eax, 32
+ 0000260B  3B 05 00002050 R		cmp eax, ce
+ 00002611  76 E3			jbe short startremip0
+
+ 00002613  A1 0000204C R		mov eax, ngxmax
+ 00002618  3B 05 00000000 E		cmp eax, _gxmax
+ 0000261E  73 52			jae short startsky
+ 00002620  03 C0			add eax, eax
+ 00002622  70 08			jo skipngxmax1 ;Make sure it doesn't overflow to negative!
+ 00002624  3B 05 00000000 E		cmp eax, _gxmax
+ 0000262A  7C 05			jl short skipngxmax2
+ 0000262C			skipngxmax1:
+ 0000262C  A1 00000000 E		mov eax, _gxmax
+ 00002631			skipngxmax2:
+ 00002631  A3 0000204C R		mov ngxmax, eax
+
+						;register fix-ups after here:
+ 00002636  8B 8B 00000808		mov ecx, [ebx+8+2048] ;this is the official place to restore ecx
+ 0000263C  D1 E9			shr ecx, 1
+ 0000263E  42				inc edx
+ 0000263F  D1 EA			shr edx, 1
+
+						;this makes grid transition clean
+ 00002641  8B 2D 00000004 E		mov ebp, _gpz[4]
+ 00002647  2B 2D 00000000 E		sub ebp, _gpz[0]
+ 0000264D  C1 ED 1F			shr ebp, 31
+ 00002650  8B 04 AD			mov eax, _gpz[ebp*4]
+	   00000000 E
+ 00002657  03 04 AD			add eax, _gdz[ebp*4]
+	   00000000 E
+ 0000265E  89 04 AD			mov _gpz[ebp*4], eax
+	   00000000 E
+ 00002665  8B 3E			mov edi, [esi]
+
+ 00002667  8B 25 00002050 R		mov esp, ce
+ 0000266D  E9 FFFFFD38			jmp skipixy2
+
+ 00002672			startsky:
+ 00002672  BC 00000820 R		mov esp, offset _cfasm[2048]
+ 00002677  3B 25 00002050 R		cmp esp, ce
+ 0000267D  0F 87 000000AD		ja retsub
+ 00002683  8B 35 00000000 E		mov esi, _skyoff
+ 00002689  85 F6			test esi, esi
+ 0000268B  75 30			jnz short prestartskyloop
+
+				;Sky not loaded, so fill with black ------------------------------------------
+ 0000268D			endprebegloop:
+ 0000268D  0F 6F 2D			movq mm5, _skycast
+	   00002040 R
+ 00002694  8B 84 24			mov eax, [esp+2048]
+	   00000800
+ 0000269B  8B 9C 24			mov ebx, [esp+4+2048]
+	   00000804
+ 000026A2  3B C3			cmp eax, ebx
+ 000026A4  77 0A			ja short endnextloop
+ 000026A6			endbegloop:
+				ifdef USEZBUFFER
+ 000026A6  0F E7 28			movntq [eax], mm5
+ 000026A9  83 C0 08			add eax, 8
+				else
+				endif
+ 000026AC  3B C3			cmp eax, ebx
+ 000026AE  76 F6			jbe short endbegloop
+ 000026B0			endnextloop:
+ 000026B0  83 C4 20			add esp, 32
+ 000026B3  3B 25 00002050 R		cmp esp, ce
+ 000026B9  76 D2			jbe short endprebegloop
+ 000026BB  EB 73			jmp short retsub
+
+				;Sky loaded: do texture mapping ----------------------------------------------
+
+ 000026BD			prestartskyloop:
+ 000026BD  0F 7F 8B			movq qword ptr [ebx+24+2048], mm1  ;Hack to make sure [cy0,cx0] is in memory for sky
+	   00000818
+
+ 000026C4  8B 35 00000000 E		mov esi, _skyoff
+ 000026CA  8B 0D 00000000 E		mov ecx, _skylat
+ 000026D0  0F 6E 2D			movd mm5, dword ptr _skycast[4]
+	   00002044 R
+ 000026D7  8B 3D 00000000 E		mov edi, _skyxsiz
+ 000026DD			startskyloop:
+ 000026DD  8B 84 24			mov eax, [esp+2048]
+	   00000800
+ 000026E4  8B 9C 24			mov ebx, [esp+4+2048]
+	   00000804
+ 000026EB  3B C3			cmp eax, ebx
+ 000026ED  77 36			ja short endskyslab
+ 000026EF  0F 6F 8C 24			movq mm1, [esp+24+2048]    ;mm1: [cy1.... cx1....]
+	   00000818
+ 000026F7			preskysearch:
+ 000026F7  0F FA 0D			psubd mm1, qword ptr _gi
+	   00000000 E
+ 000026FE			skysearch:
+ 000026FE  0F 70 F9 DD			pshufw mm7, mm1, 0ddh      ;mm7: [cy1 cx1 cy1 cx1]
+ 00002702  0F 6E 1C B9			movd mm3, dword ptr [ecx+edi*4]      ;mm3: [       xvi -yvi]
+ 00002706  0F F5 FB			pmaddwd mm7, mm3           ;mm7: [ 0   0  -decide]
+ 00002709  0F 7E FA			movd edx, mm7
+ 0000270C  C1 FA 1F			sar edx, 31
+ 0000270F  8D 3C 3A			lea edi, [edi+edx]
+ 00002712  75 EA			jnz short skysearch        ;if (cy1*xvi ? -yvi*cx1)
+
+ 00002714  0F 6E 34 BE			movd mm6, dword ptr [esi+edi*4]
+				ifdef USEZBUFFER
+ 00002718  0F 62 F5			punpckldq mm6, mm5
+ 0000271B  0F E7 33			movntq [ebx], mm6
+ 0000271E  83 EB 08			sub ebx, 8
+				else
+				endif
+ 00002721  3B C3			cmp eax, ebx
+ 00002723  76 D2			jbe short preskysearch
+ 00002725			endskyslab:
+ 00002725  83 C4 20			add esp, 32
+ 00002728  3B 25 00002050 R		cmp esp, ce
+ 0000272E  76 AD			jbe short startskyloop
+
+				;-----------------------------------------------------------------------
+
+ 00002730			retsub:
+ 00002730  0F 77			emms
+ 00002732  8B 25 00002054 R		mov esp, dword ptr espbak
+ 00002738  5D				pop ebp    ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
+ 00002739  5F				pop edi
+ 0000273A  5E				pop esi
+ 0000273B  5B				pop ebx
+ 0000273C  C3				ret
+
+ 0000273D			predeletez:
+ 0000273D  0F 70 F6 4E			pshufw mm6, mm6, 04eh       ;swap hi & lo of mm6
+ 00002741			deletez:
+ 00002741  8B 1D 00002050 R		mov ebx, ce
+ 00002747  83 EB 20			sub ebx, 32
+ 0000274A  81 FB 00000820 R		cmp ebx, offset _cfasm[2048]
+ 00002750  72 DE			jb retsub          ;nothing to fill - skip remiporend stuff!
+ 00002752  89 1D 00002050 R		mov dword ptr ce, ebx
+
+ 00002758  83 C3 20			add ebx, 32
+
+ 0000275B  3B E3			cmp esp, ebx       ;while (eax <= ce)
+ 0000275D  0F 83 FFFFFBE2		jae afterdelete
+ 00002763  8B C4			mov eax, esp
+ 00002765			deleteloop:
+ 00002765  0F 6F A8			movq mm5, [eax+32+0+2048]
+	   00000820
+ 0000276C  0F 6F B8			movq mm7, [eax+32+8+2048]
+	   00000828
+ 00002773  0F 7F A8			movq [eax+0+2048], mm5
+	   00000800
+ 0000277A  0F 7F B8			movq [eax+8+2048], mm7
+	   00000808
+ 00002781  0F 6F A8			movq mm5, [eax+32+16+2048]
+	   00000830
+ 00002788  0F 6F B8			movq mm7, [eax+32+24+2048]
+	   00000838
+ 0000278F  0F 7F A8			movq [eax+16+2048], mm5
+	   00000810
+ 00002796  0F 7F B8			movq [eax+24+2048], mm7
+	   00000818
+ 0000279D  83 C0 20			add eax, 32
+ 000027A0  3B C3			cmp eax, ebx
+ 000027A2  72 C1			jb deleteloop
+ 000027A4  E9 FFFFFB9C			jmp afterdelete
+
+				;debugret:
+				;   mov _reax, eax
+				;   mov _rebx, ebx
+				;   mov _recx, ecx
+				;   mov _redx, edx
+				;   mov _resi, esi
+				;   mov _redi, edi
+				;   mov _rebp, ebp
+				;   mov _resp, esp
+				;   movq _remm[0], mm0
+				;   movq _remm[8], mm1
+				;   movq _remm[16], mm2
+				;   movq _remm[24], mm3
+				;   movq _remm[32], mm4
+				;   movq _remm[40], mm5
+				;   movq _remm[48], mm6
+				;   movq _remm[56], mm7
+				;   emms
+				;   pop ebp
+				;   ret
+
+				;----------------------------------------------------------------------------
+
+ = 00000400			MAXZSIZ EQU 1024 ;WARNING: THIS IS BAD SINCE KV6 format supports up to 65535!
+
+				ifdef USEZBUFFER
+				EXTERN _zbufoff : dword
+				endif
+				EXTERN _ptfaces16 : dword
+
+				PUBLIC _opti4asm, _caddasm, _ztabasm, _scisdist, _kv6colmul, _kv6coladd
+				PUBLIC _qsum0, _qsum1, _qbplbpp, _kv6frameplace, _kv6bytesperline
+
+				ALIGN 16
+ 000027B0  00000014 [		_opti4asm dd 5*4 dup(0)        ;NOTE: this used by ?render
+	    00000000
+	   ]
+ 00002800  00000020 [		_caddasm dd 8*4 dup(0)
+	    00000000
+	   ]
+ 00002880  0000100C [		_ztabasm dd (MAXZSIZ+3)*4 dup(0)
+	    00000000
+	   ]
+ 000068B0 40800000		_scisdist dd 40800000h,0,0,0
+	   00000000
+	   00000000
+	   00000000
+ 000068C0  00000100 [		_kv6colmul dq 256 dup(0)
+	    0000000000000000
+	   ]
+ 000070C0			_kv6coladd dq 0
+	   0000000000000000
+ 000070C8			_qsum0 dq 0   ;[8000h-hy,8000h-hx,8000h-hy,8000h-hx]
+	   0000000000000000
+ 000070D0			_qsum1 dq 0   ;[8000h-fy,8000h-fx,8000h-fy,8000h-fx]
+	   0000000000000000
+ 000070D8			_qbplbpp dq 0 ;[0,0,bpl,bpp]
+	   0000000000000000
+ 000070E0 00000000		_kv6frameplace dd 0
+ 000070E4 00000000		_kv6bytesperline dd 0
+
+				PUBLIC _drawboundcubesseinit   ;Visual C entry point (pass by stack)
+ 000070E8			_drawboundcubesseinit:
+ 000070E8  A1 000070E0 R		mov eax, _kv6frameplace
+ 000070ED  A3 00007265 R		mov dword ptr [bcmod0-4], eax
+ 000070F2  A1 000070E4 R		mov eax, _kv6bytesperline
+ 000070F7  A3 0000728F R		mov dword ptr [bcmod3-4], eax
+				ifdef USEZBUFFER
+					;mov eax, _kv6bytesperline
+ 000070FC  A3 00007289 R		mov dword ptr [bcmod2-4], eax
+ 00007101  A1 00000000 E		mov eax, _zbufoff
+ 00007106  A3 00007270 R		mov dword ptr [bcmod1-4], eax
+				endif
+ 0000710B  C3				ret       ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
+
+				ALIGN 16
+				PUBLIC _drawboundcubesse       ;Visual C entry point (pass by stack)
+ 00007110			_drawboundcubesse:
+ 00007110  8B 44 24 04			mov eax, [esp+4]
+ 00007114  8B 4C 24 08			mov ecx, [esp+8]
+ 00007118  53				push ebx   ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
+ 00007119  57				push edi
+
+ 0000711A  0F B6 78 06			movzx edi, byte ptr [eax+6]
+ 0000711E  23 CF			and ecx, edi
+ 00007120  0F 84 00000175		jz retboundcube
+
+ 00007126  0F 28 3D			movaps xmm7, _ztabasm[MAXZSIZ*16]
+	   00006880 R
+ 0000712D  0F B7 78 04			movzx edi, word ptr [eax+4]
+ 00007131  C1 E7 04			shl edi, 4
+ 00007134  0F 58 BF			addps xmm7, _ztabasm[edi]
+	   00002880 R
+ 0000713B  0F 12 C7			movhlps xmm0, xmm7
+ 0000713E  0F 2E 05			ucomiss xmm0, _scisdist
+	   000068B0 R
+ 00007145  0F 82 00000150		jc retboundcube
+
+ 0000714B  8D 0C CD			lea ecx, _ptfaces16[ecx*8]
+	   00000000 E
+
+ 00007152  0F B6 59 01			movzx ebx, byte ptr [ecx+1] ;                           Ý
+ 00007156  0F B6 79 02			movzx edi, byte ptr [ecx+2] ;                           Ý
+ 0000715A  0F 28 83			movaps xmm0, _caddasm[ebx]  ;xmm0: [ z0, z0, y0, x0]    Û
+	   00002800 R
+ 00007161  0F 58 C7			addps xmm0, xmm7            ;                           ÛÛ±
+ 00007164  0F 28 8F			movaps xmm1, _caddasm[edi]  ;xmm1: [ z1, z1, y1, x1]    Û
+	   00002800 R
+ 0000716B  0F 58 CF			addps xmm1, xmm7            ;                           ÛÛ±
+ 0000716E  0F 28 F0			movaps xmm6, xmm0           ;xmm6: [ z0, z0, y0, x0]    Û
+ 00007171  0F 12 C1			movhlps xmm0, xmm1          ;xmm0: [ z0, z0, z1, z1]    Û
+ 00007174  0F 16 CE			movlhps xmm1, xmm6          ;xmm1: [ y0, x0, y1, x1]    Û
+ 00007177  0F 53 C0			rcpps xmm0, xmm0            ;xmm6: [/z0,/z0,/z1,/z1]    ÛÛ
+ 0000717A  0F 59 C1			mulps xmm0, xmm1            ;xmm0: [sy0,sx0,sy1,sx1]    ÛÛ±±
+
+ 0000717D  0F B6 59 03			movzx ebx, byte ptr [ecx+3] ;                           Ý
+ 00007181  0F B6 79 04			movzx edi, byte ptr [ecx+4] ;                           Ý
+ 00007185  0F 28 93			movaps xmm2, _caddasm[ebx]  ;xmm2: [ z2, z2, y2, x2]    Û
+	   00002800 R
+ 0000718C  0F 58 D7			addps xmm2, xmm7            ;                           ÛÛ±
+ 0000718F  0F 28 9F			movaps xmm3, _caddasm[edi]  ;xmm3: [ z3, z3, y3, x3]    Û
+	   00002800 R
+ 00007196  0F 58 DF			addps xmm3, xmm7            ;                           ÛÛ±
+ 00007199  0F 28 F2			movaps xmm6, xmm2           ;xmm6: [ z2, z2, y2, x2]    Û
+ 0000719C  0F 12 D3			movhlps xmm2, xmm3          ;xmm2: [ z2, z2, z3, z3]    Û
+ 0000719F  0F 16 DE			movlhps xmm3, xmm6          ;xmm3: [ y2, x2, y3, x3]    Û
+ 000071A2  0F 53 D2			rcpps xmm2, xmm2            ;xmm6: [/z2,/z2,/z3,/z3]    ÛÛ
+ 000071A5  0F 59 D3			mulps xmm2, xmm3            ;xmm2: [sy2,sx2,sy3,sx3]    ÛÛ±±
+
+ 000071A8  0F 2C C0			cvttps2pi mm0, xmm0         ;                           Û
+ 000071AB  0F 12 C0			movhlps xmm0, xmm0          ;                           Û
+ 000071AE  0F 2C D2			cvttps2pi mm2, xmm2         ;                           Û
+ 000071B1  0F 2C C8			cvttps2pi mm1, xmm0         ;                           Û
+ 000071B4  0F 12 D2			movhlps xmm2, xmm2          ;                           Û
+ 000071B7  0F 6B C1			packssdw mm0, mm1           ;                           Ý
+ 000071BA  0F 7F C1			movq mm1, mm0               ;                           Ý
+ 000071BD  0F 2C DA			cvttps2pi mm3, xmm2         ;                           Û
+ 000071C0  0F 6B D3			packssdw mm2, mm3           ;                           Ý
+ 000071C3  0F EA C2			pminsw mm0, mm2             ;                           Ý
+ 000071C6  0F EE CA			pmaxsw mm1, mm2             ;                           Ý
+
+ 000071C9  80 39 04			cmp byte ptr [ecx], 4
+ 000071CC  74 3D			je short bcskip6case
+
+ 000071CE  0F B6 59 05			movzx ebx, byte ptr [ecx+5] ;                           Ý
+ 000071D2  0F B6 79 06			movzx edi, byte ptr [ecx+6] ;                           Ý
+ 000071D6  0F 28 A3			movaps xmm4, _caddasm[ebx]  ;xmm4: [ z4, z4, y4, x4]    Û
+	   00002800 R
+ 000071DD  0F 58 E7			addps xmm4, xmm7            ;                           ÛÛ±
+ 000071E0  0F 28 AF			movaps xmm5, _caddasm[edi]  ;xmm5: [ z5, z5, y5, x5]    Û
+	   00002800 R
+ 000071E7  0F 58 EF			addps xmm5, xmm7            ;                           ÛÛ±
+ 000071EA  0F 28 F4			movaps xmm6, xmm4           ;xmm6: [ z4, z4, y4, x4]    Û
+ 000071ED  0F 12 E5			movhlps xmm4, xmm5          ;xmm4: [ z4, z4, z5, z5]    Û
+ 000071F0  0F 16 EE			movlhps xmm5, xmm6          ;xmm5: [ y4, x4, y5, x5]    Û
+ 000071F3  0F 53 E4			rcpps xmm4, xmm4            ;xmm6: [/z4,/z4,/z5,/z5]    ÛÛ
+ 000071F6  0F 59 E5			mulps xmm4, xmm5            ;xmm4: [sy4,sx4,sy5,sx5]    ÛÛ±±
+
+ 000071F9  0F 2C E4			cvttps2pi mm4, xmm4         ;                           Û
+ 000071FC  0F 12 E4			movhlps xmm4, xmm4          ;                           Û
+ 000071FF  0F 2C EC			cvttps2pi mm5, xmm4         ;                           Û
+ 00007202  0F 6B E5			packssdw mm4, mm5           ;                           Ý
+ 00007205  0F EA C4			pminsw mm0, mm4             ; mm0: [my1,mx1,my0,mx0]    Ý
+ 00007208  0F EE CC			pmaxsw mm1, mm4             ; mm1: [My1,Mx1,My0,Mx0]    Ý
+ 0000720B			bcskip6case:
+
+ 0000720B  0F 70 D0 0E			pshufw mm2, mm0, 0eh        ; mm2: [   ,   ,my1,mx1]    Û
+ 0000720F  0F 70 D9 0E			pshufw mm3, mm1, 0eh        ; mm3: [   ,   ,My1,Mx1]    Û
+ 00007213  0F EA C2			pminsw mm0, mm2             ; mm0: [  ?,  ?, my, mx]    Ý
+ 00007216  0F EE CB			pmaxsw mm1, mm3             ; mm1: [  ?,  ?, My, Mx]    Ý
+ 00007219  0F 62 C1			punpckldq mm0, mm1          ; mm0: [ My, Mx, my, mx]    Ý
+
+						;See SCRCLP2D.BAS for a derivation of these 4 lines:
+ 0000721C  0F ED C6			paddsw mm0, mm6 ;_qsum0     ; mm0: ["+?,"+?,"+?,"+?]    Û
+ 0000721F  0F EE C7			pmaxsw mm0, mm7 ;_qsum1     ; mm0: [sy1,sx1,sy0,sx0]    Û
+ 00007222  0F 70 C8 EE			pshufw mm1, mm0, 0eeh       ; mm1: [sy1,sx1,sy1,sx1]    Û
+ 00007226  0F D9 C8			psubusw mm1, mm0            ; mm1: [  0,  0, dy, dx]    Ý
+						;kv6frameplace -= ((32767-yres)*bpl + (32767-xres)*4);
+
+ 00007229  0F 7E CA			movd edx, mm1               ; edx: [ dy, dx]            Û
+ 0000722C  0F F5 05			pmaddwd mm0, _qbplbpp       ; mm0: [      ?,   offs]    Û±± (=y*bpl+x*bpp)
+	   000070D8 R
+ 00007233  0F 7E CB			movd ebx, mm1               ; ebx: [ dy, dx]            Ý
+ 00007236  81 E2 0000FFFF		and edx, 0ffffh             ; ebx: [  0, dx]            Ý
+ 0000723C  74 5D			jz short retboundcube       ;                           Ý
+ 0000723E  81 EB 00010000		sub ebx, 65536              ;                           Ý
+ 00007244  72 55			jc short retboundcube       ;                           Ý
+
+ 00007246  0F B6 78 07			movzx edi, byte ptr [eax+7]
+ 0000724A  0F 60 28			punpcklbw mm5, [eax]
+ 0000724D  0F E4 2C FD			pmulhuw mm5, _kv6colmul[edi*8]
+	   000068C0 R
+ 00007255  0F FD 2D			paddw mm5, _kv6coladd
+	   000070C0 R
+ 0000725C  0F 67 ED			packuswb mm5, mm5
+ 0000725F  0F 7E C7			movd edi, mm0               ; edi: offs
+
+ 00007262  8D BC 97			lea edi, [edi+edx*4+88888888h] ;_kv6frameplace
+	   88888888
+ 00007269			bcmod0:
+ 00007269  F7 DA			neg edx
+				ifdef USEZBUFFER
+ 0000726B  0F 12 C7			movhlps xmm0, xmm7
+ 0000726E  8D 87 88888888		lea eax, [edi+88888888h] ;_zbufoff
+ 00007274			bcmod1:
+				endif
+ 00007274			boundcubenextline:
+ 00007274  8B CA			mov ecx, edx
+ 00007276			begstosb:
+				ifdef USEZBUFFER
+ 00007276  0F 2E 04 88			ucomiss xmm0, dword ptr [eax+ecx*4]
+ 0000727A  73 09			jnc short skipdrawpix
+ 0000727C  F3/ 0F 11 04 88		movss dword ptr [eax+ecx*4], xmm0
+				endif
+ 00007281  0F 7E 2C 8F			movd dword ptr [edi+ecx*4], mm5
+ 00007285			skipdrawpix:
+ 00007285  41				inc ecx
+ 00007286  75 EE			jnz begstosb
+				ifdef USEZBUFFER
+ 00007288  05 88888888			add eax, 88888888h; _kv6bytesperline
+ 0000728D			bcmod2:
+				endif
+ 0000728D  81 C7 88888888		add edi, 88888888h ;_kv6bytesperline
+ 00007293			bcmod3:
+
+ 00007293  81 EB 00010000		sub ebx, 65536
+ 00007299  73 D9			jnc short boundcubenextline
+
+ 0000729B			retboundcube:
+ 0000729B  5F				pop edi    ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
+ 0000729C  5B				pop ebx
+ 0000729D  C3				ret
+
+				PUBLIC _drawboundcube3dninit   ;Visual C entry point (pass by stack)
+ 0000729E			_drawboundcube3dninit:
+ 0000729E  A1 000070E0 R		mov eax, _kv6frameplace
+ 000072A3  A3 00007487 R		mov dword ptr [bcmod0_3dn-4], eax
+ 000072A8  A1 000070E4 R		mov eax, _kv6bytesperline
+ 000072AD  A3 000074B9 R		mov dword ptr [bcmod3_3dn-4], eax
+				ifdef USEZBUFFER
+					;mov eax, _kv6bytesperline
+ 000072B2  A3 000074B3 R		mov dword ptr [bcmod2_3dn-4], eax
+ 000072B7  A1 00000000 E		mov eax, _zbufoff
+ 000072BC  A3 00007492 R		mov dword ptr [bcmod1_3dn-4], eax
+				endif
+ 000072C1  C3				ret       ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
+
+				ALIGN 16
+				PUBLIC _drawboundcube3dn       ;Visual C entry point (pass by stack)
+ 000072D0			_drawboundcube3dn:
+ 000072D0  8B 44 24 04			mov eax, [esp+4]
+ 000072D4  8B 4C 24 08			mov ecx, [esp+8]
+ 000072D8  53				push ebx   ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
+ 000072D9  57				push edi
+
+ 000072DA  0F B6 78 06			movzx edi, byte ptr [eax+6]
+ 000072DE  23 CF			and ecx, edi
+ 000072E0  0F 84 000001DF		jz retboundcube_3dn
+
+ 000072E6  0F 6F 35			movq mm6, qword ptr _ztabasm[MAXZSIZ*16]
+	   00006880 R
+ 000072ED  0F 6F 3D			movq mm7, qword ptr _ztabasm[MAXZSIZ*16+8]
+	   00006888 R
+ 000072F4  0F B7 78 04			movzx edi, word ptr [eax+4]
+ 000072F8  C1 E7 04			shl edi, 4
+ 000072FB  0F 0F B7			pfadd mm6, qword ptr _ztabasm[edi]
+	   00002880 R 9E
+ 00007303  0F 0F BF			pfadd mm7, qword ptr _ztabasm[edi+8]
+	   00002888 R 9E
+ 0000730B  0F 7F F8			movq mm0, mm7
+ 0000730E  0F 66 05			pcmpgtd mm0, qword ptr _scisdist
+	   000068B0 R
+ 00007315  0F 7E C2			movd edx, mm0
+ 00007318  85 D2			test edx, edx
+ 0000731A  0F 84 000001A5		jz retboundcube_3dn
+
+ 00007320  8D 0C CD			lea ecx, _ptfaces16[ecx*8]
+	   00000000 E
+
+ 00007327  0F B6 59 01			movzx ebx, byte ptr [ecx+1]
+ 0000732B  0F B6 79 02			movzx edi, byte ptr [ecx+2]
+ 0000732F  0F 6F 83			movq mm0, qword ptr _caddasm[ebx]
+	   00002800 R
+ 00007336  0F 6F 8F			movq mm1, qword ptr _caddasm[edi]
+	   00002800 R
+ 0000733D  0F 0F C6 9E			pfadd mm0, mm6              ;mm0: [   y0    x0]
+ 00007341  0F 0F CE 9E			pfadd mm1, mm6              ;mm1: [   y1    x1]
+ 00007345  0F 6E AB			movd mm5, _caddasm[ebx+8]
+	   00002808 R
+ 0000734C  0F 62 AF			punpckldq mm5, _caddasm[edi+8]
+	   00002808 R
+ 00007353  0F 0F EF 9E			pfadd mm5, mm7              ;mm5: [   z1    z0]
+ 00007357  0F 0F E5 96			pfrcp mm4, mm5              ;mm4: [ 1/z0  1/z0]
+ 0000735B  0F 6A ED			punpckhdq mm5, mm5          ;mm5: [   z1    z1]
+ 0000735E  0F 0F ED 96			pfrcp mm5, mm5              ;mm5: [ 1/z1  1/z1]
+ 00007362  0F 0F C4 B4			pfmul mm0, mm4              ;mm0: [y0/z0 x0/z0]
+ 00007366  0F 0F CD B4			pfmul mm1, mm5              ;mm1: [y1/z1 x1/z1]
+ 0000736A  0F 0F C0 1D			pf2id mm0, mm0              ;mm0: [  sy0   sx0]
+ 0000736E  0F 0F C9 1D			pf2id mm1, mm1              ;mm1: [  sy1   sx1]
+ 00007372  0F 6B C1			packssdw mm0, mm1           ;mm0: [sy1 sx1 sy0 sx0]
+
+ 00007375  0F B6 59 03			movzx ebx, byte ptr [ecx+3]
+ 00007379  0F B6 79 04			movzx edi, byte ptr [ecx+4]
+ 0000737D  0F 6F 93			movq mm2, qword ptr _caddasm[ebx]
+	   00002800 R
+ 00007384  0F 6F 9F			movq mm3, qword ptr _caddasm[edi]
+	   00002800 R
+ 0000738B  0F 0F D6 9E			pfadd mm2, mm6              ;mm2: [   y2    x2]
+ 0000738F  0F 0F DE 9E			pfadd mm3, mm6              ;mm3: [   y3    x3]
+ 00007393  0F 6E AB			movd mm5, _caddasm[ebx+8]
+	   00002808 R
+ 0000739A  0F 62 AF			punpckldq mm5, _caddasm[edi+8]
+	   00002808 R
+ 000073A1  0F 0F EF 9E			pfadd mm5, mm7              ;mm5: [   z3    z2]
+ 000073A5  0F 0F E5 96			pfrcp mm4, mm5              ;mm4: [ 1/z2  1/z2]
+ 000073A9  0F 6A ED			punpckhdq mm5, mm5          ;mm5: [   z3    z3]
+ 000073AC  0F 0F ED 96			pfrcp mm5, mm5              ;mm5: [ 1/z3  1/z3]
+ 000073B0  0F 0F D4 B4			pfmul mm2, mm4              ;mm2: [y2/z2 x2/z2]
+ 000073B4  0F 0F DD B4			pfmul mm3, mm5              ;mm3: [y3/z3 x3/z3]
+ 000073B8  0F 0F D2 1D			pf2id mm2, mm2              ;mm2: [  sy2   sx2]
+ 000073BC  0F 0F DB 1D			pf2id mm3, mm3              ;mm3: [  sy3   sx3]
+ 000073C0  0F 6B D3			packssdw mm2, mm3           ;mm2: [sy3 sx3 sy2 sx2]
+
+ 000073C3  0F 7F C1			movq mm1, mm0
+ 000073C6  0F EA C2			pminsw mm0, mm2             ;mm0: [sy1 sx1 sy0 sx0] <-min
+ 000073C9  0F EE CA			pmaxsw mm1, mm2             ;mm1: [sy1 sx1 sy0 sx0] <-max
+
+ 000073CC  80 39 04			cmp byte ptr [ecx], 4
+ 000073CF  74 54			je short bcskip6case_3dn
+
+ 000073D1  0F B6 59 05			movzx ebx, byte ptr [ecx+5]
+ 000073D5  0F B6 79 06			movzx edi, byte ptr [ecx+6]
+ 000073D9  0F 6F 93			movq mm2, qword ptr _caddasm[ebx]
+	   00002800 R
+ 000073E0  0F 6F 9F			movq mm3, qword ptr _caddasm[edi]
+	   00002800 R
+ 000073E7  0F 0F D6 9E			pfadd mm2, mm6              ;mm2: [   y4    x4]
+ 000073EB  0F 0F DE 9E			pfadd mm3, mm6              ;mm3: [   y5    x5]
+ 000073EF  0F 6E AB			movd mm5, _caddasm[ebx+8]
+	   00002808 R
+ 000073F6  0F 62 AF			punpckldq mm5, _caddasm[edi+8]
+	   00002808 R
+ 000073FD  0F 0F EF 9E			pfadd mm5, mm7              ;mm5: [   z5    z4]
+ 00007401  0F 0F E5 96			pfrcp mm4, mm5              ;mm4: [ 1/z4  1/z4]
+ 00007405  0F 6A ED			punpckhdq mm5, mm5          ;mm5: [   z5    z5]
+ 00007408  0F 0F ED 96			pfrcp mm5, mm5              ;mm5: [ 1/z5  1/z5]
+ 0000740C  0F 0F D4 B4			pfmul mm2, mm4              ;mm2: [y4/z4 x4/z4]
+ 00007410  0F 0F DD B4			pfmul mm3, mm5              ;mm3: [y5/z5 x5/z5]
+ 00007414  0F 0F D2 1D			pf2id mm2, mm2              ;mm2: [  sy4   sx4]
+ 00007418  0F 0F DB 1D			pf2id mm3, mm3              ;mm3: [  sy5   sx5]
+ 0000741C  0F 6B D3			packssdw mm2, mm3           ;mm2: [sy5 sx5 sy4 sx4]
+
+ 0000741F  0F EA C2			pminsw mm0, mm2             ; mm0: [my1,mx1,my0,mx0]
+ 00007422  0F EE CA			pmaxsw mm1, mm2             ; mm1: [My1,Mx1,My0,Mx0]
+ 00007425			bcskip6case_3dn:
+
+ 00007425  0F 70 D0 0E			pshufw mm2, mm0, 0eh        ; mm2: [my0,mx0,my1,mx1]
+ 00007429  0F 70 D9 0E			pshufw mm3, mm1, 0eh        ; mm3: [My0,Mx0,My1,Mx1]
+ 0000742D  0F EA C2			pminsw mm0, mm2             ; mm0: [  ?,  ?, my, mx]
+ 00007430  0F EE CB			pmaxsw mm1, mm3             ; mm1: [  ?,  ?, My, Mx]
+ 00007433  0F 62 C1			punpckldq mm0, mm1          ; mm0: [ My, Mx, my, mx]
+
+						;See SCRCLP2D.BAS for a derivation of these 4 lines:
+ 00007436  0F ED 05			paddsw mm0, _qsum0          ; mm0: ["+?,"+?,"+?,"+?]    Û
+	   000070C8 R
+ 0000743D  0F EE 05			pmaxsw mm0, _qsum1          ; mm0: [sy1,sx1,sy0,sx0]    Û
+	   000070D0 R
+ 00007444  0F 70 C8 EE			pshufw mm1, mm0, 0eeh       ; mm1: [sy1,sx1,sy1,sx1]    Û
+ 00007448  0F D9 C8			psubusw mm1, mm0            ; mm1: [  0,  0, dy, dx]    Ý
+						;kv6frameplace -= ((32767-yres)*bpl + (32767-xres)*4);
+
+ 0000744B  0F 7E CA			movd edx, mm1               ; edx: [ dy, dx]            Û
+ 0000744E  0F F5 05			pmaddwd mm0, _qbplbpp       ; mm0: [      ?,   offs]    Û±± (=y*bpl+x*bpp)
+	   000070D8 R
+ 00007455  0F 7E CB			movd ebx, mm1               ; ebx: [ dy, dx]            Ý
+ 00007458  81 E2 0000FFFF		and edx, 0ffffh             ; ebx: [  0, dx]            Ý
+ 0000745E  74 65			jz short retboundcube_3dn   ;                           Ý
+ 00007460  81 EB 00010000		sub ebx, 65536              ;                           Ý
+ 00007466  72 5D			jc short retboundcube_3dn   ;                           Ý
+
+ 00007468  0F B6 78 07			movzx edi, byte ptr [eax+7]
+ 0000746C  0F 60 28			punpcklbw mm5, [eax]
+ 0000746F  0F E4 2C FD			pmulhuw mm5, _kv6colmul[edi*8]
+	   000068C0 R
+ 00007477  0F FD 2D			paddw mm5, _kv6coladd
+	   000070C0 R
+ 0000747E  0F 67 ED			packuswb mm5, mm5
+ 00007481  0F 7E C7			movd edi, mm0               ; edi: offs
+
+ 00007484  8D BC 97			lea edi, [edi+edx*4+88888888h] ;_kv6frameplace
+	   88888888
+ 0000748B			bcmod0_3dn:
+ 0000748B  F7 DA			neg edx
+ 0000748D  0F 6E CA			movd mm1, edx
+				ifdef USEZBUFFER
+ 00007490  8D 87 88888888		lea eax, [edi+88888888h] ;_zbufoff
+ 00007496			bcmod1_3dn:
+				endif
+ 00007496			boundcubenextline_3dn:
+ 00007496  0F 7E C9			movd ecx, mm1
+ 00007499			begstosb_3dn:
+				ifdef USEZBUFFER
+ 00007499  0F 7F F8			movq mm0, mm7
+ 0000749C  0F 66 04 88			pcmpgtd mm0, [eax+ecx*4]
+ 000074A0  0F 7E C2			movd edx, mm0
+ 000074A3  85 D2			test edx, edx
+ 000074A5  75 08			jnz short skipdrawpix_3dn
+ 000074A7  0F 7E 3C 88			movd dword ptr [eax+ecx*4], mm7
+				endif
+ 000074AB  0F 7E 2C 8F			movd dword ptr [edi+ecx*4], mm5
+ 000074AF			skipdrawpix_3dn:
+ 000074AF  41				inc ecx
+ 000074B0  75 E7			jnz begstosb_3dn
+				ifdef USEZBUFFER
+ 000074B2  05 88888888			add eax, 88888888h; _kv6bytesperline
+ 000074B7			bcmod2_3dn:
+				endif
+ 000074B7  81 C7 88888888		add edi, 88888888h ;_kv6bytesperline
+ 000074BD			bcmod3_3dn:
+
+ 000074BD  81 EB 00010000		sub ebx, 65536
+ 000074C3  73 D1			jnc short boundcubenextline_3dn
+
+ 000074C5			retboundcube_3dn:
+ 000074C5  5F				pop edi    ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
+ 000074C6  5B				pop ebx
+ 000074C7  C3				ret
+
+ 000074C8			_dep_protect_end:
+ 74C8				text ENDS
+				END
+Microsoft (R) Macro Assembler Version 10.00.30319.01	    01/16/12 15:36:01
+./src/v5.masm						     Symbols 2 - 1
+
+
+
+
+Segments and Groups:
+
+                N a m e                 Size     Length   Align   Combine Class
+
+text . . . . . . . . . . . . . .	32 Bit	 74C8	  	  Public  'CODE'	
+
+
+Symbols:
+
+                N a m e                 Type     Value    Attr
+
+LOGPREC  . . . . . . . . . . . .	Number	 0014h	 
+LVSID  . . . . . . . . . . . . .	Number	 000Ah	 
+MAXZSIZ  . . . . . . . . . . . .	Number	 0400h	 
+USEZBUFFER . . . . . . . . . . .	Number	 0001h	 
+VSID . . . . . . . . . . . . . .	Number	 0400h	 
+__imp__VirtualProtect@16 . . . .	L Near	 0000	  text	External
+_caddasm . . . . . . . . . . . .	DWord	 2800	  text	Public
+_cfasm . . . . . . . . . . . . .	Byte	 0020	  text	Public
+_dep_protect_end . . . . . . . .	L Near	 74C8	  text	
+_drawboundcube3dninit  . . . . .	L Near	 729E	  text	Public
+_drawboundcube3dn  . . . . . . .	L Near	 72D0	  text	Public
+_drawboundcubesseinit  . . . . .	L Near	 70E8	  text	Public
+_drawboundcubesse  . . . . . . .	L Near	 7110	  text	Public
+_gcsub . . . . . . . . . . . . .	DWord	 0000	  External
+_gdz . . . . . . . . . . . . . .	DWord	 0000	  External
+_gixy  . . . . . . . . . . . . .	DWord	 0000	  External
+_gi  . . . . . . . . . . . . . .	DWord	 0000	  External
+_gmipnum . . . . . . . . . . . .	DWord	 0000	  External
+_gpixy . . . . . . . . . . . . .	DWord	 0000	  External
+_gpz . . . . . . . . . . . . . .	DWord	 0000	  External
+_grouscanasm . . . . . . . . . .	L Near	 20F0	  text	Public
+_gxmax . . . . . . . . . . . . .	DWord	 0000	  External
+_gxmip . . . . . . . . . . . . .	DWord	 0000	  External
+_gylookup  . . . . . . . . . . .	DWord	 0000	  External
+_kv6bytesperline . . . . . . . .	DWord	 70E4	  text	Public
+_kv6coladd . . . . . . . . . . .	QWord	 70C0	  text	Public
+_kv6colmul . . . . . . . . . . .	QWord	 68C0	  text	Public
+_kv6frameplace . . . . . . . . .	DWord	 70E0	  text	Public
+_opti4asm  . . . . . . . . . . .	DWord	 27B0	  text	Public
+_ptfaces16 . . . . . . . . . . .	DWord	 0000	  text	External
+_qbplbpp . . . . . . . . . . . .	QWord	 70D8	  text	Public
+_qsum0 . . . . . . . . . . . . .	QWord	 70C8	  text	Public
+_qsum1 . . . . . . . . . . . . .	QWord	 70D0	  text	Public
+_scisdist  . . . . . . . . . . .	DWord	 68B0	  text	Public
+_skycast . . . . . . . . . . . .	QWord	 2040	  text	Public
+_skylat  . . . . . . . . . . . .	DWord	 0000	  External
+_skyoff  . . . . . . . . . . . .	DWord	 0000	  External
+_skyxsiz . . . . . . . . . . . .	DWord	 0000	  External
+_sptr  . . . . . . . . . . . . .	DWord	 0000	  External
+_v5_asm_dep_unlock . . . . . . .	L Near	 0000	  text	Public
+_zbufoff . . . . . . . . . . . .	DWord	 0000	  text	External
+_ztabasm . . . . . . . . . . . .	DWord	 2880	  text	Public
+afterdelete  . . . . . . . . . .	L Near	 2345	  text	
+bcmod0_3dn . . . . . . . . . . .	L Near	 748B	  text	
+bcmod0 . . . . . . . . . . . . .	L Near	 7269	  text	
+bcmod1_3dn . . . . . . . . . . .	L Near	 7496	  text	
+bcmod1 . . . . . . . . . . . . .	L Near	 7274	  text	
+bcmod2_3dn . . . . . . . . . . .	L Near	 74B7	  text	
+bcmod2 . . . . . . . . . . . . .	L Near	 728D	  text	
+bcmod3_3dn . . . . . . . . . . .	L Near	 74BD	  text	
+bcmod3 . . . . . . . . . . . . .	L Near	 7293	  text	
+bcskip6case_3dn  . . . . . . . .	L Near	 7425	  text	
+bcskip6case  . . . . . . . . . .	L Near	 720B	  text	
+beginsertloop  . . . . . . . . .	L Near	 24B3	  text	
+begsearchi . . . . . . . . . . .	L Near	 2489	  text	
+begstosb_3dn . . . . . . . . . .	L Near	 7499	  text	
+begstosb . . . . . . . . . . . .	L Near	 7276	  text	
+boundcubenextline_3dn  . . . . .	L Near	 7496	  text	
+boundcubenextline  . . . . . . .	L Near	 7274	  text	
+ce . . . . . . . . . . . . . . .	DWord	 2050	  text	
+deleteloop . . . . . . . . . . .	L Near	 2765	  text	
+deletez  . . . . . . . . . . . .	L Near	 2741	  text	
+drawceilloop . . . . . . . . . .	L Near	 228D	  text	
+drawceil . . . . . . . . . . . .	L Near	 2281	  text	
+drawcwall  . . . . . . . . . . .	L Near	 2201	  text	
+drawflorloop . . . . . . . . . .	L Near	 22F0	  text	
+drawflor . . . . . . . . . . . .	L Near	 22E4	  text	
+drawfwall  . . . . . . . . . . .	L Near	 2191	  text	
+endbegloop . . . . . . . . . . .	L Near	 26A6	  text	
+enddrawflor  . . . . . . . . . .	L Near	 2343	  text	
+endloop1 . . . . . . . . . . . .	L Near	 21F2	  text	
+endloop3 . . . . . . . . . . . .	L Near	 226C	  text	
+endnextloop  . . . . . . . . . .	L Near	 26B0	  text	
+endprebegloop  . . . . . . . . .	L Near	 268D	  text	
+endskyslab . . . . . . . . . . .	L Near	 2725	  text	
+espbak . . . . . . . . . . . . .	DWord	 2054	  text	
+findslabloop . . . . . . . . . .	L Near	 23E8	  text	
+gamipk . . . . . . . . . . . . .	DWord	 20C4	  text	
+gmipcnt  . . . . . . . . . . . .	Byte	 20E8	  text	
+gxmipk . . . . . . . . . . . . .	DWord	 207C	  text	
+gylookoff  . . . . . . . . . . .	DWord	 2048	  text	
+gylut  . . . . . . . . . . . . .	DWord	 2058	  text	
+gymipk . . . . . . . . . . . . .	DWord	 20A0	  text	
+intoslabloop . . . . . . . . . .	L Near	 23F4	  text	
+loop0  . . . . . . . . . . . . .	L Near	 21A0	  text	
+loop1  . . . . . . . . . . . . .	L Near	 21C9	  text	
+loop2  . . . . . . . . . . . . .	L Near	 221A	  text	
+loop3  . . . . . . . . . . . . .	L Near	 2243	  text	
+mmask  . . . . . . . . . . . . .	QWord	 2038	  text	
+ngxmax . . . . . . . . . . . . .	DWord	 204C	  text	
+prebegsearchi16  . . . . . . . .	L Near	 2453	  text	
+prebegsearchi  . . . . . . . . .	L Near	 247F	  text	
+predeletez . . . . . . . . . . .	L Near	 273D	  text	
+predrawceil  . . . . . . . . . .	L Near	 227B	  text	
+predrawflor  . . . . . . . . . .	L Near	 22E0	  text	
+preskysearch . . . . . . . . . .	L Near	 26F7	  text	
+prestartskyloop  . . . . . . . .	L Near	 26BD	  text	
+remiporend . . . . . . . . . . .	L Near	 252E	  text	
+retboundcube_3dn . . . . . . . .	L Near	 74C5	  text	
+retboundcube . . . . . . . . . .	L Near	 729B	  text	
+retsub . . . . . . . . . . . . .	L Near	 2730	  text	
+skipbladd0 . . . . . . . . . . .	L Near	 2564	  text	
+skipbladd1 . . . . . . . . . . .	L Near	 259F	  text	
+skipdrawpix_3dn  . . . . . . . .	L Near	 74AF	  text	
+skipdrawpix  . . . . . . . . . .	L Near	 7285	  text	
+skipinsertloop . . . . . . . . .	L Near	 24F2	  text	
+skipixy2 . . . . . . . . . . . .	L Near	 23AA	  text	
+skipixy3 . . . . . . . . . . . .	L Near	 23D7	  text	
+skipixy  . . . . . . . . . . . .	L Near	 23A6	  text	
+skipngxmax0  . . . . . . . . . .	L Near	 214C	  text	
+skipngxmax1  . . . . . . . . . .	L Near	 262C	  text	
+skipngxmax2  . . . . . . . . . .	L Near	 2631	  text	
+skipremip0 . . . . . . . . . . .	L Near	 2574	  text	
+skipremip1 . . . . . . . . . . .	L Near	 25AF	  text	
+skysearch  . . . . . . . . . . .	L Near	 26FE	  text	
+startremip0  . . . . . . . . . .	L Near	 25F6	  text	
+startskyloop . . . . . . . . . .	L Near	 26DD	  text	
+startsky . . . . . . . . . . . .	L Near	 2672	  text	
+w8bmask0 . . . . . . . . . . . .	QWord	 2020	  text	
+w8bmask1 . . . . . . . . . . . .	QWord	 2028	  text	
+w8bmask2 . . . . . . . . . . . .	QWord	 2030	  text	
+
+	   0 Warnings
+	   0 Errors

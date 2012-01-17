@@ -1,0 +1,985 @@
+; Input	MD5   :	1B2939D52E98F54008F05E74D434D779
+; Input	CRC32 :	0343C349
+
+; File Name   :	C:\Users\John\Code\git\voxlap-port\outbin\v6.obj
+; Format      :	COFF (X386MAGIC)
+
+		include	uni.inc	; see unicode subdir of	ida for	info on	unicode
+
+		.686p
+		.mmx
+		.model flat
+
+; ===========================================================================
+
+; Segment type:	Pure code
+; Segment permissions: Read/Execute
+_text		segment	para public 'CODE' use32
+		assume cs:_text
+		assume es:nothing, ss:nothing, ds:nothing, fs:nothing, gs:nothing
+
+; =============== S U B	R O U T	I N E =======================================
+
+
+		public _v5_asm_dep_unlock
+_v5_asm_dep_unlock proc	near		; DATA XREF: _v5_asm_dep_unlock+Bo
+					; _v5_asm_dep_unlock+11o
+		sub	esp, 4
+		push	esp		; lpflOldProtect
+		push	40h ; '@'       ; flNewProtect
+		mov	eax, (offset nullsub_1+1)
+		sub	eax, offset _v5_asm_dep_unlock
+		push	eax		; dwSize
+		push	offset _v5_asm_dep_unlock ; lpAddress
+		call	__imp__VirtualProtect@16 ; VirtualProtect(x,x,x,x)
+		add	esp, 4
+		retn
+_v5_asm_dep_unlock endp
+
+; ---------------------------------------------------------------------------
+		align 10h
+		public _cfasm
+_cfasm		dd 1F7h	dup(0)
+		db 2 dup(0)
+word_7FE	dw 0			; DATA XREF: .text:gxmipko
+		dd 8 dup(0)
+dword_820	dd 0			; DATA XREF: _grouscanasm+10o
+					; _grouscanasm+24Co ...
+		dd 1FFh	dup(0)
+dword_1020	dd 400h	dup(0)		; DATA XREF: _grouscanasm+15o
+					; _grouscanasm+3A0o
+w8bmask0	dd 2 dup(0FF00FFh)
+w8bmask1	dd 2 dup(0F000F0h)
+w8bmask2:
+		unicode	0, <…………>
+mmask		dq 0FFFF0000FFFF0000h	; DATA XREF: _grouscanasm+79r
+					; _grouscanasm+281r
+		public _skycast
+_skycast	dq 0			; DATA XREF: _grouscanasm:endprebegloopr
+					; _grouscanasm+5D2r
+gylookoff	dd 0			; DATA XREF: _grouscanasm+2Ew
+					; _grouscanasm+B9r ...
+ngxmax		dd 0			; DATA XREF: _grouscanasm:skipngxmax0w
+					; _grouscanasm+288r ...
+ce		dd 0			; DATA XREF: _grouscanasm+28w
+					; _grouscanasm+2A2r ...
+espbak		dd 0			; DATA XREF: _grouscanasm+8w
+					; _grouscanasm+631r
+gylut		dd offset _gylookup	; DATA XREF: _grouscanasm+4E0r
+		dd offset _gylookup+410h
+		dd offset _gylookup+620h
+		dd offset _gylookup+730h
+		dd offset _gylookup+7C0h
+		dd offset _gylookup+810h
+		dd offset _gylookup+840h
+		dd offset _gylookup+860h
+		dd offset _gylookup+878h
+gxmipk		dd offset word_7FE	; DATA XREF: _grouscanasm+4C1r
+		dd offset _cfasm+3DEh
+		dd offset _cfasm+1DEh
+		dd offset _cfasm+0DEh
+		dd offset _cfasm+5Eh
+		dd offset _cfasm+1Eh
+		dd 1Eh,	0Eh, 6
+gymipk		dd 3FF000h		; DATA XREF: _grouscanasm+4C8r
+		dd 0FF800h, 3FC00h, 0FE00h, 3F00h, 0F80h, 3C0h,	0E0h, 30h
+gamipk		dd offset _sptr		; DATA XREF: _grouscanasm+4D2r
+		dd offset _sptr+400000h
+		dd offset _sptr+500000h
+		dd offset _sptr+540000h
+		dd offset _sptr+550000h
+		dd offset _sptr+554000h
+		dd offset _sptr+555000h
+		dd offset _sptr+555400h
+		dd offset _sptr+555500h
+gmipcnt		db 0			; DATA XREF: _grouscanasm+38w
+					; _grouscanasm:remiporendr ...
+		align 10h
+
+; =============== S U B	R O U T	I N E =======================================
+
+
+		public _grouscanasm
+_grouscanasm	proc near
+
+arg_0		= dword	ptr  4
+arg_7CC		= dword	ptr  7D0h
+arg_7D0		= dword	ptr  7D4h
+arg_7D4		= dword	ptr  7D8h
+arg_7DC		= qword	ptr  7E0h
+arg_7E4		= qword	ptr  7E8h
+arg_7EC		= dword	ptr  7F0h
+arg_7F0		= dword	ptr  7F4h
+
+		mov	eax, [esp+arg_0]
+		push	ebx
+		push	esi
+		push	edi
+		push	ebp
+		mov	ds:espbak, esp
+		mov	edi, eax
+		mov	esp, offset dword_820
+		mov	eax, offset dword_1020
+		mov	ecx, [eax+8]
+		mov	edx, [eax+0Ch]
+		movq	mm0, qword ptr [eax+10h]
+		movq	mm1, qword ptr [eax+18h]
+		mov	ds:ce, esp
+		mov	ds:gylookoff, offset _gylookup
+		mov	ds:gmipcnt, 0
+		mov	ebp, dword ptr ds:_gxmax
+		cmp	byte ptr ds:_gmipnum, 1
+		jle	short skipngxmax0
+		cmp	ebp, dword ptr ds:_gxmip
+		jle	short skipngxmax0
+		mov	ebp, dword ptr ds:_gxmip
+
+skipngxmax0:				; CODE XREF: _grouscanasm+4Cj
+					; _grouscanasm+54j
+		mov	ds:ngxmax, ebp
+		mov	ebp, dword ptr ds:_gpz+4
+		sub	ebp, dword ptr ds:_gpz
+		shr	ebp, 1Fh
+		movd	mm6, dword ptr ds:_gpz[ebp*4]
+		pand	mm6, ds:mmask
+		mov	eax, dword ptr ds:_gdz[ebp*4]
+		add	dword ptr ds:_gpz[ebp*4], eax
+		mov	esi, dword ptr ds:_gpixy
+		cmp	edi, [esi]
+		jz	drawflor
+		jmp	drawceil
+; ---------------------------------------------------------------------------
+
+drawfwall:				; CODE XREF: _grouscanasm+2DEj
+					; _grouscanasm+2F2j ...
+		movzx	eax, byte ptr [edi+1]
+		cmp	eax, edx
+		jge	short drawcwall
+		mov	ebx, [esp+10h+arg_7F0]
+
+loop0:					; CODE XREF: _grouscanasm+105j
+		neg	eax
+		add	eax, edx
+		dec	edx
+		punpcklbw mm5, qword ptr [edi+eax*4]
+		mov	eax, ds:gylookoff
+		movd	mm3, dword ptr [eax+edx*4]
+		psubusb	mm5, mm4
+		pshufw	mm2, mm5, 0FFh
+		pmulhuw	mm5, mm2
+		psrlw	mm5, 7
+		packuswb mm5, mm5
+		por	mm3, mm6
+
+loop1:					; CODE XREF: _grouscanasm+F8j
+		pshufw	mm7, mm1, 0DDh
+		pmaddwd	mm7, mm3
+		movd	eax, mm7
+		test	eax, eax
+		jle	short endloop1
+		psubd	mm1, qword ptr ds:_gi
+		movd	dword ptr [ebx], mm5
+		sub	ebx, 4
+		cmp	ebx, [esp+10h+arg_7EC]
+		jnb	short loop1
+		jmp	predeletez
+; ---------------------------------------------------------------------------
+
+endloop1:				; CODE XREF: _grouscanasm+E2j
+		movzx	eax, byte ptr [edi+1]
+		cmp	eax, edx
+		jnz	short loop0
+		mov	[esp+10h+arg_7F0], ebx
+
+drawcwall:				; CODE XREF: _grouscanasm+A7j
+		cmp	edi, [esi]
+		mov	edx, eax
+		jz	predrawflor
+		movzx	eax, byte ptr [edi+3]
+		cmp	eax, ecx
+		jle	short predrawceil
+		mov	ebx, [esp+10h+arg_7EC]
+
+loop2:					; CODE XREF: _grouscanasm+17Cj
+		neg	eax
+		add	eax, ecx
+		inc	ecx
+		punpcklbw mm5, qword ptr [edi+eax*4]
+		mov	eax, ds:gylookoff
+		movd	mm3, dword ptr [eax+ecx*4]
+		psubusb	mm5, mm4
+		pshufw	mm2, mm5, 0FFh
+		pmulhuw	mm5, mm2
+		psrlw	mm5, 7
+		packuswb mm5, mm5
+		por	mm3, mm6
+
+loop3:					; CODE XREF: _grouscanasm+16Fj
+		pshufw	mm7, mm0, 0DDh
+		pmaddwd	mm7, mm3
+		movd	eax, mm7
+		test	eax, eax
+		jg	short endloop3
+		paddd	mm0, qword ptr ds:_gi
+		movd	dword ptr [ebx], mm5
+		add	ebx, 4
+		cmp	ebx, [esp+10h+arg_7F0]
+		jbe	short loop3
+		jmp	predeletez
+; ---------------------------------------------------------------------------
+
+endloop3:				; CODE XREF: _grouscanasm+159j
+		movzx	eax, byte ptr [edi+3]
+		cmp	eax, ecx
+		jnz	short loop2
+		mov	[esp+10h+arg_7EC], ebx
+
+predrawceil:				; CODE XREF: _grouscanasm+11Ej
+		mov	ecx, eax
+		pshufw	mm6, mm6, 4Eh
+
+drawceil:				; CODE XREF: _grouscanasm+9Cj
+		mov	eax, ds:gylookoff
+		movd	mm3, dword ptr [eax+ecx*4]
+		por	mm3, mm6
+
+drawceilloop:				; CODE XREF: _grouscanasm+1E0j
+		pshufw	mm7, mm0, 0DDh
+		pmaddwd	mm7, mm3
+		movd	eax, mm7
+		test	eax, eax
+		jg	short drawflor
+		paddd	mm0, qword ptr ds:_gi
+		mov	eax, [esp+10h+arg_7EC]
+		punpcklbw mm5, qword ptr [edi-4]
+		psubusb	mm5, qword ptr ds:_gcsub+10h
+		pshufw	mm2, mm5, 0FFh
+		pmulhuw	mm5, mm2
+		psrlw	mm5, 7
+		packuswb mm5, mm5
+		movd	dword ptr [eax], mm5
+		add	eax, 4
+		mov	[esp+10h+arg_7EC], eax
+		cmp	eax, [esp+10h+arg_7F0]
+		jbe	short drawceilloop
+		jmp	deletez
+; ---------------------------------------------------------------------------
+
+predrawflor:				; CODE XREF: _grouscanasm+112j
+		pshufw	mm6, mm6, 4Eh
+
+drawflor:				; CODE XREF: _grouscanasm+96j
+					; _grouscanasm+1A3j
+		mov	eax, ds:gylookoff
+		movd	mm3, dword ptr [eax+edx*4]
+		por	mm3, mm6
+
+drawflorloop:				; CODE XREF: _grouscanasm+240j
+		pshufw	mm7, mm1, 0DDh
+		pmaddwd	mm7, mm3
+		movd	eax, mm7
+		test	eax, eax
+		jle	short enddrawflor
+		psubd	mm1, qword ptr ds:_gi
+		mov	eax, [esp+10h+arg_7F0]
+		punpcklbw mm5, qword ptr [edi+4]
+		psubusb	mm5, qword ptr ds:_gcsub+18h
+		pshufw	mm2, mm5, 0FFh
+		pmulhuw	mm5, mm2
+		psrlw	mm5, 7
+		packuswb mm5, mm5
+		movd	dword ptr [eax], mm5
+		sub	eax, 4
+		mov	[esp+10h+arg_7F0], eax
+		cmp	eax, [esp+10h+arg_7EC]
+		jnb	short drawflorloop
+		jmp	deletez
+; ---------------------------------------------------------------------------
+
+enddrawflor:				; CODE XREF: _grouscanasm+203j
+		mov	ebx, esp
+
+afterdelete:				; CODE XREF: _grouscanasm+65Cj
+					; _grouscanasm+6A3j
+		sub	esp, 20h
+		cmp	esp, offset dword_820
+		jnb	short skipixy
+		movq	mm4, qword ptr ds:_gcsub[ebp*8]
+		add	esi, dword ptr ds:_gixy[ebp*4]
+		mov	ebp, dword ptr ds:_gpz+4
+		mov	edi, [esi]
+		sub	ebp, dword ptr ds:_gpz
+		shr	ebp, 1Fh
+		mov	eax, dword ptr ds:_gpz[ebp*4]
+		movd	mm7, eax
+		punpckldq mm6, mm7
+		pand	mm6, ds:mmask
+		cmp	eax, ds:ngxmax
+		ja	remiporend
+		add	eax, dword ptr ds:_gdz[ebp*4]
+		mov	dword ptr ds:_gpz[ebp*4], eax
+		mov	esp, ds:ce
+		jmp	short skipixy2
+; ---------------------------------------------------------------------------
+
+skipixy:				; CODE XREF: _grouscanasm+252j
+		pshufw	mm6, mm6, 4Eh
+
+skipixy2:				; CODE XREF: _grouscanasm+2A8j
+					; _grouscanasm+56Ej
+		cmp	ebx, esp
+		jz	short skipixy3
+		add	ebx, 800h
+		mov	[ebx+8], ecx
+		mov	[ebx+0Ch], edx
+		movq	qword ptr [ebx+10h], mm0
+		movq	qword ptr [ebx+18h], mm1
+		lea	ebx, [esp+30h+arg_7CC]
+		mov	ecx, [ebx+8]
+		mov	edx, [ebx+0Ch]
+		movq	mm0, qword ptr [ebx+10h]
+		movq	mm1, qword ptr [ebx+18h]
+
+skipixy3:				; CODE XREF: _grouscanasm+2B0j
+		cmp	byte ptr [edi],	0
+		jz	drawfwall
+		mov	ebx, ds:gylookoff
+		jmp	short intoslabloop
+; ---------------------------------------------------------------------------
+
+findslabloop:				; CODE XREF: _grouscanasm+313j
+		lea	edi, [edi+eax*4]
+		cmp	byte ptr [edi],	0
+		jz	drawfwall
+
+intoslabloop:				; CODE XREF: _grouscanasm+2EAj
+		movzx	eax, byte ptr [edi+2]
+		movd	mm3, dword ptr [ebx+eax*4+4]
+		por	mm3, mm6
+		pshufw	mm7, mm0, 0DDh
+		pmaddwd	mm7, mm3
+		movd	eax, mm7
+		test	eax, eax
+		movzx	eax, byte ptr [edi]
+		jg	short findslabloop
+		movzx	eax, byte ptr [edi+eax*4+3]
+		movd	mm3, dword ptr [ebx+eax*4]
+		por	mm3, mm6
+		pshufw	mm7, mm1, 0DDh
+		pmaddwd	mm7, mm3
+		movd	eax, mm7
+		test	eax, eax
+		jle	drawfwall
+		lea	eax, [esp+30h+arg_7CC]
+		mov	[eax+8], ecx
+		mov	[eax+0Ch], edx
+		movq	qword ptr [eax+10h], mm0
+		movq	qword ptr [eax+18h], mm1
+		mov	edx, [eax+4]
+		movzx	eax, byte ptr [edi+2]
+		movd	mm3, dword ptr [ebx+eax*4+4]
+		por	mm3, mm6
+
+prebegsearchi16:			; CODE XREF: _grouscanasm+37Cj
+		movq	mm7, qword ptr ds:_gi
+		pslld	mm7, 4
+		movq	mm5, mm1
+		psubd	mm5, mm7
+		pshufw	mm7, mm5, 0DDh
+		pmaddwd	mm7, mm3
+		movd	eax, mm7
+		test	eax, eax
+		jle	short begsearchi
+		movq	mm1, mm5
+		sub	edx, 40h ; '@'
+		jmp	short prebegsearchi16
+; ---------------------------------------------------------------------------
+		jmp	short begsearchi
+; ---------------------------------------------------------------------------
+
+prebegsearchi:				; CODE XREF: _grouscanasm+396j
+		sub	edx, 4
+		psubd	mm1, qword ptr ds:_gi
+
+begsearchi:				; CODE XREF: _grouscanasm+374j
+					; _grouscanasm+37Ej
+		pshufw	mm7, mm1, 0DDh
+		pmaddwd	mm7, mm3
+		movd	eax, mm7
+		test	eax, eax
+		jg	short prebegsearchi
+		mov	eax, ds:ce
+		add	eax, 20h ; ' '
+		cmp	eax, offset dword_1020
+		ja	retsub
+		mov	ds:ce, eax
+		cmp	eax, esp
+		jbe	short skipinsertloop
+
+beginsertloop:				; CODE XREF: _grouscanasm+3F1j
+		movq	mm5, qword ptr [eax+7F8h]
+		movq	mm7, qword ptr [eax+7F0h]
+		movq	qword ptr [eax+818h], mm5
+		movq	qword ptr [eax+810h], mm7
+		movq	mm5, qword ptr [eax+7E8h]
+		movq	mm7, qword ptr [eax+7E0h]
+		movq	qword ptr [eax+808h], mm5
+		movq	qword ptr [eax+800h], mm7
+		sub	eax, 20h ; ' '
+		cmp	eax, esp
+		ja	short beginsertloop
+
+skipinsertloop:				; CODE XREF: _grouscanasm+3B2j
+		movzx	eax, byte ptr [edi]
+		movq	mm7, mm1
+		paddd	mm7, qword ptr ds:_gi
+		movzx	eax, byte ptr [edi+eax*4+3]
+		mov	[esp+30h+arg_7F0], edx
+		add	edx, 4
+		mov	[esp+30h+arg_7CC], edx
+		mov	edx, eax
+		mov	[esp+30h+arg_7D4], eax
+		movq	[esp+30h+arg_7DC], mm7
+		add	esp, 20h
+		jmp	drawfwall
+; ---------------------------------------------------------------------------
+
+remiporend:				; CODE XREF: _grouscanasm+28Ej
+		mov	al, ds:gmipcnt
+		inc	al
+		cmp	al, byte ptr ds:_gmipnum
+		jge	startsky
+		mov	ds:gmipcnt, al
+		sub	esi, offset _sptr
+		mov	eax, esi
+		shl	eax, 1Dh
+		xor	eax, dword ptr ds:_gixy
+		mov	eax, dword ptr ds:_gdz
+		js	short skipbladd0
+		add	dword ptr ds:_gpz, eax
+
+skipbladd0:				; CODE XREF: _grouscanasm+45Dj
+		add	eax, eax
+		jno	short skipremip0
+		mov	dword ptr ds:_gpz, 7FFFFFFFh
+		xor	eax, eax
+
+skipremip0:				; CODE XREF: _grouscanasm+467j
+		mov	dword ptr ds:_gdz, eax
+		mov	[ebx+808h], ecx
+		mov	eax, esi
+		mov	cl, ds:gmipcnt
+		add	cl, 12h
+		shl	eax, cl
+		xor	eax, dword ptr ds:_gixy+4
+		mov	eax, dword ptr ds:_gdz+4
+		js	short skipbladd1
+		add	dword ptr ds:_gpz+4, eax
+
+skipbladd1:				; CODE XREF: _grouscanasm+498j
+		add	eax, eax
+		jno	short skipremip1
+		mov	dword ptr ds:_gpz+4, 7FFFFFFFh
+		xor	eax, eax
+
+skipremip1:				; CODE XREF: _grouscanasm+4A2j
+		mov	dword ptr ds:_gdz+4, eax
+		shr	esi, 2
+		mov	eax, esi
+		movzx	ecx, ds:gmipcnt
+		and	esi, ds:gxmipk[ecx*4]
+		and	eax, ds:gymipk[ecx*4]
+		lea	esi, [eax+esi*2]
+		add	esi, ds:gamipk[ecx*4]
+		movzx	eax, ds:gmipcnt
+		mov	eax, ds:gylut[eax*4]
+		mov	ds:gylookoff, eax
+		sar	dword ptr ds:_gixy+4, 1
+		mov	eax, offset dword_820
+
+startremip0:				; CODE XREF: _grouscanasm+512j
+		shr	dword ptr [eax+808h], 1
+		inc	dword ptr [eax+80Ch]
+		shr	dword ptr [eax+80Ch], 1
+		add	eax, 20h ; ' '
+		cmp	eax, ds:ce
+		jbe	short startremip0
+		mov	eax, ds:ngxmax
+		cmp	eax, dword ptr ds:_gxmax
+		jnb	short startsky
+		add	eax, eax
+		jo	short skipngxmax1
+		cmp	eax, dword ptr ds:_gxmax
+		jl	short skipngxmax2
+
+skipngxmax1:				; CODE XREF: _grouscanasm+523j
+		mov	eax, dword ptr ds:_gxmax
+
+skipngxmax2:				; CODE XREF: _grouscanasm+52Bj
+		mov	ds:ngxmax, eax
+		mov	ecx, [ebx+808h]
+		shr	ecx, 1
+		inc	edx
+		shr	edx, 1
+		mov	ebp, dword ptr ds:_gpz+4
+		sub	ebp, dword ptr ds:_gpz
+		shr	ebp, 1Fh
+		mov	eax, dword ptr ds:_gpz[ebp*4]
+		add	eax, dword ptr ds:_gdz[ebp*4]
+		mov	dword ptr ds:_gpz[ebp*4], eax
+		mov	edi, [esi]
+		mov	esp, ds:ce
+		jmp	skipixy2
+; ---------------------------------------------------------------------------
+
+startsky:				; CODE XREF: _grouscanasm+43Cj
+					; _grouscanasm+51Fj
+		mov	esp, ds:dword_820
+		cmp	esp, ds:ce
+		ja	retsub
+		mov	esi, dword ptr ds:_skyoff
+		test	esi, esi
+		jnz	short prestartskyloop
+
+endprebegloop:				; CODE XREF: _grouscanasm+5BBj
+		movq	mm5, ds:_skycast
+		mov	eax, [esp+30h+arg_7CC]
+		mov	ebx, [esp+30h+arg_7D0]
+		cmp	eax, ebx
+		ja	short endnextloop
+
+endbegloop:				; CODE XREF: _grouscanasm+5B0j
+		movd	dword ptr [eax], mm5
+		add	eax, 4
+		cmp	eax, ebx
+		jbe	short endbegloop
+
+endnextloop:				; CODE XREF: _grouscanasm+5A6j
+		add	esp, 20h
+		cmp	esp, ds:ce
+		jbe	short endprebegloop
+		jmp	short retsub
+; ---------------------------------------------------------------------------
+
+prestartskyloop:			; CODE XREF: _grouscanasm+58Dj
+		movq	qword ptr [ebx+818h], mm1
+		mov	esi, dword ptr ds:_skyoff
+		mov	ecx, dword ptr ds:_skylat
+		movd	mm5, dword ptr ds:_skycast+4
+		mov	edi, dword ptr ds:_skyxsiz
+
+startskyloop:				; CODE XREF: _grouscanasm+62Dj
+		mov	eax, [esp+30h+arg_7CC]
+		mov	ebx, [esp+30h+arg_7D0]
+		cmp	eax, ebx
+		ja	short endskyslab
+		movq	mm1, [esp+30h+arg_7E4]
+
+preskysearch:				; CODE XREF: _grouscanasm+622j
+		psubd	mm1, qword ptr ds:_gi
+
+skysearch:				; CODE XREF: _grouscanasm+614j
+		pshufw	mm7, mm1, 0DDh
+		movd	mm3, dword ptr [ecx+edi*4]
+		pmaddwd	mm7, mm3
+		movd	edx, mm7
+		sar	edx, 1Fh
+		lea	edi, [edi+edx]
+		jnz	short skysearch
+		movd	mm6, dword ptr [esi+edi*4]
+		movd	dword ptr [ebx], mm6
+		sub	ebx, 4
+		cmp	eax, ebx
+		jbe	short preskysearch
+
+endskyslab:				; CODE XREF: _grouscanasm+5EFj
+		add	esp, 20h
+		cmp	esp, ds:ce
+		jbe	short startskyloop
+
+retsub:					; CODE XREF: _grouscanasm+3A5j
+					; _grouscanasm+57Fj ...
+		emms
+		mov	esp, ds:espbak
+		pop	ebp
+		pop	edi
+		pop	esi
+		pop	ebx
+		retn
+; ---------------------------------------------------------------------------
+
+predeletez:				; CODE XREF: _grouscanasm+FAj
+					; _grouscanasm+171j
+		pshufw	mm6, mm6, 4Eh
+
+deletez:				; CODE XREF: _grouscanasm+1E2j
+					; _grouscanasm+242j
+		mov	ebx, ds:ce
+		sub	ebx, 20h ; ' '
+		cmp	ebx, ds:dword_820
+		jb	short retsub
+		mov	ds:ce, ebx
+		add	ebx, 20h ; ' '
+		cmp	esp, ebx
+		jnb	afterdelete
+		mov	eax, esp
+
+deleteloop:				; CODE XREF: _grouscanasm+6A1j
+		movq	mm5, qword ptr [eax+820h]
+		movq	mm7, qword ptr [eax+828h]
+		movq	qword ptr [eax+800h], mm5
+		movq	qword ptr [eax+808h], mm7
+		movq	mm5, qword ptr [eax+830h]
+		movq	mm7, qword ptr [eax+838h]
+		movq	qword ptr [eax+810h], mm5
+		movq	qword ptr [eax+818h], mm7
+		add	eax, 20h ; ' '
+		cmp	eax, ebx
+		jb	short deleteloop
+		jmp	afterdelete
+_grouscanasm	endp ; sp-analysis failed
+
+; ---------------------------------------------------------------------------
+		align 10h
+		public _opti4asm
+_opti4asm	dd 14h dup(0)
+		public _caddasm
+_caddasm	xmmword	0		; DATA XREF: .text:0000713Ar
+					; .text:00007144r ...
+		dd 1Ch dup(0)
+		public _ztabasm
+_ztabasm	xmmword	0		; DATA XREF: .text:00007114r
+					; .text:000072ABr ...
+		dd 0FFCh dup(0)
+xmmword_6870	xmmword	0		; DATA XREF: .text:00007106r
+					; .text:00007296r ...
+		dd 8 dup(0)
+		public _scisdist
+_scisdist	dq 40800000h		; DATA XREF: .text:0000711Er
+					; .text:000072BEr
+		align 10h
+		public _kv6colmul
+_kv6colmul	dq 0			; DATA XREF: .text:0000722Dr
+					; .text:0000741Fr
+		dd 1FEh	dup(0)
+		public _kv6coladd
+_kv6coladd	dq 0			; DATA XREF: .text:00007235r
+					; .text:00007427r
+		public _qsum0
+_qsum0		dq 0			; DATA XREF: .text:000073E6r
+		public _qsum1
+_qsum1		dq 0			; DATA XREF: .text:000073EDr
+		public _qbplbpp
+_qbplbpp	dq 0			; DATA XREF: .text:0000720Cr
+					; .text:000073FEr
+		public _kv6frameplace
+_kv6frameplace	dd 0			; DATA XREF: _drawboundcubesseinitr
+					; _drawboundcube3dninitr
+		public _kv6bytesperline
+_kv6bytesperline dd 0			; DATA XREF: _drawboundcubesseinit+Ar
+					; _drawboundcube3dninit+Ar
+
+; =============== S U B	R O U T	I N E =======================================
+
+
+		public _drawboundcubesseinit
+_drawboundcubesseinit proc near
+		mov	eax, ds:_kv6frameplace
+		mov	ds:dword_7245, eax
+		mov	eax, ds:_kv6bytesperline
+		mov	ds:dword_7256, eax
+		retn
+_drawboundcubesseinit endp
+
+; ---------------------------------------------------------------------------
+		align 10h
+
+		public _drawboundcubesse
+_drawboundcubesse:
+		mov	eax, [esp+4]
+		mov	ecx, [esp+8]
+		push	ebx
+		push	edi
+		movzx	edi, byte ptr [eax+6]
+		and	ecx, edi
+		jz	retboundcube
+		movaps	xmm7, ds:xmmword_6870
+		movzx	edi, word ptr [eax+4]
+		shl	edi, 4
+		addps	xmm7, ds:_ztabasm[edi]
+		movhlps	xmm0, xmm7
+		ucomiss	xmm0, dword ptr	ds:_scisdist
+		jb	retboundcube
+		lea	ecx, _ptfaces16[ecx*8]
+		movzx	ebx, byte ptr [ecx+1]
+		movzx	edi, byte ptr [ecx+2]
+		movaps	xmm0, ds:_caddasm[ebx]
+		addps	xmm0, xmm7
+		movaps	xmm1, ds:_caddasm[edi]
+		addps	xmm1, xmm7
+		movaps	xmm6, xmm0
+		movhlps	xmm0, xmm1
+		movlhps	xmm1, xmm6
+		rcpps	xmm0, xmm0
+		mulps	xmm0, xmm1
+		movzx	ebx, byte ptr [ecx+3]
+		movzx	edi, byte ptr [ecx+4]
+		movaps	xmm2, ds:_caddasm[ebx]
+		addps	xmm2, xmm7
+		movaps	xmm3, ds:_caddasm[edi]
+		addps	xmm3, xmm7
+		movaps	xmm6, xmm2
+		movhlps	xmm2, xmm3
+		movlhps	xmm3, xmm6
+		rcpps	xmm2, xmm2
+		mulps	xmm2, xmm3
+		cvttps2pi mm0, xmm0
+		movhlps	xmm0, xmm0
+		cvttps2pi mm2, xmm2
+		cvttps2pi mm1, xmm0
+		movhlps	xmm2, xmm2
+		packssdw mm0, mm1
+		movq	mm1, mm0
+		cvttps2pi mm3, xmm2
+		packssdw mm2, mm3
+		pminsw	mm0, mm2
+		pmaxsw	mm1, mm2
+		cmp	byte ptr [ecx],	4
+		jz	short bcskip6case
+		movzx	ebx, byte ptr [ecx+5]
+		movzx	edi, byte ptr [ecx+6]
+		movaps	xmm4, ds:_caddasm[ebx]
+		addps	xmm4, xmm7
+		movaps	xmm5, ds:_caddasm[edi]
+		addps	xmm5, xmm7
+		movaps	xmm6, xmm4
+		movhlps	xmm4, xmm5
+		movlhps	xmm5, xmm6
+		rcpps	xmm4, xmm4
+		mulps	xmm4, xmm5
+		cvttps2pi mm4, xmm4
+		movhlps	xmm4, xmm4
+		cvttps2pi mm5, xmm4
+		packssdw mm4, mm5
+		pminsw	mm0, mm4
+		pmaxsw	mm1, mm4
+
+bcskip6case:				; CODE XREF: .text:000071ACj
+		pshufw	mm2, mm0, 0Eh
+		pshufw	mm3, mm1, 0Eh
+		pminsw	mm0, mm2
+		pmaxsw	mm1, mm3
+		punpckldq mm0, mm1
+		paddsw	mm0, mm6
+		pmaxsw	mm0, mm7
+		pshufw	mm1, mm0, 0EEh
+		psubusw	mm1, mm0
+		movd	edx, mm1
+		pmaddwd	mm0, ds:_qbplbpp
+		movd	ebx, mm1
+		and	edx, 0FFFFh
+		jz	short retboundcube
+		sub	ebx, 10000h
+		jb	short retboundcube
+		movzx	edi, byte ptr [eax+7]
+		punpcklbw mm5, qword ptr [eax]
+		pmulhuw	mm5, ds:_kv6colmul[edi*8]
+		paddw	mm5, ds:_kv6coladd
+		packuswb mm5, mm5
+		movd	edi, mm0
+; ---------------------------------------------------------------------------
+		dw 0BC8Dh
+		db 97h
+dword_7245	dd 88888888h		; DATA XREF: _drawboundcubesseinit+5w
+bcmod0		db 0F7h, 0DAh
+boundcubenextline db 89h
+		db 0D1h
+begstosb	db 0Fh,	7Eh, 2Ch
+		db 8Fh
+skipdrawpix	db 41h,	75h, 0F9h
+		db 81h,	0C7h
+dword_7256	dd 88888888h		; DATA XREF: _drawboundcubesseinit+Fw
+bcmod3		dw 0EB81h
+		dd 10000h
+		db 73h,	0E9h
+; ---------------------------------------------------------------------------
+
+retboundcube:				; CODE XREF: .text:00007100j
+					; .text:00007125j ...
+		pop	edi
+		pop	ebx
+		retn
+
+; =============== S U B	R O U T	I N E =======================================
+
+
+		public _drawboundcube3dninit
+_drawboundcube3dninit proc near
+		mov	eax, ds:_kv6frameplace
+		mov	ds:dword_7437, eax
+		mov	eax, ds:_kv6bytesperline
+		mov	ds:dword_744C, eax
+		retn
+_drawboundcube3dninit endp
+
+; ---------------------------------------------------------------------------
+		align 10h
+
+		public _drawboundcube3dn
+_drawboundcube3dn:
+		mov	eax, [esp+4]
+		mov	ecx, [esp+8]
+		push	ebx
+		push	edi
+		movzx	edi, byte ptr [eax+6]
+		and	ecx, edi
+		jz	retboundcube_3dn
+		movq	mm6, qword ptr ds:xmmword_6870
+		movq	mm7, qword ptr ds:xmmword_6870+8
+		movzx	edi, word ptr [eax+4]
+		shl	edi, 4
+		pfadd	mm6, qword ptr ds:_ztabasm[edi]
+		pfadd	mm7, qword ptr ds:(_ztabasm+8)[edi]
+		movq	mm0, mm7
+		pcmpgtd	mm0, ds:_scisdist
+		movd	edx, mm0
+		test	edx, edx
+		jz	retboundcube_3dn
+		lea	ecx, _ptfaces16[ecx*8]
+		movzx	ebx, byte ptr [ecx+1]
+		movzx	edi, byte ptr [ecx+2]
+		movq	mm0, qword ptr ds:_caddasm[ebx]
+		movq	mm1, qword ptr ds:_caddasm[edi]
+		pfadd	mm0, mm6
+		pfadd	mm1, mm6
+		movd	mm5, dword ptr ds:(_caddasm+8)[ebx]
+		punpckldq mm5, qword ptr ds:(_caddasm+8)[edi]
+		pfadd	mm5, mm7
+		pfrcp	mm4, mm5
+		punpckhdq mm5, mm5
+		pfrcp	mm5, mm5
+		pfmul	mm0, mm4
+		pfmul	mm1, mm5
+		pf2id	mm0, mm0
+		pf2id	mm1, mm1
+		packssdw mm0, mm1
+		movzx	ebx, byte ptr [ecx+3]
+		movzx	edi, byte ptr [ecx+4]
+		movq	mm2, qword ptr ds:_caddasm[ebx]
+		movq	mm3, qword ptr ds:_caddasm[edi]
+		pfadd	mm2, mm6
+		pfadd	mm3, mm6
+		movd	mm5, dword ptr ds:(_caddasm+8)[ebx]
+		punpckldq mm5, qword ptr ds:(_caddasm+8)[edi]
+		pfadd	mm5, mm7
+		pfrcp	mm4, mm5
+		punpckhdq mm5, mm5
+		pfrcp	mm5, mm5
+		pfmul	mm2, mm4
+		pfmul	mm3, mm5
+		pf2id	mm2, mm2
+		pf2id	mm3, mm3
+		packssdw mm2, mm3
+		movq	mm1, mm0
+		pminsw	mm0, mm2
+		pmaxsw	mm1, mm2
+		cmp	byte ptr [ecx],	4
+		jz	short bcskip6case_3dn
+		movzx	ebx, byte ptr [ecx+5]
+		movzx	edi, byte ptr [ecx+6]
+		movq	mm2, qword ptr ds:_caddasm[ebx]
+		movq	mm3, qword ptr ds:_caddasm[edi]
+		pfadd	mm2, mm6
+		pfadd	mm3, mm6
+		movd	mm5, dword ptr ds:(_caddasm+8)[ebx]
+		punpckldq mm5, qword ptr ds:(_caddasm+8)[edi]
+		pfadd	mm5, mm7
+		pfrcp	mm4, mm5
+		punpckhdq mm5, mm5
+		pfrcp	mm5, mm5
+		pfmul	mm2, mm4
+		pfmul	mm3, mm5
+		pf2id	mm2, mm2
+		pf2id	mm3, mm3
+		packssdw mm2, mm3
+		pminsw	mm0, mm2
+		pmaxsw	mm1, mm2
+
+bcskip6case_3dn:			; CODE XREF: .text:0000737Fj
+		pshufw	mm2, mm0, 0Eh
+		pshufw	mm3, mm1, 0Eh
+		pminsw	mm0, mm2
+		pmaxsw	mm1, mm3
+		punpckldq mm0, mm1
+		paddsw	mm0, ds:_qsum0
+		pmaxsw	mm0, ds:_qsum1
+		pshufw	mm1, mm0, 0EEh
+		psubusw	mm1, mm0
+		movd	edx, mm1
+		pmaddwd	mm0, ds:_qbplbpp
+		movd	ebx, mm1
+		and	edx, 0FFFFh
+		jz	short retboundcube_3dn
+		sub	ebx, 10000h
+		jb	short retboundcube_3dn
+		movzx	edi, byte ptr [eax+7]
+		punpcklbw mm5, qword ptr [eax]
+		pmulhuw	mm5, ds:_kv6colmul[edi*8]
+		paddw	mm5, ds:_kv6coladd
+		packuswb mm5, mm5
+		movd	edi, mm0
+; ---------------------------------------------------------------------------
+		db 8Dh,	0BCh, 97h
+dword_7437	dd 88888888h		; DATA XREF: _drawboundcube3dninit+5w
+bcmod0_3dn	db 0F7h
+		dd 0CA6E0FDAh
+boundcubenextline_3dn db 0Fh, 7Eh, 0C9h
+begstosb_3dn	db 0Fh
+		db 7Eh,	2Ch, 8Fh
+skipdrawpix_3dn	db 41h
+		dd 0C781F975h
+dword_744C	dd 88888888h		; DATA XREF: _drawboundcube3dninit+Fw
+bcmod3_3dn	dd 0EB81h, 0E8730001h
+; ---------------------------------------------------------------------------
+
+retboundcube_3dn:			; CODE XREF: .text:00007290j
+					; .text:000072CAj ...
+		pop	edi
+		pop	ebx
+; [00000001 BYTES: COLLAPSED FUNCTION nullsub_1. PRESS KEYPAD "+" TO EXPAND]
+; ===========================================================================
+
+; Segment type:	Externs
+; UNDEF
+		extrn _gi:near		; DATA XREF: _grouscanasm+E4r
+					; _grouscanasm+15Br ...
+		extrn _gpixy:near	; DATA XREF: _grouscanasm+8Er
+		extrn _gixy:near	; DATA XREF: _grouscanasm+25Cr
+					; _grouscanasm+452r ...
+		extrn _gpz:near		; DATA XREF: _grouscanasm+62r
+					; _grouscanasm+68r ...
+		extrn _gdz:near		; DATA XREF: _grouscanasm+80r
+					; _grouscanasm+294r ...
+		extrn _gxmip:near	; DATA XREF: _grouscanasm+4Er
+					; _grouscanasm+56r
+		extrn _gxmax:near	; DATA XREF: _grouscanasm+3Fr
+					; _grouscanasm+519r ...
+		extrn _gcsub:near	; DATA XREF: _grouscanasm+1B7r
+					; _grouscanasm+217r ...
+		extrn _gylookup:near	; DATA XREF: .text:gyluto
+					; .text:0000205Co ...
+		extrn _gmipnum:near	; DATA XREF: _grouscanasm+45r
+					; _grouscanasm+436r
+		extrn _sptr:near	; DATA XREF: .text:gamipko
+					; .text:000020C8o ...
+		extrn _skyoff:near	; DATA XREF: _grouscanasm+585r
+					; _grouscanasm+5C6r
+		extrn _skyxsiz:near	; DATA XREF: _grouscanasm+5D9r
+		extrn _skylat:near	; DATA XREF: _grouscanasm+5CCr
+; BOOL __stdcall VirtualProtect(LPVOID lpAddress, SIZE_T dwSize, DWORD flNewProtect, PDWORD lpflOldProtect)
+		extrn __imp__VirtualProtect@16:near ; CODE XREF: _v5_asm_dep_unlock+16p
+		extrn _ptfaces16:near	; DATA XREF: .text:0000712Bo
+					; .text:000072D0o
+
+
+		end
