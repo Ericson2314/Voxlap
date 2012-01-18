@@ -333,7 +333,58 @@ void rgbcolselrend (long, long, long, long, long);
 	value
 
 #endif
-#ifdef _MSC_VER
+#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+
+static inline void rgbcolselinitinc (long a, long b, long c)
+{
+	__asm__
+	{
+		"mov a, %eax/n/t"
+		"mov b, %edx/n/t"
+		"mov c, %ecx/n/t"
+		"movd %ecx, %mm4/n/t"
+		"movd %edx, %mm0/n/t"
+		"punpckldq %mm0, %mm4/n/t"
+		"movd %eax, %mm5/n/t"
+	}
+}
+
+static inline void rgbcolselrend (long a, long b, long c, long t, long s)
+{
+	__asm__
+	{
+		"push %ebx/n/t"
+		"push %esi/n/t"
+		"push %edi/n/t"
+		"mov a, %eax/n/t"
+		"mov b, %ebx/n/t"
+		"mov c, %ecx/n/t"
+		"mov t, %edi/n/t"
+		"mov s, %esi/n/t"
+		"movd %ecx, %mm2/n/t"
+		"movd %ebx, %mm0/n/t"
+		"punpckldq %mm0, %mm2/n/t"
+		"movd %eax, %mm3/n/t"
+		"sub %esi, %edi/n/t"
+beg:
+		"movq %mm2, %mm0/n/t"
+		"packuswb %mm3, %mm0/n/t"
+		"paddd %mm4, %mm2/n/t"
+		"psrlw $8, %mm0/n/t"
+		"paddd %mm5, %mm3/n/t"
+		"packuswb %mm0, %mm0/n/t"
+		"movd %mm0, (%edi,%esi)/n/t"
+		"add $4, %edi/n/t"
+		"js short beg/n/t"
+
+		"pop %edi/n/t"
+		"pop %esi/n/t"
+		"pop %ebx/n/t"
+	}
+}
+
+#endif
+#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 
 static _inline void rgbcolselinitinc (long a, long b, long c)
 {
@@ -2975,12 +3026,22 @@ void doframe ()
 #if (STEREOMODE == 2)
 #ifdef _WIN32
 	i = ((numframes&1^1)<<2)^0xff;
+	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	__asm__
+	{
+		"mov $0x378, %dx\n\t"
+		"movb i, %al\n\t"
+		"out %al, %dx\n\t"
+	}
+	#endif
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		mov dx, 0x378
 		mov al, byte ptr i
 		out dx, al
 	}
+	#endif
 #endif
 #endif
 	numframes++;

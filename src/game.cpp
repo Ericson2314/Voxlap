@@ -364,8 +364,9 @@ void botinit ()
 			if (bothei[i] < botheimin) botheimin = bothei[i];
 		}
 }
-#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+
 static inline void fcossin (float a, float *c, float *s)
+#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 {
 	__asm__
 	(
@@ -379,7 +380,6 @@ static inline void fcossin (float a, float *c, float *s)
 }
 #endif
 #ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-static _inline void fcossin (float a, float *c, float *s)
 {
 	_asm
 	{
