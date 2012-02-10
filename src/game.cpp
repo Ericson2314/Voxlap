@@ -1,6 +1,8 @@
 // VOXLAP engine by Ken Silverman (http://advsys.net/ken)
 // This file has been modified from Ken Silverman's original release
 
+//#include "inlineasm.h"
+
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -366,21 +368,21 @@ void botinit ()
 }
 
 static inline void fcossin (float a, float *c, float *s)
-#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 {
-	__asm__
+	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
 	(
-		"fld a\n\t"
+		".intel_syntax noprefix\n"
+		"fld	DWORD PTR a\n\t"
 		"fsincos\n\t"
-		"mov c, %eax\n\t"
-		"fstpl (eax)\n\t"
-		"mov s, %eax\n\t"
-		"fstpl (eax)\n\t"
+		"mov	eax, c\n\t"
+		"fstp	DWORD PTR [eax]\n\t"
+		"mov	eax, s\n\t"
+		"fstp	DWORD PTR [eax]\n\t"
+		".att_syntax prefix\n"
 	);
-}
-#endif
-#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-{
+	#endif
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		fld a
@@ -390,8 +392,8 @@ static inline void fcossin (float a, float *c, float *s)
 		mov eax, s
 		fstp dword ptr [eax]
 	}
+	#endif
 }
-#endif
 
 #define EXTRASLICECOVER 1
 

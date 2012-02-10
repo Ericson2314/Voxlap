@@ -4,7 +4,7 @@ iBN                        =$(MAKEDIR)/inbin
 oBN                        =$(MAKEDIR)/outbin
 
 Phony:                     default
-default:                   $(oBN)/game.exe    $(oBN)/simple.exe $(oBN)/voxed.exe $(oBN)/kwalk.exe
+default:                   $(oBN)/game.exe $(oBN)/simple.exe $(oBN)/voxed.exe $(oBN)/kwalk.exe
 
 # executable (.exe) (meta)targets
 $(oBN)/game.exe:           $(oBN)/game.obj   $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main1.obj;
