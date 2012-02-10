@@ -39,7 +39,7 @@ CMacroPre              =/D # for Micrsoft Compiler(cl)
 LNKFLAGS               =/out:$(@) # for Microsfoft Linker (link)
 LNKlibSuf              =.lib
 !ENDIF
-# END VMicrososft Visual C Macros
+# END Micrososft Visual C Macros
 # -----------------------------------
 
 # -----------------------------------
