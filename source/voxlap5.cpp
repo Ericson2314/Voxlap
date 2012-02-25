@@ -4,7 +4,7 @@
 #include <math.h>
 #include <stdio.h>
 #define VOXLAP5
-#include "voxlap5.h"
+#include "../include/voxlap5.h"
 
 #define USEZBUFFER 1
 

@@ -1,3 +1,10 @@
+/**************************************************************************************************
+ * SDLMAIN.CPP & SYSMAIN.H                                                                        *
+ *                                                                                                *
+ **************************************************************************************************/
+
+// This file has been modified from Ken Silverman's original release
+
 #ifndef __GNUC__
 #error GCC only.
 #endif
@@ -41,7 +48,7 @@ typedef struct __attribute__ ((packed)) tWAVEFORMATEX {
 #endif
 
 #undef _WIN32
-#include "Sysmain.h"
+#include "../include/sysmain.h"
 
 #define evalmacro(x) evalmacrox(x)
 #define evalmacrox(x) #x
@@ -61,7 +68,8 @@ long xres = 640, yres = 480, colbits = 8, fullscreen = 1, maxpages = 8;
 
 //======================== CPU detection code begins ========================
 
-static long cputype asm("cputype") = 0;
+//static long cputype asm("cputype") = 0; //What the hell? Doesn't match header or use; doesn't make much sense on it's own.
+long cputype = 0; //I think this will work just fine.
 
 static inline long testflag (long c)
 {
@@ -327,7 +335,7 @@ static long mousex = 0, mousey = 0, gbstatus = 0;
 long mousmoth=0;
 float mousper=0.0;
 
-void readkeyboard ()
+long readkeyboard () //changed from "void" to "long" to match header & DirectX original. Returned value is never used so it shouldn't matter.
 {
 	// all gets done in sdlmsgloop now
 }

@@ -6,34 +6,35 @@ Additional modifications by Tom Dobrowolski (http://ged.ax.pl/~tomkh)
 You may use this code for non-commercial purposes as long as credit is maintained.
 ***************************************************************************************************/
 
+// This file has been modified from Ken Silverman's original release
 
 #ifndef KEN_SYSMAIN_H
 #define KEN_SYSMAIN_H
 
 	//System specific:
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-extern HWND ghwnd;
-extern HINSTANCE ghinst;
-extern HDC startdc ();
-extern void stopdc ();
-extern void ddflip2gdi ();
-extern void setalwaysactive (long);
-extern void setacquire (long mouse, long kbd);
-extern void smartsleep (long timeoutms);
-extern long canrender ();
-extern long ddrawuseemulation;
-extern long ddrawdebugmode; // -1 = off, old ddrawuseemulation = on
-extern void debugdirectdraw (); //toggle debug mode
-extern long (CALLBACK *peekwindowproc)(HWND,UINT,WPARAM,LPARAM);
+	#define WIN32_LEAN_AND_MEAN
+	#include <windows.h>
+	extern HWND ghwnd;
+	extern HINSTANCE ghinst;
+	extern HDC startdc ();
+	extern void stopdc ();
+	extern void ddflip2gdi ();
+	extern void setalwaysactive (long);
+	extern void smartsleep (long timeoutms);
+	extern long canrender ();
+	extern long ddrawuseemulation;
+	extern long ddrawdebugmode; // -1 = off, old ddrawuseemulation = on
+	extern void debugdirectdraw (); //toggle debug mode
+	extern long (CALLBACK *peekwindowproc)(HWND,UINT,WPARAM,LPARAM);
 #else
-#pragma pack(push,1)
-typedef struct { unsigned char peRed, peGreen, peBlue, peFlags; } PALETTEENTRY;
-#pragma pack(pop)
-#define MAX_PATH 260
+	#pragma pack(push,1)
+	typedef struct { unsigned char peRed, peGreen, peBlue, peFlags; } PALETTEENTRY;
+	#pragma pack(pop)
+	#define MAX_PATH 260
 #endif
 extern long cputype;
+extern void setacquire (long mouse, long kbd);
 
 	//Program Flow:
 extern char *prognam;

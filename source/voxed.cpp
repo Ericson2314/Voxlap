@@ -4,8 +4,8 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "sysmain.h"
-#include "voxlap5.h"
+#include "../include/sysmain.h"
+#include "../include/voxlap5.h"
 #define SCISSORDIST 1.0
 #define STEREOMODE 0  //0:no stereo (normal mode), 1:CrystalEyes, 2:Nuvision
 #define USETDHELP 0 //0:Ken's notepad style help, 1:Tom's keyboard graphic help
@@ -2307,7 +2307,7 @@ long notepadinput ()
 }
 
 #if (USETDHELP != 0)
-#include "kbdhelp.h"
+#include "../include/kbdhelp.h"
 
 static struct {
 	long tf, tp, tx, ty; // tile

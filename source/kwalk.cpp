@@ -12,8 +12,8 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "sysmain.h"
-#include "voxlap5.h"
+#include "../include/sysmain.h"
+#include "../include/voxlap5.h"
 
 long kfatim = -1, okfatim = -1;
 
