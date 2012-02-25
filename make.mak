@@ -1,61 +1,137 @@
+# sub-directory macros
+locSRC                 =./source
+locINC                 =./include
+locLIB                 =./libraries
+locBIN                 =./binaries
+
 # adding inbin directory to paths
 ifdef __MSVC__
-#PATH                   =$(iBN);$(PATH)
-#INCLUDE                =$(iBN);$(INCLUDE)
-#LIB                    =$(iBN);$(LIB)
+PATH                   =$(locLIB);$(PATH)
+INCLUDE                =$(locLIB);$(INCLUDE)
+LIB                    =$(locLIB);$(LIB)
 endif
 
-# sub-directory macros
-SRC                    =$(MAKEDIR)/src
-iBN                    =$(MAKEDIR)/inbin
-oBN                    =$(MAKEDIR)/outbin
 # -----------------------------------
-# GNU Compiler Collection Macros
+# Choices
+
+# "gcc" for GNU C Compiler, "cl" for Micrsoft Compiler
+CXX                    =gcc
+
+# "nasm" for Netwide Assembler, masm" for Micrsoft Macro Assembler
+AsmName                =nasm
+
+# "ld" for GNU linker, "link" for Microsfoft Linker
+LNK                    =ld
+
+# "sdl" for Simple DirectMedia Layer, "win" for DirectX
+GFXdep                 =sdl
+
+# "win32" for Windows 32-bit, "posix" for POSIX (32-bit for now)
+PLATdep                =posix
+
+# END Choices 
+# -----------------------------------
+
+# -----------------------------------
+# Build Flags
+
 ifdef __GNUC__
-AsmName                =nasm #for Netwide Assembler
-AS=$(AsmName)
-CPP                    =gcc  #for GNU C++ Compiler
-LNK                    =ld   #for GNU linker
-
-# Flags
-AFLAGS                 =-o $(@) -f win32 #for Netwide Assembler (nasm)
-CPPFLAGS               =-o $(@) -c -funsigned-char `sdl-config --cflags` #for GNU C++ Compiler (gcc)
-CMacroPre              =-D" " #for GNU C++ Compiler (gcc)
-
-ldFLAGS                =-o $(@) `sdl-config --libs` #for GNU linker (ld)
 endif
-# END GNU Compiler Collection Macros
-# -----------------------------------
-
-# -----------------------------------
-# Micrososft Visual C Macros
 ifdef __MSVC__
-AsmName                =masm #masm or nasm
-CPP                    =cl   #for Micrsoft Compiler
-LNK                    =link #for Microsfoft Linker
-
-# Flags
-CPPFLAGS               =/Fo$(@R) /c /J # for Micrsoft Compiler(cl)
-CMacroPre              =/D # for Micrsoft Compiler(cl)
-
-LNKFLAGS               =/out:$(@) # for Microsfoft Linker (link)
 endif
-# END Micrososft Visual C Macros
+
+nasm_FLAGS             =-o $(@)           # Netwide Assembler (nasm)
+
+masm_FLAGS             =/Fo$(@R) /c /coff # Micrsoft Macro Assembler (masm)
+
+cl_FLAGS               =/Fo$(@R) /c /J    # for Micrsoft Compiler(cl)
+cl_MacroPre            =/D                # for Micrsoft Compiler(cl)
+
+gcc_FLAGS              =-o $(@) -c -funsigned-char    # for GNU C++ Compiler (gcc)
+gcc_MacroPre           =-D #                          # for GNU C++ Compiler (gcc)
+
+ld_FLAGS               =-o $(@)                       # for GNU linker (ld)
+ld_libPre              =-l #                          # for GNU linker (ld)
+ld_libSuf              =
+
+link_FLAGS             =/out:$(@)                     # for Microsfoft Linker (link)
+link_libPre            =
+link_libSuf            =.lib                          # for Microsfoft Linker (link)
+
+# END Build Flags
 # -----------------------------------
 
 # -----------------------------------
-# Assembler Macros
-if AsmName=masm
-AS=ml
-masmFLAGS              =/Fo$(@R) /c /coff
-endif
+# Graphics
+sdl_gcc_FLAGS          =`sdl-config --cflags`
+sdl_ld_LIBs            =`sdl-config --static-libs`
 
-if AsmName=nasm
-AS=nasm
-nasmFLAGS              =-o $(@) -f win32
-endif
-# END Assembler Macros
+sdl_cl_FLAGS           =/D_GNU_SOURCE=1 /Dmain=SDL_main
+sdl_link_LIBs          =$(LNKlibPre)opengl32$(LNKlibSuf) $(LNKlibPre)glu32$(LNKlibSuf) $(LNKlibPre)sdl$(LNKlibSuf) $(LNKlibPre)sdlmain$(LNKlibSuf)
+
+win_gcc_FLAGS           =
+win_cl_FLAGS            =
+win_$(LNK)_LIBs         =$(LNKlibPre)ddraw$(LNKlibSuf) $(LNKlibPre)dinput$(LNKlibSuf) $(LNKlibPre)dxguid$(LNKlibSuf)
+
+
+# END Graphics
 # -----------------------------------
+
+# -----------------------------------
+# Platform
+
+posix_OBJSuf           =elf.o
+posix_EXESuf           =
+
+posix_nasm_FLAGS       =-f elf32
+posix_ld_LIBs          =
+
+Win32_LIBs               =
+
+win32_OBJSuf             =obj
+win32_EXESuf             =exe
+
+win32_nasm_FLAGS         =-f win32
+win32_ld_LIBs            =$(LNKlibPre)mingw32$(LNKlibSuf)
+
+win32_gameLIBs	       =$(LNKlibPre)ole32$(LNKlibSuf)
+win32_simpleLIBs         =$(LNKlibPre)ole32$(LNKlibSuf)
+win32_voxedLIBs	       =                              $(LNKlibPre)comdlg32$(LNKlibSuf)
+win32_kwalkLIBs	       =$(LNKlibPre)ole32$(LNKlibSuf) $(LNKlibPre)comdlg32$(LNKlibSuf)
+
+win32_LIBs               =$(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf)
+
+# END Platform
+# -----------------------------------
+
+# -----------------------------------
+# Choosing...
+ifeq "$(AsmName)" "masm"
+AS                     =ml
+else
+AS                     =$(AsmName)
+endif
+AFLAGS                 =$($(AsmName)_FLAGS) $($(PLATdep)_$(AsmName)_FLAGS)
+
+CXXFLAGS               =$($(CXX)_FLAGS)     $($(GFXdep)_$(CXX)_FLAGS)    $($(PLATdep)_$(CXX)_FLAGS)
+CMacroPre              =$($(CXX)_MacroPre)
+
+LNKFLAGS               =$($(LNK)_FLAGS)     $($(GFXdep)_$(LNK)_FLAGS)    $($(PLATdep)_$(LNK)_FLAGS)
+LNKlibPre              =$($(LNK)_libPre)
+LNKlibSuf              =$($(LNK)_libSuf)
+
+gameLIBs	           =$($(GFXdep)_gameLIBs)   $($(GFXdep)_$(LNK)_LIBs) $($(PLATdep)_gameLIBs)   $($(PLATdep)_$(LNK)_LIBs) $($(PLATdep)_LIBs)
+simpleLIBs             =$($(GFXdep)_simpleLIBs) $($(GFXdep)_$(LNK)_LIBs) $($(PLATdep)_simpleLIBs) $($(PLATdep)_$(LNK)_LIBs) $($(PLATdep)_LIBs)
+voxedLIBs	           =$($(GFXdep)_voxedLIBs)  $($(GFXdep)_$(LNK)_LIBs) $($(PLATdep)_voxedLIBs)  $($(PLATdep)_$(LNK)_LIBs) $($(PLATdep)_LIBs)
+kwalkLIBs	           =$($(GFXdep)_kwalkLIBs)  $($(GFXdep)_$(LNK)_LIBs) $($(PLATdep)_kwalkLIBs)  $($(PLATdep)_$(LNK)_LIBs) $($(PLATdep)_LIBs) 
+
+OBJSuf                 =$($(PLATdep)_OBJSuf)
+EXESuf                 =$($(PLATdep)_EXESuf)
+
+# END Choosing...
+# -----------------------------------
+
+rm                     =rm -f
 
 # Call Common
 include common.mak

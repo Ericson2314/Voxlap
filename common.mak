@@ -1,70 +1,85 @@
 # sub-directory macros
-SRC                        =$(MAKEDIR)/src
-iBN                        =$(MAKEDIR)/inbin
-oBN                        =$(MAKEDIR)/outbin
+# locSRC                      =$(MAKEDIR)/source
+# locINC                      =$(MAKEDIR)/include
+# locLIB                      =$(MAKEDIR)/libraries
+# locBIN                      =$(MAKEDIR)/binaries
 
-Phony:                     default
-default:                   $(oBN)/game.exe $(oBN)/simple.exe $(oBN)/voxed.exe $(oBN)/kwalk.exe
+Phony:                        default
+default:                      $(locBIN)/game.$(EXESuf) $(locBIN)/simple.$(EXESuf) $(locBIN)/voxed.$(EXESuf) $(locBIN)/kwalk.$(EXESuf)
 
-# executable (.exe) (meta)targets
-$(oBN)/game.exe:           $(oBN)/game.obj   $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main1.obj;
-	$(LNK) $(LNKFLAGS)     $(oBN)/game.obj   $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main1.obj \
-	                       $(GFXOBJ) $(LNKlibPre)ole32$(LNKlibSuf) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf)
+# executable (.$(EXESuf)) (meta)targets
+game:                         $(locBIN)/game.$(EXESuf)
+$(locBIN)/game.$(EXESuf):     $(locBIN)/game.$(OBJSuf)   $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kpLIB.$(OBJSuf) $(locBIN)/$(GFXdep)main1.$(OBJSuf)
+	$(LNK) $(LNKFLAGS)        $(locBIN)/game.$(OBJSuf)   $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kpLIB.$(OBJSuf) $(locBIN)/$(GFXdep)main1.$(OBJSuf) $(gameLIBs)
 
-$(oBN)/simple.exe:         $(oBN)/simple.obj $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main1.obj;
-	$(LNK) $(LNKFLAGS)     $(oBN)/simple.obj $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main1.obj \
-	                       $(GFXOBJ) $(LNKlibPre)ole32$(LNKlibSuf) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf)
+simple:                       $(locBIN)/simple.$(OBJSuf)
+$(locBIN)/simple.$(EXESuf):   $(locBIN)/simple.$(OBJSuf) $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kpLIB.$(OBJSuf) $(locBIN)/$(GFXdep)main1.$(OBJSuf)
+	$(LNK) $(LNKFLAGS)        $(locBIN)/simple.$(OBJSuf) $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kpLIB.$(OBJSuf) $(locBIN)/$(GFXdep)main1.$(OBJSuf) $(simpleLIBs)
 
-$(oBN)/voxed.exe:          $(oBN)/voxed.obj  $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main2.obj;
-	$(LNK) $(LNKFLAGS)     $(oBN)/voxed.obj  $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main2.obj \
-	                       $(GFXOBJ)                               $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf) $(LNKlibPre)comdlg32$(LNKlibSuf)
+voxed:                        $(locBIN)/voxed.$(OBJSuf)
+$(locBIN)/voxed.$(EXESuf):    $(locBIN)/voxed.$(OBJSuf)  $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kpLIB.$(OBJSuf) $(locBIN)/$(GFXdep)main2.$(OBJSuf)
+	$(LNK) $(LNKFLAGS)        $(locBIN)/voxed.$(OBJSuf)  $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kpLIB.$(OBJSuf) $(locBIN)/$(GFXdep)main2.$(OBJSuf) $(voxedLIBs)
 
-$(oBN)/kwalk.exe:          $(oBN)/kwalk.obj  $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main2.obj;
-	$(LNK) $(LNKFLAGS)     $(oBN)/kwalk.obj  $(oBN)/voxlap5.obj $(oBN)/v5.obj $(oBN)/kpLIB.obj $(oBN)/$(GFXdep)main2.obj \
-	                       $(GFXOBJ) $(LNKlibPre)ole32$(LNKlibSuf) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf) $(LNKlibPre)comdlg32$(LNKlibSuf)
+kwalk:                        $(locBIN)/kwalk.$(OBJSuf)
+$(locBIN)/kwalk.$(EXESuf):    $(locBIN)/kwalk.$(OBJSuf)  $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kpLIB.$(OBJSuf) $(locBIN)/$(GFXdep)main2.$(OBJSuf)
+	$(LNK) $(LNKFLAGS)        $(locBIN)/kwalk.$(OBJSuf)  $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kpLIB.$(OBJSuf) $(locBIN)/$(GFXdep)main2.$(OBJSuf) $(kwalkLIBs)
 
 
-# binary object (.obj) targets
+# binary object (.$(OBJSuf)) targets
 
 # Primary Objects
-$(oBN)/game.obj:           $(SRC)/game.cpp   $(SRC)/voxlap5.h $(SRC)/sysmain.h;
-	$(CPP) $(CPPFLAGS)     $(SRC)/game.cpp
+game:                         $(locSRC)/game.cpp
+$(locBIN)/game.$(OBJSuf):     $(locSRC)/game.cpp   $(locINC)/voxlap5.h $(locINC)/sysmain.h
+	$(CXX) $(CXXFLAGS)        $(locSRC)/game.cpp
 #   used to use /QIfist
 
-$(oBN)/simple.obj:         $(SRC)/simple.cpp $(SRC)/voxlap5.h $(SRC)/sysmain.h;
-	$(CPP) $(CPPFLAGS)     $(SRC)/simple.cpp
+simple:                       $(locSRC)/simple.cpp
+$(locBIN)/simple.$(OBJSuf):   $(locSRC)/simple.cpp $(locINC)/voxlap5.h $(locINC)/sysmain.h
+	$(CXX) $(CXXFLAGS)        $(locSRC)/simple.cpp
 #   used to use /QIfist
 
-$(oBN)/voxed.obj:          $(SRC)/voxed.cpp  $(SRC)/voxlap5.h $(SRC)/sysmain.h;
-	$(CPP) $(CPPFLAGS)     $(SRC)/voxed.cpp
+voxed:                        $(locSRC)/voxed.cpp
+$(locBIN)/voxed.$(OBJSuf):    $(locSRC)/voxed.cpp  $(locINC)/voxlap5.h $(locINC)/sysmain.h
+	$(CXX) $(CXXFLAGS)        $(locSRC)/voxed.cpp
 
-$(oBN)/kwalk.obj:          $(SRC)/kwalk.cpp  $(SRC)/voxlap5.h $(SRC)/sysmain.h;
-	$(CPP) $(CPPFLAGS)     $(SRC)/kwalk.cpp
+kwalk:                        $(locSRC)/kwalk.cpp
+$(locBIN)/kwalk.$(OBJSuf):    $(locSRC)/kwalk.cpp  $(locINC)/voxlap5.h $(locINC)/sysmain.h
+	$(CXX) $(CXXFLAGS)        $(locSRC)/kwalk.cpp
 
 # Secondary Objects
-$(oBN)/voxlap5.obj:        $(SRC)/voxlap5.cpp $(SRC)/voxlap5.h;
-	$(CPP) $(CPPFLAGS)     $(SRC)/voxlap5.cpp
+voxlap:                       $(locSRC)/voxlap5.cpp 
+$(locBIN)/voxlap5.$(OBJSuf):  $(locSRC)/voxlap5.cpp $(locINC)/voxlap5.h
+	$(CXX) $(CXXFLAGS)        $(locSRC)/voxlap5.cpp
 
-$(oBN)/v5.obj:             $(SRC)/v5.$(AsmName);
-	$(AS)  $(AFLAGS)       $(SRC)/v5.$(AsmName)
+v5:                           $(locBIN)/v5.$(OBJSuf)
+$(locBIN)/v5.$(OBJSuf):       $(locSRC)/v5.$(AsmName)
+	$(AS)  $(AFLAGS)          $(locSRC)/v5.$(AsmName)
 
-$(oBN)/kpLIB.obj:          $(SRC)/kpLIB.cpp;
-	$(CPP) $(CPPFLAGS)     $(SRC)/kpLIB.cpp
+kplib:                        $(locBIN)/kplib.$(OBJSuf)
+$(locBIN)/kplib.$(OBJSuf):    $(locSRC)/kplib.cpp
+	$(CXX) $(CXXFLAGS)        $(locSRC)/kplib.cpp
 
-$(oBN)/$(GFXdep)main1.obj: $(SRC)/$(GFXdep)main.cpp $(SRC)/sysmain.h;
-	$(CPP) $(CPPFLAGS)     $(SRC)/$(GFXdep)main.cpp $(CMacroPre)USEKZ $(CMacroPre)ZOOM_TEST
+winmain1:                     $(locBIN)/winmain1.$(OBJSuf)
+$(locBIN)/winmain1.$(OBJSuf): $(locSRC)/winmain.cpp $(locINC)/sysmain.h
+	$(CXX) $(CXXFLAGS)        $(locSRC)/winmain.cpp $(CMacroPre)USEKZ $(CMacroPre)ZOOM_TEST
 
-$(oBN)/$(GFXdep)main2.obj: $(SRC)/$(GFXdep)main.cpp $(SRC)/sysmain.h;
-	$(CPP) $(CPPFLAGS)     $(SRC)/$(GFXdep)main.cpp $(CMacroPre)NOSOUND
+winmain2:                     $(locBIN)/winmain2.$(OBJSuf)
+$(locBIN)/winmain2.$(OBJSuf): $(locSRC)/winmain.cpp $(locINC)/sysmain.h
+	$(CXX) $(CXXFLAGS)        $(locSRC)/winmain.cpp $(CMacroPre)NOSOUND
+	
+sdlmain1:                     $(locBIN)/sdlmain1.$(OBJSuf)
+$(locBIN)/sdlmain1.$(OBJSuf): $(locSRC)/sdlmain.c $(locINC)/sysmain.h
+	$(CXX) $(CXXFLAGS)        $(locSRC)/sdlmain.c $(CMacroPre)USEKZ $(CMacroPre)ZOOM_TEST
+
+sdlmain2:                     $(locBIN)/sdlmain2.$(OBJSuf)
+$(locBIN)/sdlmain2.$(OBJSuf): $(locSRC)/sdlmain.c $(locINC)/sysmain.h
+	$(CXX) $(CXXFLAGS)        $(locSRC)/sdlmain.c $(CMacroPre)NOSOUND
 
 # Clearn Script
 cleanall: clean
-	cd $(oBN)
-	del *.exe *.dll
-	cd ../decomp
-	del v*
+	$(rm) $(locBIN)/*
+	$(rm) ./decompv*
 clean:
-	del "* - debug.txt"
-	del asmcompare.txt
-	cd $(oBN)
-	del *.obj
+	$(rm) "* - debug.txt"
+	$(rm) asmcompare.txt
+	$(rm) $(locBIN)/*.elf.o $(locBIN)/*.obj

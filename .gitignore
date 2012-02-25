@@ -1,5 +1,5 @@
-./outbin/
-./outbin/*
+./binaries/
+./binaries/*
 ./decomp/
 ./decomp/*
 *.user
