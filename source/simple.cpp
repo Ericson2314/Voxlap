@@ -1,8 +1,8 @@
 // VOXLAP engine by Ken Silverman (http://advsys.net/ken): Example skeleton program
 // This file has been modified from Ken Silverman's original release
 
-#include "sysmain.h"
-#include "voxlap5.h"
+#include "../include/sysmain.h"
+#include "../include/voxlap5.h"
 dpoint3d ipos, istr, ihei, ifor;
 
 vx5sprite desklamp;
@@ -46,10 +46,10 @@ void uninitapp () { freekv6(desklamp.voxnum); /*uninitvoxlap();*/ kzuninit(); }
 //////////////////////////////////////////////////////////////////////////
 A line-by-line explanation of this program:
 
->#include "sysmain.h"
+>#include "../include/sysmain.h"
    Function and variable declarations for WINMAIN.CPP or DOSMAIN.C.
 
->#include "voxlap5.h"
+>#include "../include/voxlap5.h"
    I have all my function and structure declarations in here, so if you
    include this, you will be sure that you're calling my functions with the
    correct parameters.

@@ -1,14 +1,14 @@
 // VOXLAP engine by Ken Silverman (http://advsys.net/ken)
 // This file has been modified from Ken Silverman's original release
 
-//#include "inlineasm.h"
+//#include "../include/inlineasm.h"
 
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "sysmain.h"
-#include "voxlap5.h"
+#include "../include/sysmain.h"
+#include "../include/voxlap5.h"
 
 	//NUMSECRETS:actual num,1:1,2:1,4:2,8:5,16:8,32:14,64:26,128:49,256:87
 	//512:168,1024:293,2048:480,4096:711,8192:931
