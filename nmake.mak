@@ -1,27 +1,35 @@
 # sub-directory macros
-SRC                    =$(MAKEDIR)/src
-iBN                    =$(MAKEDIR)/inbin
-oBN                    =$(MAKEDIR)/outbin
+locSRC                 =$(MAKEDIR)/source
+locINC                 =$(MAKEDIR)/include
+locLIB                 =$(MAKEDIR)/libraries
+locBIN                 =$(MAKEDIR)/binaries
 
-# adding inbin directory to paths
+# adding local equivalents to environment variables
+INCLUDE                =$(locINC);$(INCLUDE)
 !IFDEF __MSVC__
-PATH                   =$(iBN);$(PATH)
-INCLUDE                =$(iBN);$(INCLUDE)
-LIB                    =$(iBN);$(LIB)
+LIB                    =$(locLIB);$(LIB)
 !ENDIF
+#PATH                   =$(locBIN);$(PATH)
+
 
 # -----------------------------------
 # GNU Compiler Collection Macros
 !IFDEF __GNUC__
-CPP                    =gcc  #for GNU C++ Compiler
+CXX                    =gcc  #for GNU C++ Compiler
 LNK                    =ld   #for GNU linker
 
 # Flags
-CPPFLAGS               =-o $(@) -c -funsigned-char -mwindows #for GNU C++ Compiler (gcc)
+CXXFLAGS               =-o $(@) -c -funsigned-char -mwindows $(GFXCFLAGS) #for GNU C++ Compiler (gcc)
 CMacroPre              =-D "" #for GNU C++ Compiler (gcc)
 
 ldFLAGS                =-o $(@) #for GNU linker (ld)
 LNKlibPre              =-l "" #for GNU linker (ld)
+
+gameLIBs	           =$(GFXOBJ) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf) $(LNKlibPre)ole32$(LNKlibSuf)
+simpleLIBs             =$(GFXOBJ) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf) $(LNKlibPre)ole32$(LNKlibSuf)
+voxedLIBs	           =$(GFXOBJ) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf)                               $(LNKlibPre)comdlg32$(LNKlibSuf)
+kwalkLIBs	           =$(GFXOBJ) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf) $(LNKlibPre)ole32$(LNKlibSuf)
+
 !ENDIF
 # END GNU Compiler Collection Macros
 # -----------------------------------
@@ -29,15 +37,21 @@ LNKlibPre              =-l "" #for GNU linker (ld)
 # -----------------------------------
 # Micrososft Visual C Macros
 !IFDEF __MSVC__
-CPP                    =cl   #for Micrsoft Compiler
+CXX                    =cl   #for Micrsoft Compiler
 LNK                    =link #for Microsfoft Linker
 
 # Flags
-CPPFLAGS               =/Fo$(@R) /c /J # for Micrsoft Compiler(cl)
+CXXFLAGS               =/Fo$(@R) /c /J $(GFXCFLAGS) # for Micrsoft Compiler(cl)
 CMacroPre              =/D # for Micrsoft Compiler(cl)
 
 LNKFLAGS               =/out:$(@) # for Microsfoft Linker (link)
 LNKlibSuf              =.lib
+
+gameLIBs	           =$(GFXOBJ) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf) $(LNKlibPre)ole32$(LNKlibSuf)
+simpleLIBs             =$(GFXOBJ) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf) $(LNKlibPre)ole32$(LNKlibSuf)
+voxedLIBs	           =$(GFXOBJ) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf)                               $(LNKlibPre)comdlg32$(LNKlibSuf)
+kwalkLIBs	           =$(GFXOBJ) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf) $(LNKlibPre)ole32$(LNKlibSuf)
+
 !ENDIF
 # END Micrososft Visual C Macros
 # -----------------------------------
@@ -57,6 +71,10 @@ AFLAGS                 =-o $(@) -f win32
 !ENDIF
 # END Assembler Macros
 # -----------------------------------
+
+OBJSuf                 =$(win_OBJSuf)
+EXESuf                 =$(win_EXESuf)
+rm                     =del
 
 # Call Common
 !include common.mak
