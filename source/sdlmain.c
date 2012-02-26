@@ -1,6 +1,6 @@
 /**************************************************************************************************
  * SDLMAIN.CPP & SYSMAIN.H                                                                        *
- *                                                                                                *
+ * By Jonathon Fowler                                                                             *
  **************************************************************************************************/
 
 // This file has been modified from Ken Silverman's original release
@@ -68,7 +68,7 @@ long xres = 640, yres = 480, colbits = 8, fullscreen = 1, maxpages = 8;
 
 //======================== CPU detection code begins ========================
 
-//static long cputype asm("cputype") = 0; //What the hell? Doesn't match header or use; doesn't make much sense on it's own.
+//static long cputype asm("cputype") = 0; // What the hell? Doesn't match header or use; doesn't make much sense on it's own.
 long cputype = 0; //I think this will work just fine.
 
 static inline long testflag (long c)
@@ -335,7 +335,7 @@ static long mousex = 0, mousey = 0, gbstatus = 0;
 long mousmoth=0;
 float mousper=0.0;
 
-long readkeyboard () //changed from "void" to "long" to match header & DirectX original. Returned value is never used so it shouldn't matter.
+long readkeyboard () // changed from "void" to "long" to match header & DirectX original. Returned value is never used so it shouldn't matter.
 {
 	// all gets done in sdlmsgloop now
 }

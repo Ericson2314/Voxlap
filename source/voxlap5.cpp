@@ -6,6 +6,8 @@
 #define VOXLAP5
 #include "../include/voxlap5.h"
 
+#include "../include/porthacks.h"
+
 #define USEZBUFFER 1
 
 #define PREC (256*4096)
@@ -16,31 +18,16 @@
 #define GOLDRAT 0.3819660112501052 //Golden Ratio: 1 - 1/((sqrt(5)+1)/2)
 #define ESTNORMRAD 2 //Specially optimized for 2: DON'T CHANGE unless testing!
 
-
-// General Compiler Hacks
-#ifdef __GNUC__
-	// inserts opcode emms
-	// used to avoid many compiler checks
-	#define CLEARMMX()	__asm__("emms\n");
-	// Maps __assume() to __builtin_unreachable()
-	#define __assume(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
-#endif
-#ifdef _MSC_VER
-	// inserts opcode emms
-	// used to avoid many compiler checks
-	#define CLEARMMX()	_asm emms
-#endif
-
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#else
-#include <stdarg.h>
-#include <stdio.h>
-#include <string.h>
-#include <conio.h>
-#include <dos.h>
-#define MAX_PATH 260
+	#define WIN32_LEAN_AND_MEAN
+	#include <windows.h>
+#elifdef DOS
+	#include <stdarg.h>
+	#include <stdio.h>
+	#include <string.h>
+	#include <conio.h>
+	#include <dos.h>
+	#define MAX_PATH 260
 #endif
 #include <stdlib.h>
 
@@ -217,388 +204,453 @@ long zbufoff;
 #define gi0 (((long *)&gi)[0])
 #define gi1 (((long *)&gi)[1])
 
-#ifdef __GNUC__
 
-//#pragma warning(disable:4799) //I know how to use EMMS
-
-static inline void fcossin (float a, float *c, float *s)
-{
-	__asm__ __volatile__
-	(
-		"fld	a\n\t"
-		"fsincos\n\t"
-		"mov	c,%eax\n\t"
-		"fstpl	(%eax)\n\t"
-		"mov	s,%eax\n\t"
-		"fstpl	(%eax)\n\t"
-	);
-}
-
-static inline void dcossin (double a, double *c, double *s)
-{
-	__asm__ __volatile__
-	(
-		"fld	a\n\t"
-		"fsincos\n\t"
-		"mov	c,%eax\n\t"
-		"fstpq	(%eax)\n\t"
-		"mov	s,%eax\n\t"
-		"fstpq	(%eax)\n\t"
-	);
-}
-
-static inline void ftol (float f, long *a)
-{
-	__asm__ __volatile__
-	(
-		"mov	a,%eax\n\t"
-		"fld	f\n\t"
-		"fistpl	(%eax)\n\t"
-	);
-}
-
-static inline void dtol (double d, long *a)
-{
-	__asm__ __volatile__
-	(
-		"mov	a,%eax\n\t"
-		"fldq		d\n\t"
-		"fistpl	(%eax)\n\t"
-	);
-}
-
-	//WARNING: This ASM code requires >= PPRO
-static inline double dbound (double d, double dmin, double dmax)
-{
-	__asm__ __volatile__
-	(
-		"fld	dmin\n\t"
-		"fld	d\n\t"
-		"fucomi	st(1),st\n\t"     //if (d < dmin)
-		"fcmovb	st(1),st\n\t"     //    d = dmin;
-		"fld	dmax\n\t"
-		"fxch	st(1)\n\t"
-		"fucomi	st(1),st\n\t"     //if (d > dmax)
-		"fcmovnb	st(1),st\n\t" //    d = dmax;
-		"fstp	d\n\t"
-		"fucompp\n\t"
-	);
-	return(d);
-}
-
-static inline long mulshr16 (long a, long d)
-{
-	__asm__ __volatile__
-	(
-		"mov	a,%eax\n\t"
-		"mov	d,%edx\n\t"
-		"imul	%edx\n\t"
-		"shrd	%edx,16,%eax\n\t"
-	);
-}
-
-static inline __int64 mul64 (long a, long d)
-{
-	__asm__ __volatile__
-	(
-		"mov	a,%eax\n\t"
-		"imul	d\n\t"
-	);
-}
-
-static inline long shldiv16 (long a, long b)
-{
-	__asm__ __volatile__
-	(
-		"mov	a,%eax\n\t"
-		"mov	%eax,%edx\n\t"
-		"shl	$16,%eax\n\t"
-		"sar	$16,%edx\n\t"
-		"idiv	b\n\t"
-	);
-}
-
-static inline long isshldiv16safe (long a, long b)
-{
-	__asm__ __volatile__
-	(
-		"mov	a,%edx\n\t"
-		"test	%edx,%edx\n\t"
-		"js	skipneg0\n\t"
-		"neg	%edx\n"
-	"skipneg0:\n\t"
-		"sar	$14,%edx\n\t"
-
-		"mov	b,%eax\n\t"
-		"test	%eax,%eax\n\t"
-		"js	skipneg1\n\t"
-		"neg	%eax\n"
-	"skipneg1:\n\t"
-				//abs((a<<16)/b) < (1<<30) //1 extra for good luck!
-				//-abs(a)>>14 > -abs(b)    //use -abs because safe for 0x80000000
-				//eax-edx < 0
-		"sub	%edx,%eax\n\t"
-		"shr	$31,%eax\n\t"
-	);
-}
-
-static inline long umulshr32 (long a, long d)
-{
-	__asm__ __volatile__
-	(
-		"mov	a,%eax\n\t"
-		"mul	d\n\t"
-		"mov	%edx,%eax\n\t"
-	);
-}
-
-static inline long scale (long a, long d, long c)
-{
-	__asm__ __volatile__
-	(
-		"mov	a,%eax\n\t"
-		"imul	d\n\t"
-		"idiv	c\n\t"
-	);
-}
-
-static inline long dmulrethigh (long b, long c, long a, long d)
-{
-	__asm__ __volatile__
-	(
-		"mov	a,%eax\n\t"
-		"imul	d\n\t"
-		"mov	%eax,%ecx\n\t"
-		"push	%edx\n\t"
-		"mov	b,%eax\n\t"
-		"imul	c\n\t"
-		"sub	%ecx,%eax\n\t"
-		"pop	%ecx\n\t"
-		"sbb	%ecx,%edx\n\t"
-		"mov	%edx,%eax\n\t"
-	);
-}
-
-static inline void copybuf (void *s, void *d, long c)
-{
-	__asm__ __volatile__
-	(
-		"push	%esi\n\t"
-		"push	%edi\n\t"
-		"mov	s,%esi\n\t"
-		"mov	d,%edi\n\t"
-		"mov	c,%ecx\n\t"
-		"rep	movsd\n\t"
-		"pop	%edi\n\t"
-		"pop	%esi\n\t"
-	);
-}
-
-static inline void clearbuf (void *d, long c, long a)
-{
-	__asm__ __volatile__
-	(
-		"push	%edi\n\t"
-		"mov	d,%edi\n\t"
-		"mov	c,%ecx\n\t"
-		"mov	a,%eax\n\t"
-		"rep	stosd\n\t"
-		"pop	%edi\n\t"
-	);
-}
-
+	//Ken Silverman knows how to use EMMS
+#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#pragma warning(disable:4799) 
 #endif
-#ifdef _MSC_VER
-
-#pragma warning(disable:4799) //I know how to use EMMS
 
 static inline void fcossin (float a, float *c, float *s)
 {
+	#if defined(__NOASM__)
+	*c = cos(a);
+	*s = sin(a);
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"fld	DWORD PTR a\n\t"
+		"fsincos\n\t"
+		"mov	eax, c\n\t"
+		"fstp	DWORD PTR [eax]\n\t"
+		"mov	eax, s\n\t"
+		"fstp	DWORD PTR [eax]\n\t"
+		".att_syntax prefix\n"
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		fld a
 		fsincos
-		mov eax, c
-		fstp dword ptr [eax]
-		mov eax, s
-		fstp dword ptr [eax]
+		mov	eax, c
+		fstp	dword ptr [eax]
+		mov	eax, s
+		fstp	dword ptr [eax]
 	}
+	#endif
 }
 
 static inline void dcossin (double a, double *c, double *s)
 {
+	#if defined(__NOASM__)
+	*c = cos(a);
+	*s = sin(a);
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"fld	qword ptr a\n"
+		"fsincos\n"
+		"mov	eax, c\n"
+		"fstp	qword ptr [eax]\n"
+		"mov	eax, s\n"
+		"fstp	qword ptr [eax]\n"
+		".att_syntax prefix\n"
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		fld a
+		fld	a
 		fsincos
-		mov eax, c
-		fstp qword ptr [eax]
-		mov eax, s
-		fstp qword ptr [eax]
+		mov	eax, c
+		fstp	qword ptr [eax]
+		mov	eax, s
+		fstp	qword ptr [eax]
 	}
+	#endif
 }
 
 static inline void ftol (float f, long *a)
 {
+	#if defined(__NOASM__)
+	
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"mov	eax, a\n"
+		"fld	dword ptr f\n"
+		"fistp	dword ptr [eax]\n"
+		".att_syntax prefix\n"
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov eax, a
-		fld f
-		fistp dword ptr [eax]
+		mov	eax, a
+		fld	f
+		fistp	dword ptr [eax]
 	}
+	#endif
 }
 
 static inline void dtol (double d, long *a)
 {
+	#if defined(__NOASM__)
+	
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"mov	eax, a\n"
+		"fld	qword ptr d\n"
+		"fistp	dword ptr [eax]\n"
+		".att_syntax prefix\n"
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov eax, a
-		fld qword ptr d
-		fistp dword ptr [eax]
+		mov	eax, a
+		fld	qword ptr d
+		fistp	dword ptr [eax]
 	}
+	#endif
 }
 
 	//WARNING: This ASM code requires >= PPRO
 static inline double dbound (double d, double dmin, double dmax)
 {
+	#if defined(__NOASM__)
+	
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"fld	qword ptr dmin\n"
+		"fld	qword ptr d\n"
+		"fucomi	st, st(1)\n"      //if (d < dmin)
+		"fcmovb	st, st(1)\n"      //    d = dmin;
+		"fld	qword ptr dmax\n"
+		"fxch	st(1)\n"
+		"fucomi	st, st(1)\n"      //if (d > dmax)
+		"fcmovnb	st, st(1)\n"  //    d = dmax;
+		"fstp	qword ptr d\n"
+		"fucompp\n"
+		".att_syntax prefix\n"
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		fld dmin
-		fld d
-		fucomi st, st(1)   ;if (d < dmin)
-		fcmovb st, st(1)   ;    d = dmin;
-		fld dmax
-		fxch st(1)
-		fucomi st, st(1)   ;if (d > dmax)
-		fcmovnb st, st(1)  ;    d = dmax;
-		fstp d
+		fld	dmin
+		fld	d
+		fucomi	st, st(1)   //if (d < dmin)
+		fcmovb	st, st(1)   //    d = dmin;
+		fld	dmax
+		fxch	st(1)
+		fucomi	st, st(1)   //if (d > dmax)
+		fcmovnb	st, st(1)   //    d = dmax;
+		fstp	d
 		fucompp
 	}
+	#endif
 	return(d);
 }
 
 static inline long mulshr16 (long a, long d)
 {
+	#if defined(__NOASM__)
+	
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"mov	eax, a\n"
+		"mov	edx, d\n"
+		"imul	dword ptr edx\n"
+		"shrd	eax, edx, 16\n"
+		".att_syntax prefix\n"
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov eax, a
-		mov edx, d
-		imul edx
-		shrd eax, edx, 16
+		mov	eax, a
+		mov	edx, d
+		imul	edx
+		shrd	eax, edx, 16
 	}
-}
+	#endif
+	}
 
 static inline __int64 mul64 (long a, long d)
 {
+	#if defined(__NOASM__)
+	
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"mov	eax, a\n"
+		"imul	dword ptr d\n"
+		".att_syntax prefix\n"
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov eax, a
-		imul d
+		mov	eax, a
+		imul	d
 	}
+	#endif
 }
 
 static inline long shldiv16 (long a, long b)
 {
+	#if defined(__NOASM__)
+	
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"mov	eax, a\n"
+		"mov	edx, eax\n"
+		"shl	eax, 16\n"
+		"sar	edx, 16\n"
+		"idiv	dword ptr b\n"
+		".att_syntax prefix\n"
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov eax, a
-		mov edx, eax
-		shl eax, 16
-		sar edx, 16
-		idiv b
+		mov	eax, a
+		mov	edx, eax
+		shl	eax, 16
+		sar	edx, 16
+		idiv	b
 	}
+	#endif
 }
 
 static inline long isshldiv16safe (long a, long b)
 {
+	#if defined(__NOASM__)
+	
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"mov	edx, a\n"
+		"test	edx, edx\n"
+		"js	short skipneg0\n"
+		"neg	edx\n"
+	"skipneg0:\n"
+		"sar	edx, 14\n"
+
+		"mov	eax, b\n"
+		"test	eax, eax\n"
+		"js	short skipneg1\n"
+		"neg	eax\n"
+	"skipneg1:\n"
+			//abs((a<<16)/b) < (1<<30) //1 extra for good luck!
+			//-abs(a)>>14 > -abs(b)    //use -abs because safe for 0x80000000
+			//eax-edx < 0
+		"sub	eax, edx\n"
+		"shr	eax, 31\n"
+		".att_syntax prefix\n"
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov edx, a
-		test edx, edx
-		js short skipneg0
-		neg edx
-skipneg0:
-		sar edx, 14
+		mov	edx, a
+		test	edx, edx
+		js	short skipneg0
+		neg	edx
+	skipneg0:
+		sar	edx, 14
 
-		mov eax, b
-		test eax, eax
-		js short skipneg1
-		neg eax
-skipneg1:
-			;abs((a<<16)/b) < (1<<30) ;1 extra for good luck!
-			;-abs(a)>>14 > -abs(b)    ;use -abs because safe for 0x80000000
-			;eax-edx < 0
-		sub eax, edx
-		shr eax, 31
+		mov	eax, b
+		test	eax, eax
+		js	short skipneg1
+		neg	eax
+	skipneg1:
+			//abs((a<<16)/b) < (1<<30) //1 extra for good luck!
+			//-abs(a)>>14 > -abs(b)    //use -abs because safe for 0x80000000
+			//eax-edx	< 0
+		sub	eax, edx
+		shr	eax, 31
 	}
+	#endif
 }
 
 static inline long umulshr32 (long a, long d)
 {
+	#if defined(__NOASM__)
+	
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"mov	eax, a\n"
+		"mul	dword ptr d\n"
+		"mov	eax, edx\n"
+		".att_syntax prefix\n"
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov eax, a
-		mul d
-		mov eax, edx
+		mov	eax, a
+		mul	d
+		mov	eax, edx
 	}
+	#endif
 }
 
 static inline long scale (long a, long d, long c)
 {
+	#if defined(__NOASM__)
+	
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"mov	eax, a\n"
+		"imul	dword ptr d\n"
+		"idiv	dword ptr c\n"
+		".att_syntax prefix\n"
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov eax, a
-		imul d
-		idiv c
+		mov	eax, a
+		imul	d
+		idiv	c
 	}
+	#endif
 }
 
 static inline long dmulrethigh (long b, long c, long a, long d)
 {
+	#if defined(__NOASM__)
+	
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"mov	eax, a\n"
+		"imul	dword ptr d\n"
+		"mov	ecx, eax\n"
+		"push	edx\n"
+		"mov	eax, b\n"
+		"imul	dword ptr c\n"
+		"sub	eax, ecx\n"
+		"pop	ecx\n"
+		"sbb	edx, ecx\n"
+		"mov	eax, edx\n"
+		".att_syntax prefix\n"
+	)
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov eax, a
-		imul d
-		mov ecx, eax
-		push edx
-		mov eax, b
-		imul c
-		sub eax, ecx
-		pop ecx
-		sbb edx, ecx
-		mov eax, edx
+		mov	eax, a
+		imul	d
+		mov	ecx, eax
+		push	edx
+		mov	eax, b
+		imul	c
+		sub	eax, ecx
+		pop	ecx
+		sbb	edx, ecx
+		mov	eax, edx
 	}
+	#endif
 }
 
 static inline void copybuf (void *s, void *d, long c)
 {
+	#if defined(__NOASM__)
+	
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"push	esi\n"
+		"push	edi\n"
+		"mov	esi, s\n"
+		"mov	edi, d\n"
+		"mov	ecx, c\n"
+		"rep	movsd\n"
+		"pop	edi\n"
+		"pop	esi\n"
+		".att_syntax prefix\n"
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		push esi
-		push edi
-		mov esi, s
-		mov edi, d
-		mov ecx, c
-		rep movsd
-		pop edi
-		pop esi
+		push	esi
+		push	edi
+		mov	esi, s
+		mov	edi, d
+		mov	ecx, c
+		rep	movsd
+		pop	edi
+		pop	esi
 	}
+	#endif
 }
 
 static inline void clearbuf (void *d, long c, long a)
 {
+	#if defined(__NOASM__)
+	
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"push	edi\n"
+		"mov	edi, d\n"
+		"mov	ecx, c\n"
+		"mov	eax, a\n"
+		"rep	stosd\n"
+		"pop	edi\n"
+		".att_syntax prefix\n"
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		push edi
-		mov edi, d
-		mov ecx, c
-		mov eax, a
-		rep stosd
-		pop edi
+		push	edi
+		mov	edi, d
+		mov	ecx, c
+		mov	eax, a
+		rep	stosd
+		pop	edi
 	}
+	#endif
 }
-
-#endif
 
 	//if (a < 0) return(0); else if (a > b) return(b); else return(a);
 static inline long lbound0 (long a, long b) //b MUST be >= 0
@@ -1237,7 +1289,7 @@ long compilestack (long *uind, long *n0, long *n1, long *n2, long *n3, char *cbu
 }
 static inline void expandbit256 (void *s, void *d)
 {
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -1292,7 +1344,7 @@ static inline void expandbit256 (void *s, void *d)
 		".att_syntax prefix\n"
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		push	esi
@@ -1332,7 +1384,7 @@ static inline void expandbit256 (void *s, void *d)
 		movzx	eax, byte ptr [esi]
 		test	eax, eax
 		jnz	short begit
-		sub	ecx, 256               //finish writing buffer to [edi]
+		sub	ecx, 256                //finish writing buffer to [edi]
 		jg	short xskpe
 	xdoe:
 		mov	[edi], edx
@@ -1620,54 +1672,57 @@ deletez:;
 #endif
 }
 
-#ifdef __GNUC__
 static inline void mmxcoloradd (long *a)
 {
+	#if defined(__NOASM__)
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		"mov	a,%eax\n\t"
-		"movd	(%eax),mm0\n\t"
-		"paddusb	flashbrival,mm0\n\t"
-		"movd	mm0,(%eax)\n\t"
+		".intel_syntax noprefix"
+		"mov	eax, a\n"
+		"movd	mm0, [eax]\n"
+		"psubusb	mm0, flashbrival\n"
+		"movd	[eax], mm0\n"
+		".att_syntax prefix"
 	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	_asm
+	{
+		mov	eax, a
+		movd	mm0, [eax]
+		psubusb	mm0, flashbrival
+		movd	[eax], mm0
+	}
+	#endif
 }
 
-static inline void mmxcolorsub (long *a)
+static inline void mmxcolorsub (long *a) //WHY IS THIS THE SAME???
 {
+	#if defined(__NOASM__)
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		"mov	a,%eax\n\t"
-		"movd	(%eax),mm0\n\t"
-		"psubusb	flashbrival,mm0\n\t"
-		"movd	mm0,(%eax)\n\t"
+		".intel_syntax noprefix"
+		"mov	eax, a\n"
+		"movd	mm0, [eax]\n"
+		"psubusb	mm0, flashbrival\n"
+		"movd	[eax], mm0\n"
+		".att_syntax prefix"
 	);
-}
-#endif
-#ifdef _MSC_VER
-
-static inline void mmxcoloradd (long *a)
-{
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov eax, a
-		movd mm0, [eax]
-		paddusb mm0, flashbrival
-		movd [eax], mm0
+		mov	eax, a
+		movd	mm0, [eax]
+		paddusb	mm0, flashbrival
+		movd	[eax], mm0
 	}
+	#endif
 }
-
-static inline void mmxcolorsub (long *a)
-{
-	_asm
-	{
-		mov eax, a
-		movd mm0, [eax]
-		psubusb mm0, flashbrival
-		movd [eax], mm0
-	}
-}
-
-#endif
 
 static inline void addusb (char *a, long b)
 {
@@ -1723,7 +1778,7 @@ void setflash (float px, float py, float pz, long flashradius, long numang, long
 
 	for(i=0;i<numang;i++)
 	{
-		CLEARMMX()
+		clearMMX();
 
 		fcossin(((float)i+(float)angoff*.125f)*PI*2.0f/(float)numang,&vx,&vy);
 
@@ -1845,7 +1900,7 @@ fafterdelete:;
 fcontinue:;
 	}
 
-	CLEARMMX()
+	clearMMX();
 	updatebbox(vx5.minx,vx5.miny,vx5.minz,vx5.maxx,vx5.maxy,vx5.maxz,0);
 	return;
 
@@ -1974,18 +2029,17 @@ void estnorm (long x, long y, long z, point3d *fp)
 		//fp->x = f*(float)n.x; fp->y = f*(float)n.y; fp->z = f*(float)n.z;
 	zz = n.x*n.x + n.y*n.y + n.z*n.z;
 	if (cputype&(1<<25))
-
-	#ifdef __GNUC__
 	{
+		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 		__asm__ __volatile__
 		(
 			"cvtsi2ss	zz,%xmm0\n\t"
 			"rsqrtss	%xmm0,%xmm0\n\t"
-			//"movss %xmm0, f\n\t"
+			//"movss	%xmm0, f\n\t"
 
 				//fp->x = f*(float)n.x; fp->y = f*(float)n.y; fp->z = f*(float)n.z;\n\t"
 			"cvtsi2ss	%xmm1,n	.	z\n\t"
-			"shufps	%xmm0,0,%xmm0\n\t"
+			"shufps	0,%xmm0,%xmm0\n\t"
 			"mov	fp,%eax\n\t"
 			"movlhps	%xmm1,%xmm1\n\t"
 			"cvtpi2ps	n,%xmm1\n\t"
@@ -1994,9 +2048,32 @@ void estnorm (long x, long y, long z, point3d *fp)
 			"movhlps	%xmm0,%xmm0\n\t"
 			"movss	%xmm0,8(%eax)\n\t"
 		);
+		#endif
+		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+		_asm
+		{
+			cvtsi2ss	xmm0, zz
+			rsqrtss	xmm0, xmm0
+			//movss	f, xmm0
+
+				//fp->x = f*(float)n.x; fp->y = f*(float)n.y; fp->z = f*(float)n.z;
+			cvtsi2ss	xmm1, n.z
+			shufps	xmm0, xmm0, 0
+			mov	eax, fp
+			movlhps	xmm1, xmm1
+			cvtpi2ps	xmm1, n
+			mulps	xmm0, xmm1
+			movlps	[eax], xmm0
+			movhlps	xmm0, xmm0
+			movss	[eax+8], xmm0
+		}
+		#endif
 	}
 	else
 	{
+		#if defined(__NOASM__)
+		#endif
+		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 		__asm__ __volatile__
 		(
 			"pi2fd	zz,%mm0\n\t"       //mm0:     0          zz
@@ -2009,50 +2086,28 @@ void estnorm (long x, long y, long z, point3d *fp)
 			"pfmul	%mm0,%mm2\n\t"     //mm2:     0       n.z/sqrt(zz)
 			"mov	fp,%eax\n\t"
 			"movq	%mm1,(%eax)\n\t"
-			"movd	%mm2,8(%eax)\n\t"
+			"movl	%mm2,8(%eax)\n\t"
 			"femms\n\t"
 		);
-	}
-	#endif
-	#ifdef _MSC_VER
-	{
+		#endif
+		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 		_asm
 		{
-			cvtsi2ss xmm0, zz
-			rsqrtss xmm0, xmm0
-			;movss f, xmm0
-
-				;fp->x = f*(float)n.x; fp->y = f*(float)n.y; fp->z = f*(float)n.z;
-			cvtsi2ss xmm1, n.z
-			shufps xmm0, xmm0, 0
-			mov eax, fp
-			movlhps xmm1, xmm1
-			cvtpi2ps xmm1, n
-			mulps xmm0, xmm1
-			movlps [eax], xmm0
-			movhlps xmm0, xmm0
-			movss [eax+8], xmm0
-		}
-	}
-	else
-	{
-		_asm
-		{
-			pi2fd mm0, zz       ;mm0:     0          zz
-			pfrsqrt mm0, mm0    ;mm0: 1/sqrt(zz) 1/sqrt(zz)
-			pi2fd mm1, n.x      ;mm1:     0         n.x
-			pi2fd mm2, n.y      ;mm2:     0         n.y
-			punpckldq mm1, mm2  ;mm1:    n.y        n.x
-			pi2fd mm2, n.z      ;mm2:     0         n.z
-			pfmul mm1, mm0      ;mm1:n.y/sqrt(zz) n.x/sqrt(zz)
-			pfmul mm2, mm0      ;mm2:     0       n.z/sqrt(zz)
-			mov eax, fp
-			movq [eax], mm1
-			movd [eax+8], mm2
+			pi2fd	mm0, zz      //mm0:      0          zz
+			pfrsqrt	mm0, mm0     //mm0:  1/sqrt(zz) 1/sqrt(zz)
+			pi2fd	mm1, n.x     //mm1:      0         n.x
+			pi2fd	mm2, n.y     //mm2:      0         n.y
+			punpckldq	mm1, mm2 //mm1:     n.y        n.x
+			pi2fd	mm2, n.z     //mm2:      0         n.z
+			pfmul	mm1, mm0     //mm1: n.y/sqrt(zz) n.x/sqrt(zz)
+			pfmul	mm2, mm0     //mm2:      0       n.z/sqrt(zz)
+			mov	eax, fp
+			movq	[eax], mm1
+			movd	[eax+8], mm2
 			femms
 		}
+		#endif
 	}
-	#endif
 #endif
 }
 
@@ -2474,9 +2529,11 @@ void vrendzfog (long sx, long sy, long p1, long iplc, long iinc)
 
 #endif
 
-#ifdef __GNUC__
 void hrendzsse (long sx, long sy, long p1, long plc, long incr, long j)
 {
+	#if defined(__NOASM__)
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
 		"push	%esi\n\t"
@@ -2506,8 +2563,8 @@ void hrendzsse (long sx, long sy, long p1, long plc, long incr, long j)
 
 		"mov	zbufoff,%ecx\n\t"
 		"mov	j,%edx\n\t"
-		"movd	plc,%mm6\n\t"
-		"movd	incr,%mm7\n\t"
+		"movl	plc,%mm6\n\t"
+		"movl	incr,%mm7\n\t"
 
 		"shufps	%xmm0,0,%xmm0\n\t"
 		"shufps	%xmm1,0,%xmm1\n\t"
@@ -2535,19 +2592,19 @@ void hrendzsse (long sx, long sy, long p1, long plc, long incr, long j)
 
 		"test	$8,%edi\n\t"
 		"jz	skipshufa\n\t"
-		"shufps	%xmm0,0x4e,%xmm0 /rotate right by 2\n"
+		"shufps	%xmm0,0x4e,%xmm0\n" //rotate right by 2
 "skipshufa:\n\t"
 		"test	$4,%edi\n\t"
 		"jz	skipshufb\n\t"
-		"shufps	%xmm0,0x39,%xmm0 /rotate right by 1\n"
+		"shufps	%xmm0,0x39,%xmm0\n" //rotate right by 1
 "skipshufb:\n"
 
 "beg1ha:\n\t"
 		"pextrw	%mm6,1,%eax\n\t"
 		"paddd	%mm7,%mm6\n\t"
 		"mov	angstart(,%eax,4),%eax\n\t"
-		"movd	(%eax,%edx,8),%mm0\n\t"
-		"movd	%mm0,(%edi)\n\t"
+		"movl	(%eax,%edx,8),%mm0\n\t"
+		"movl	%mm0,(%edi)\n\t"
 		"cvtsi2ss	4(%eax,%edx,8),%xmm7\n\t"
 		"rsqrtss	%xmm0,%xmm3\n\t"
 		"mulss	%xmm3,%xmm7\n\t"
@@ -2623,14 +2680,14 @@ void hrendzsse (long sx, long sy, long p1, long plc, long incr, long j)
 		"cmp	%esi,%edi\n\t"
 		"jae	endh\n\t"
 
-		"psrad	$1,%mm7    /Restore mm7 from incr*2 to just incr for single loop\n"
+		"psrad	$1,%mm7\n"    //Restore mm7 from incr*2 to just incr for single loop
 "skip4h:\n"
 "beg1h:\n\t"
 		"pextrw	%mm6,1,%eax\n\t"
 		"paddd	%mm7,%mm6\n\t"
 		"mov	angstart(,%eax,4),%eax\n\t"
-		"movd	(%eax,%edx,8),%mm0\n\t"
-		"movd	%mm0,(%edi)\n\t"
+		"movl	(%eax,%edx,8),%mm0\n\t"
+		"movl	%mm0,(%edi)\n\t"
 		"cvtsi2ss	4(%eax,%edx,8),%xmm7\n\t"
 		"rsqrtss	%xmm0,%xmm3\n\t"
 		"mulss	%xmm3,%xmm7\n\t"
@@ -2642,11 +2699,186 @@ void hrendzsse (long sx, long sy, long p1, long plc, long incr, long j)
 "endh:\n\t"
 		"pop	%edi\n\t"
 		"pop	%esi\n\t"
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	_asm
+	{
+		push	esi
+		push	edi
+	beghasm_p3:
+		mov	eax, sx
+		mov	ecx, sy
+		mov	esi, p1
+		mov	edx, ylookup[ecx*4]
+		add	edx, frameplace
+		lea	edi, [edx+eax*4]
+		lea	esi, [edx+esi*4]
+
+		and	eax, 0xfffffffc
+		cvtsi2ss	xmm0, eax
+		cvtsi2ss	xmm4, ecx
+		movss	xmm1, xmm0
+		movss	xmm5, xmm4
+		mulss	xmm0, optistrx
+		mulss	xmm1, optistry
+		mulss	xmm4, optiheix
+		mulss	xmm5, optiheiy
+		addss	xmm0, optiaddx
+		addss	xmm1, optiaddy
+		addss	xmm0, xmm4
+		addss	xmm1, xmm5
+
+		mov	ecx, zbufoff
+		mov	edx, j
+		movd	mm6, plc
+		movd	mm7, incr
+
+		shufps	xmm0, xmm0, 0
+		shufps	xmm1, xmm1, 0
+		movaps	xmm2, opti4asm[2*16]
+		movaps	xmm3, opti4asm[3*16]
+		addps	xmm0, opti4asm[0*16]
+		addps	xmm1, opti4asm[1*16]
+			//xmm0 =  xmm0      ^2 +  xmm1      ^2        (p)
+			//xmm2 = (xmm0+xmm2)^2 + (xmm1+xmm3)^2 - xmm0 (v)
+			//xmm1 = ...                                  (a)
+		addps	xmm2, xmm0  //This block converts inner loop...
+		addps	xmm3, xmm1  //from: 1 / sqrt(x*x + y*y), x += xi, y += yi;
+		mulps	xmm0, xmm0  //  to: 1 / sqrt(p), p += v, v += a;
+		mulps	xmm1, xmm1
+		mulps	xmm2, xmm2
+		mulps	xmm3, xmm3
+		addps	xmm0, xmm1
+		movaps	xmm1, opti4asm[4*16]
+		addps	xmm2, xmm3
+		subps	xmm2, xmm0
+
+			//Do first 0-3 pixels to align unrolled loop of 4
+		test	edi, 15
+		jz	short skip1ha
+
+		test	edi, 8
+		jz	short skipshufa
+		shufps	xmm0, xmm0, 0x4e //rotate right by 2
+	skipshufa:
+		test	edi, 4
+		jz	short skipshufb
+		shufps	xmm0, xmm0, 0x39 //rotate right by 1
+	skipshufb:
+
+	beg1ha:
+		pextrw	eax, mm6, 1
+		paddd	mm6, mm7
+		mov	eax, angstart[eax*4]
+		movd	mm0, [eax+edx*8]
+		movd	[edi], mm0
+		cvtsi2ss	xmm7, [eax+edx*8+4]
+		rsqrtss	xmm3, xmm0
+		mulss	xmm7, xmm3
+		shufps	xmm0, xmm0, 0x39 //rotate right by 1
+		movss	[edi+ecx], xmm7
+		add	edi, 4
+		cmp	edi, esi
+		jz	short endh
+		test	edi, 15
+		jnz	short beg1ha
+
+		addps	xmm0, xmm2
+		addps	xmm2, xmm1
+	skip1ha:
+		lea	eax, [edi+16]    //these 3 lines re-ordered
+		cmp	eax, esi
+		ja	short skip4h
+
+		movq	mm0, mm6     //mm0: 0,plc
+		paddd	mm0, mm7     //mm0: 0,plc+inc
+		punpckldq	mm7, mm7 //mm7: inc,inc
+		punpckldq	mm6, mm0 //mm6: plc+inc,plc
+		paddd	mm7, mm7     //mm7: inc+inc,inc+inc
+
+		sub	esi, 16
+
+			//eax: temp   ³ mm0:  z0 argb0   argb1 argb0 ³ xmm0: plc3 plc2 plc1 plc0
+			//ebx:  -     ³ mm1:  z1 argb1               ³ xmm1: acc3 acc2 acc1 acc0
+			//ecx:zbufoff ³ mm2:  z2 argb2   argb3 argb2 ³ xmm2: inc3 inc2 inc1 inc0
+			//edx:  j     ³ mm3:  z3 argb3               ³ xmm3:  r3   r2   r1   r0
+			//esi:  -     ³ mm4:              z1    z0   ³ xmm4:            z3   z2
+			//edi:scroff  ³ mm5:              z3    z2   ³ xmm5:
+			//ebp:  -     ³ mm6: plc1 plc0               ³ xmm6:
+	beg4h:
+			//esp:  -     ³ mm7: inc1 inc0               ³ xmm7:  z3   z2   z1   z0
+		pextrw	eax, mm6, 1
+		mov	eax, angstart[eax*4]
+		movq	mm0, [eax+edx*8]
+		pextrw	eax, mm6, 3
+		mov	eax, angstart[eax*4]
+		movq	mm1, [eax+edx*8]
+		paddd	mm6, mm7
+		pextrw	eax, mm6, 1
+		mov	eax, angstart[eax*4]
+		movq	mm2, [eax+edx*8]
+		pextrw	eax, mm6, 3
+		mov	eax, angstart[eax*4]
+		movq	mm3, [eax+edx*8]
+		paddd	mm6, mm7
+
+		movq	mm4, mm0
+		movq	mm5, mm2
+		punpckldq	mm0, mm1
+		punpckldq	mm2, mm3
+		movntq	[edi], mm0
+		movntq	[edi+8], mm2
+
+		punpckhdq	mm4, mm1
+		punpckhdq	mm5, mm3
+		cvtpi2ps	xmm7, mm4
+		cvtpi2ps	xmm4, mm5
+		rsqrtps	xmm3, xmm0
+		movlhps	xmm7, xmm4
+		mulps	xmm7, xmm3
+		movntps	[edi+ecx], xmm7
+		addps	xmm0, xmm2
+		addps	xmm2, xmm1
+
+		add	edi, 16
+		cmp	edi, esi
+		jbe	short beg4h
+		add	esi, 16
+		cmp	edi, esi
+		jae	endh
+
+		psrad	mm7, 1    //Restore mm7 from incr*2 to just incr for single loop
+	skip4h:
+	beg1h:
+		pextrw	eax, mm6, 1
+		paddd	mm6, mm7
+		mov	eax, angstart[eax*4]
+		movd	mm0, [eax+edx*8]
+		movd	[edi], mm0
+		cvtsi2ss	xmm7, [eax+edx*8+4]
+		rsqrtss	xmm3, xmm0
+		mulss	xmm7, xmm3
+		shufps	xmm0, xmm0, 0x39 //rotate right by 1
+		movss	[edi+ecx], xmm7
+		add	edi, 4
+		cmp	edi, esi
+		jb	short beg1h
+	endh:
+		pop	edi
+		pop	esi
+	}
+	#endif
 	);
 }
 
 void hrendzfogsse (long sx, long sy, long p1, long plc, long incr, long j)
 {
+	#if defined(__NOASM__)
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#endif
 	static __int64 mm7bak;
 	__asm__ __volatile__
 	(
@@ -2677,8 +2909,8 @@ void hrendzfogsse (long sx, long sy, long p1, long plc, long incr, long j)
 
 		"mov	zbufoff,%ecx\n\t"
 		"mov	j,%edx\n\t"
-		"movd	plc,%mm6\n\t"
-		"movd	incr,%mm7\n\t"
+		"movl	plc,%mm6\n\t"
+		"movl	incr,%mm7\n\t"
 
 		"shufps	%xmm0,0,%xmm0\n\t"
 		"shufps	%xmm1,0,%xmm1\n\t"
@@ -2706,11 +2938,11 @@ void hrendzfogsse (long sx, long sy, long p1, long plc, long incr, long j)
 
 		"test	$8,%edi\n\t"
 		"jz	skipshufa\n\t"
-		"shufps	%xmm0,0x4e,%xmm0 /rotate right by 2\n"
+		"shufps	%xmm0,0x4e,%xmm0\n" //rotate right by 2
 "skipshufa:\n\t"
 		"test	$4,%edi\n\t"
 		"jz	skipshufb\n\t"
-		"shufps	%xmm0,0x39,%xmm0 /rotate right by 1\n"
+		"shufps	%xmm0,0x39,%xmm0\n" //rotate right by 1
 "skipshufb:\n"
 
 "beg1ha:\n\t"
@@ -2736,7 +2968,7 @@ void hrendzfogsse (long sx, long sy, long p1, long plc, long incr, long j)
 		"pmulhw	foglut(,%eax,8),%mm1\n\t"
 		"paddw	%mm1,%mm0\n\t"
 		"packuswb	%mm1,%mm0\n\t"
-		"movd	%mm0,(%edi)\n\t"
+		"movl	%mm0,(%edi)\n\t"
 
 		"add	$4,%edi\n\t"
 		"cmp	%esi,%edi\n\t"
@@ -2854,7 +3086,7 @@ void hrendzfogsse (long sx, long sy, long p1, long plc, long incr, long j)
 		"jae	endh\n\t"
 
 		"movq	mm7bak,%mm7\n\t"
-		"psrad	$1,%mm7    /Restore mm7 from incr*2 to just incr for single loop\n"
+		"psrad	$1,%mm7\n"    //Restore mm7 from incr*2 to just incr for single loop
 "skip4h:\n"
 "beg1h:\n\t"
 		"pextrw	%mm6,1,%eax\n\t"
@@ -2879,7 +3111,7 @@ void hrendzfogsse (long sx, long sy, long p1, long plc, long incr, long j)
 		"pmulhw	foglut(,%eax,8),%mm1\n\t"
 		"paddw	%mm1,%mm0\n\t"
 		"packuswb	%mm1,%mm0\n\t"
-		"movd	%mm0,(%edi)\n\t"
+		"movl	%mm0,(%edi)\n\t"
 
 		"add	$4,%edi\n\t"
 		"cmp	%esi,%edi\n\t"
@@ -2892,6 +3124,12 @@ void hrendzfogsse (long sx, long sy, long p1, long plc, long incr, long j)
 
 void hrendz3dn (long sx, long sy, long p1, long plc, long incr, long j)
 {
+	#if defined(__NOASM__)
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#endif
 	__asm__ __volatile__
 	(
 		"push	%esi\n\t"
@@ -2904,24 +3142,24 @@ void hrendz3dn (long sx, long sy, long p1, long plc, long incr, long j)
 		"mov	sx,%edi\n\t"
 		"lea	(%eax,%edi,4),%edi   \n\t" //edi = p0
 
-		"movd	sx,%mm0\n\t"
+		"movl	sx,%mm0\n\t"
 		"punpckldq	sy,%mm0\n\t"
 		"pi2fd	%mm0,%mm0         \n\t" //mm0: (float)sy (float)sx
 		"pshufw	%mm0,0xee,%mm2  \n\t" //mm2: (float)sy (float)sy
 		"punpckldq	%mm0,%mm0     \n\t" //mm0: (float)sx (float)sx
-		"movd	optistrx,%mm1\n\t"
+		"movl	optistrx,%mm1\n\t"
 		"punpckldq	optistry,%mm1\n\t"
 		"pfmul	%mm1,%mm0         \n\t" //mm0: (float)sx*optistry (float)sx*optistrx
-		"movd	optiheix,%mm3\n\t"
+		"movl	optiheix,%mm3\n\t"
 		"punpckldq	optiheiy,%mm3\n\t"
 		"pfmul	%mm3,%mm2         \n\t" //mm2: (float)sy*optiheiy (float)sy*optiheix
 		"pfadd	%mm2,%mm0\n\t"
-		"movd	optiaddx,%mm3\n\t"
+		"movl	optiaddx,%mm3\n\t"
 		"punpckldq	optiaddy,%mm3\n\t" //mm3: optiaddy optiaddx
 		"pfadd	%mm3,%mm0         \n\t" //mm0: diry diry
 
-		"movd	plc,%mm6\n\t"
-		"movd	incr,%mm7\n\t"
+		"movl	plc,%mm6\n\t"
+		"movl	incr,%mm7\n\t"
 		"mov	zbufoff,%ecx\n\t"
 		"mov	j,%edx\n"
 
@@ -2938,8 +3176,8 @@ void hrendz3dn (long sx, long sy, long p1, long plc, long incr, long j)
 		"pfrsqrt	%mm4,%mm4       \n\t" //mm4: 1/sqrt(*) 1/sqrt(*)
 		"pfmul	%mm4,%mm3         \n\t" //mm3:         0    zvalue
 		"paddd	%mm7,%mm6         \n\t" //mm6:            plc+incr (unrelated)
-		"movd	%mm2,(%edi)\n\t"
-		"movd	%mm3,(%edi,%ecx)\n\t"
+		"movl	%mm2,(%edi)\n\t"
+		"movl	%mm3,(%edi,%ecx)\n\t"
 		"add	$4,%edi\n\t"
 		"cmp	%esi,%edi\n\t"
 		"jb	beg\n\t"
@@ -2950,6 +3188,12 @@ void hrendz3dn (long sx, long sy, long p1, long plc, long incr, long j)
 
 void hrendzfog3dn (long sx, long sy, long p1, long plc, long incr, long j)
 {
+	#if defined(__NOASM__)
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#endif
 	__asm__ __volatile__
 	(
 		"push	%esi\n\t"
@@ -2962,26 +3206,26 @@ void hrendzfog3dn (long sx, long sy, long p1, long plc, long incr, long j)
 		"mov	sx,%edi\n\t"
 		"lea	(%eax,%edi,4),%edi   \n\t" //edi = p0
 
-		"movd	sx,%mm0\n\t"
+		"movl	sx,%mm0\n\t"
 		"punpckldq	sy,%mm0\n\t"
 		"pi2fd	%mm0,%mm0         \n\t" //mm0: (float)sy (float)sx
 		"pshufw	%mm0,0xee,%mm2  \n\t" //mm2: (float)sy (float)sy
 		"punpckldq	%mm0,%mm0     \n\t" //mm0: (float)sx (float)sx
-		"movd	optistrx,%mm1\n\t"
+		"movl	optistrx,%mm1\n\t"
 		"punpckldq	optistry,%mm1\n\t"
 		"pfmul	%mm1,%mm0         \n\t" //mm0: (float)sx*optistry (float)sx*optistrx
-		"movd	optiheix,%mm3\n\t"
+		"movl	optiheix,%mm3\n\t"
 		"punpckldq	optiheiy,%mm3\n\t"
 		"pfmul	%mm3,%mm2         \n\t" //mm2: (float)sy*optiheiy (float)sy*optiheix
 		"pfadd	%mm2,%mm0\n\t"
-		"movd	optiaddx,%mm3\n\t"
+		"movl	optiaddx,%mm3\n\t"
 		"punpckldq	optiaddy,%mm3\n\t" //mm3: optiaddy optiaddx
 		"pfadd	%mm3,%mm0         \n\t" //mm0: diry diry
 
 		"pxor	%mm5,%mm5\n\t"
 
-		"movd	plc,%mm6\n\t"
-		"movd	incr,%mm7\n\t"
+		"movl	plc,%mm6\n\t"
+		"movl	incr,%mm7\n\t"
 		"mov	zbufoff,%ecx\n\t"
 		"mov	j,%edx\n"
 
@@ -3010,8 +3254,8 @@ void hrendzfog3dn (long sx, long sy, long p1, long plc, long incr, long j)
 		"paddw	%mm4,%mm2\n\t"
 		"packuswb	%mm4,%mm2\n\t"
 
-		"movd	%mm2,(%edi)\n\t"
-		"movd	%mm3,(%edi,%ecx)\n\t"
+		"movl	%mm2,(%edi)\n\t"
+		"movl	%mm3,(%edi,%ecx)\n\t"
 		"add	$4,%edi\n\t"
 		"cmp	%esi,%edi\n\t"
 		"jb	beg\n\t"
@@ -3022,6 +3266,12 @@ void hrendzfog3dn (long sx, long sy, long p1, long plc, long incr, long j)
 
 void vrendzsse (long sx, long sy, long p1, long iplc, long iinc)
 {
+	#if defined(__NOASM__)
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#endif
 	__asm__ __volatile__
 	(
 		"push	%ebx\n\t"
@@ -3086,11 +3336,11 @@ void vrendzsse (long sx, long sy, long p1, long iplc, long iinc)
 
 		"test	$8,%edi\n\t"
 		"jz	skipshufc\n\t"
-		"shufps	%xmm0,0x4e,%xmm0 /rotate right by 2\n"
+		"shufps	%xmm0,0x4e,%xmm0\n" //rotate right by 2
 "skipshufc:\n\t"
 		"test	$4,%edi\n\t"
 		"jz	skipshufd\n\t"
-		"shufps	%xmm0,0x39,%xmm0 /rotate right by 1\n"
+		"shufps	%xmm0,0x39,%xmm0\n" //rotate right by 1
 "skipshufd:\n"
 
 "beg1va:\n\t"
@@ -3251,6 +3501,12 @@ void vrendzsse (long sx, long sy, long p1, long iplc, long iinc)
 
 void vrendzfogsse (long sx, long sy, long p1, long iplc, long iinc)
 {
+	#if defined(__NOASM__)
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#endif
 	__asm__ __volatile__
 	(
 		"push	%ebx\n\t"
@@ -3315,11 +3571,11 @@ void vrendzfogsse (long sx, long sy, long p1, long iplc, long iinc)
 
 		"test	$8,%edi\n\t"
 		"jz	skipshufc\n\t"
-		"shufps	%xmm0,0x4e,%xmm0 /rotate right by 2\n"
+		"shufps	%xmm0,0x4e,%xmm0\n" //rotate right by 2
 "skipshufc:\n\t"
 		"test	$4,%edi\n\t"
 		"jz	skipshufd\n\t"
-		"shufps	%xmm0,0x39,%xmm0 /rotate right by 1\n"
+		"shufps	%xmm0,0x39,%xmm0\n" //rotate right by 1
 "skipshufd:\n"
 
 "beg1va:\n\t"
@@ -3348,7 +3604,7 @@ void vrendzfogsse (long sx, long sy, long p1, long iplc, long iinc)
 		"pmulhw	foglut(,%eax,8),%mm1\n\t"
 		"paddw	%mm1,%mm0\n\t"
 		"packuswb	%mm1,%mm0\n\t"
-		"movd	%mm0,(%edi)\n\t"
+		"movl	%mm0,(%edi)\n\t"
 
 		"add	iinc,%ebx\n\t"
 		"add	$4,%esi\n\t"
@@ -3572,7 +3828,7 @@ void vrendzfogsse (long sx, long sy, long p1, long iplc, long iinc)
 		"pmulhw	foglut(,%eax,8),%mm1\n\t"
 		"paddw	%mm1,%mm0\n\t"
 		"packuswb	%mm1,%mm0\n\t"
-		"movd	%mm0,(%edi)\n\t"
+		"movl	%mm0,(%edi)\n\t"
 
 		"add	iinc,%ebx\n\t"
 		"add	$4,%esi\n\t"
@@ -3588,6 +3844,12 @@ void vrendzfogsse (long sx, long sy, long p1, long iplc, long iinc)
 
 void vrendz3dn (long sx, long sy, long p1, long iplc, long iinc)
 {
+	#if defined(__NOASM__)
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#endif
 	__asm__ __volatile__
 	(
 		"push	%ebx\n\t"
@@ -3603,19 +3865,19 @@ void vrendz3dn (long sx, long sy, long p1, long iplc, long iinc)
 		"lea	(%eax,%esi,4),%esi   \n\t" //esi = p1
 		"lea	(%eax,%edi,4),%edi   \n\t" //edi = p0
 
-		"movd	sx,%mm0\n\t"
+		"movl	sx,%mm0\n\t"
 		"punpckldq	sy,%mm0\n\t"
 		"pi2fd	%mm0,%mm0         \n\t" //mm0: (float)sy (float)sx
 		"pshufw	%mm0,0xee,%mm2  \n\t" //mm2: (float)sy (float)sy
 		"punpckldq	%mm0,%mm0     \n\t" //mm0: (float)sx (float)sx
-		"movd	optistrx,%mm1\n\t"
+		"movl	optistrx,%mm1\n\t"
 		"punpckldq	optistry,%mm1\n\t"
 		"pfmul	%mm1,%mm0         \n\t" //mm0: (float)sx*optistry (float)sx*optistrx
-		"movd	optiheix,%mm3\n\t"
+		"movl	optiheix,%mm3\n\t"
 		"punpckldq	optiheiy,%mm3\n\t"
 		"pfmul	%mm3,%mm2         \n\t" //mm2: (float)sy*optiheiy (float)sy*optiheix
 		"pfadd	%mm2,%mm0\n\t"
-		"movd	optiaddx,%mm3\n\t"
+		"movl	optiaddx,%mm3\n\t"
 		"punpckldq	optiaddy,%mm3\n\t" //mm3: optiaddy optiaddx
 		"pfadd	%mm3,%mm0         \n\t" //mm0: diry diry
 
@@ -3626,10 +3888,10 @@ void vrendz3dn (long sx, long sy, long p1, long iplc, long iinc)
 		"lea	(%eax,%ebx,4),%ebx\n"
 
 "begv_3dn:\n\t"
-		"movd	(%ebx),%mm5\n\t"
+		"movl	(%ebx),%mm5\n\t"
 		"pextrw	%mm5,1,%eax\n\t"
 		"paddd	MAXXDIM(,%ebx,4),%mm5\n\t"
-		"movd	%mm5,(%ebx)\n\t"
+		"movl	%mm5,(%ebx)\n\t"
 		"mov	angstart(,%eax,4),%eax\n\t"
 		"movq	(%eax,%edx,8),%mm2  \n\t" //mm2:      dist       col
 		"pshufw	%mm2,0xee,%mm3  \n\t" //mm3:         ?      dist
@@ -3640,8 +3902,8 @@ void vrendz3dn (long sx, long sy, long p1, long iplc, long iinc)
 		"pfacc	%mm4,%mm4         \n\t" //mm4: (x^2+y^2)   x^2+y^2
 		"pfrsqrt	%mm4,%mm4       \n\t" //mm4: 1/sqrt(*) 1/sqrt(*)
 		"pfmul	%mm4,%mm3         \n\t" //mm3:         0    zvalue
-		"movd	%mm2,(%edi)\n\t"
-		"movd	%mm3,(%edi,%ecx)\n\t"
+		"movl	%mm2,(%edi)\n\t"
+		"movl	%mm3,(%edi,%ecx)\n\t"
 		"add	iinc,%edx\n\t"
 		"add	$4,%ebx\n\t"
 		"add	$4,%edi\n\t"
@@ -3656,6 +3918,12 @@ void vrendz3dn (long sx, long sy, long p1, long iplc, long iinc)
 
 void vrendzfog3dn (long sx, long sy, long p1, long iplc, long iinc)
 {
+	#if defined(__NOASM__)
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#endif
 	__asm__ __volatile__
 	(
 		"push	%ebx\n\t"
@@ -3671,19 +3939,19 @@ void vrendzfog3dn (long sx, long sy, long p1, long iplc, long iinc)
 		"lea	(%eax,%esi,4),%esi   \n\t" //esi = p1
 		"lea	(%eax,%edi,4),%edi   \n\t" //edi = p0
 
-		"movd	sx,%mm0\n\t"
+		"movl	sx,%mm0\n\t"
 		"punpckldq	sy,%mm0\n\t"
 		"pi2fd	%mm0,%mm0         \n\t" //mm0: (float)sy (float)sx
 		"pshufw	%mm0,0xee,%mm2  \n\t" //mm2: (float)sy (float)sy
 		"punpckldq	%mm0,%mm0     \n\t" //mm0: (float)sx (float)sx
-		"movd	optistrx,%mm1\n\t"
+		"movl	optistrx,%mm1\n\t"
 		"punpckldq	optistry,%mm1\n\t"
 		"pfmul	%mm1,%mm0         \n\t" //mm0: (float)sx*optistry (float)sx*optistrx
-		"movd	optiheix,%mm3\n\t"
+		"movl	optiheix,%mm3\n\t"
 		"punpckldq	optiheiy,%mm3\n\t"
 		"pfmul	%mm3,%mm2         \n\t" //mm2: (float)sy*optiheiy (float)sy*optiheix
 		"pfadd	%mm2,%mm0\n\t"
-		"movd	optiaddx,%mm3\n\t"
+		"movl	optiaddx,%mm3\n\t"
 		"punpckldq	optiaddy,%mm3\n\t" //mm3: optiaddy optiaddx
 		"pfadd	%mm3,%mm0         \n\t" //mm0: diry diry
 
@@ -3696,10 +3964,10 @@ void vrendzfog3dn (long sx, long sy, long p1, long iplc, long iinc)
 		"lea	(%eax,%ebx,4),%ebx\n"
 
 "begv_3dn:\n\t"
-		"movd	(%ebx),%mm5\n\t"
+		"movl	(%ebx),%mm5\n\t"
 		"pextrw	%mm5,1,%eax\n\t"
 		"paddd	MAXXDIM(,%ebx,4),%mm5\n\t"
-		"movd	%mm5,(%ebx)\n\t"
+		"movl	%mm5,(%ebx)\n\t"
 		"mov	angstart(,%eax,4),%eax\n\t"
 		"movq	(%eax,%edx,8),%mm2  \n\t" //mm2:      dist       col
 		"pshufw	%mm2,0xee,%mm3  \n\t" //mm3:         ?      dist
@@ -3722,8 +3990,8 @@ void vrendzfog3dn (long sx, long sy, long p1, long iplc, long iinc)
 		"paddw	%mm4,%mm2\n\t"
 		"packuswb	%mm4,%mm2\n\t"
 
-		"movd	%mm2,(%edi)\n\t"
-		"movd	%mm3,(%edi,%ecx)\n\t"
+		"movl	%mm2,(%edi)\n\t"
+		"movl	%mm3,(%edi,%ecx)\n\t"
 		"add	iinc,%edx\n\t"
 		"add	$4,%ebx\n\t"
 		"add	$4,%edi\n\t"
@@ -3735,420 +4003,251 @@ void vrendzfog3dn (long sx, long sy, long p1, long iplc, long iinc)
 		"pop	%ebx\n\t"
 	);
 }
-#endif
-#ifdef _MSC_VER
-void hrendzsse (long sx, long sy, long p1, long plc, long incr, long j)
-{
-	_asm
-	{
-		push esi
-		push edi
-beghasm_p3:
-		mov eax, sx
-		mov ecx, sy
-		mov esi, p1
-		mov edx, ylookup[ecx*4]
-		add edx, frameplace
-		lea edi, [edx+eax*4]
-		lea esi, [edx+esi*4]
 
-		and eax, 0xfffffffc
-		cvtsi2ss xmm0, eax
-		cvtsi2ss xmm4, ecx
-		movss xmm1, xmm0
-		movss xmm5, xmm4
-		mulss xmm0, optistrx
-		mulss xmm1, optistry
-		mulss xmm4, optiheix
-		mulss xmm5, optiheiy
-		addss xmm0, optiaddx
-		addss xmm1, optiaddy
-		addss xmm0, xmm4
-		addss xmm1, xmm5
 
-		mov ecx, zbufoff
-		mov edx, j
-		movd mm6, plc
-		movd mm7, incr
-
-		shufps xmm0, xmm0, 0
-		shufps xmm1, xmm1, 0
-		movaps xmm2, opti4asm[2*16]
-		movaps xmm3, opti4asm[3*16]
-		addps xmm0, opti4asm[0*16]
-		addps xmm1, opti4asm[1*16]
-			;xmm0 =  xmm0      ^2 +  xmm1      ^2        (p)
-			;xmm2 = (xmm0+xmm2)^2 + (xmm1+xmm3)^2 - xmm0 (v)
-			;xmm1 = ...                                  (a)
-		addps xmm2, xmm0  ;This block converts inner loop...
-		addps xmm3, xmm1  ;from: 1 / sqrt(x*x + y*y), x += xi, y += yi;
-		mulps xmm0, xmm0  ;  to: 1 / sqrt(p), p += v, v += a;
-		mulps xmm1, xmm1
-		mulps xmm2, xmm2
-		mulps xmm3, xmm3
-		addps xmm0, xmm1
-		movaps xmm1, opti4asm[4*16]
-		addps xmm2, xmm3
-		subps xmm2, xmm0
-
-			;Do first 0-3 pixels to align unrolled loop of 4
-		test edi, 15
-		jz short skip1ha
-
-		test edi, 8
-		jz short skipshufa
-		shufps xmm0, xmm0, 0x4e ;rotate right by 2
-skipshufa:
-		test edi, 4
-		jz short skipshufb
-		shufps xmm0, xmm0, 0x39 ;rotate right by 1
-skipshufb:
-
-beg1ha:
-		pextrw eax, mm6, 1
-		paddd mm6, mm7
-		mov eax, angstart[eax*4]
-		movd mm0, [eax+edx*8]
-		movd [edi], mm0
-		cvtsi2ss xmm7, [eax+edx*8+4]
-		rsqrtss xmm3, xmm0
-		mulss xmm7, xmm3
-		shufps xmm0, xmm0, 0x39 ;rotate right by 1
-		movss [edi+ecx], xmm7
-		add edi, 4
-		cmp edi, esi
-		jz short endh
-		test edi, 15
-		jnz short beg1ha
-
-		addps xmm0, xmm2
-		addps xmm2, xmm1
-skip1ha:
-		lea eax, [edi+16]      ;these 3 lines re-ordered
-		cmp eax, esi
-		ja short skip4h
-
-		movq mm0, mm6          ;mm0: 0,plc
-		paddd mm0, mm7         ;mm0: 0,plc+inc
-		punpckldq mm7, mm7     ;mm7: inc,inc
-		punpckldq mm6, mm0     ;mm6: plc+inc,plc
-		paddd mm7, mm7         ;mm7: inc+inc,inc+inc
-
-		sub esi, 16
-
-		 ;eax: temp   ³ mm0:  z0 argb0   argb1 argb0 ³ xmm0: plc3 plc2 plc1 plc0
-		 ;ebx:  -     ³ mm1:  z1 argb1               ³ xmm1: acc3 acc2 acc1 acc0
-		 ;ecx:zbufoff ³ mm2:  z2 argb2   argb3 argb2 ³ xmm2: inc3 inc2 inc1 inc0
-		 ;edx:  j     ³ mm3:  z3 argb3               ³ xmm3:  r3   r2   r1   r0
-		 ;esi:  -     ³ mm4:              z1    z0   ³ xmm4:            z3   z2
-		 ;edi:scroff  ³ mm5:              z3    z2   ³ xmm5:
-		 ;ebp:  -     ³ mm6: plc1 plc0               ³ xmm6:
-beg4h:
-		;esp:  -     ³ mm7: inc1 inc0               ³ xmm7:  z3   z2   z1   z0
-		pextrw eax, mm6, 1
-		mov eax, angstart[eax*4]
-		movq mm0, [eax+edx*8]
-		pextrw eax, mm6, 3
-		mov eax, angstart[eax*4]
-		movq mm1, [eax+edx*8]
-		paddd mm6, mm7
-		pextrw eax, mm6, 1
-		mov eax, angstart[eax*4]
-		movq mm2, [eax+edx*8]
-		pextrw eax, mm6, 3
-		mov eax, angstart[eax*4]
-		movq mm3, [eax+edx*8]
-		paddd mm6, mm7
-
-		movq mm4, mm0
-		movq mm5, mm2
-		punpckldq mm0, mm1
-		punpckldq mm2, mm3
-		movntq [edi], mm0
-		movntq [edi+8], mm2
-
-		punpckhdq mm4, mm1
-		punpckhdq mm5, mm3
-		cvtpi2ps xmm7, mm4
-		cvtpi2ps xmm4, mm5
-		rsqrtps xmm3, xmm0
-		movlhps xmm7, xmm4
-		mulps xmm7, xmm3
-		movntps [edi+ecx], xmm7
-		addps xmm0, xmm2
-		addps xmm2, xmm1
-
-		add edi, 16
-		cmp edi, esi
-		jbe short beg4h
-		add esi, 16
-		cmp edi, esi
-		jae endh
-
-		psrad mm7, 1    ;Restore mm7 from incr*2 to just incr for single loop
-skip4h:
-beg1h:
-		pextrw eax, mm6, 1
-		paddd mm6, mm7
-		mov eax, angstart[eax*4]
-		movd mm0, [eax+edx*8]
-		movd [edi], mm0
-		cvtsi2ss xmm7, [eax+edx*8+4]
-		rsqrtss xmm3, xmm0
-		mulss xmm7, xmm3
-		shufps xmm0, xmm0, 0x39 ;rotate right by 1
-		movss [edi+ecx], xmm7
-		add edi, 4
-		cmp edi, esi
-		jb short beg1h
-endh:
-		pop edi
-		pop esi
-	}
-}
-
+#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 void hrendzfogsse (long sx, long sy, long p1, long plc, long incr, long j)
 {
 	static __int64 mm7bak;
 	_asm
 	{
-		push esi
-		push edi
+		push	esi
+		push	edi
 beghasm_p3:
-		mov eax, sx
-		mov ecx, sy
-		mov esi, p1
-		mov edx, ylookup[ecx*4]
-		add edx, frameplace
-		lea edi, [edx+eax*4]
-		lea esi, [edx+esi*4]
+		mov	eax, sx
+		mov	ecx, sy
+		mov	esi, p1
+		mov	edx, ylookup[ecx*4]
+		add	edx, frameplace
+		lea	edi, [edx+eax*4]
+		lea	esi, [edx+esi*4]
 
-		and eax, 0xfffffffc
-		cvtsi2ss xmm0, eax
-		cvtsi2ss xmm4, ecx
-		movss xmm1, xmm0
-		movss xmm5, xmm4
-		mulss xmm0, optistrx
-		mulss xmm1, optistry
-		mulss xmm4, optiheix
-		mulss xmm5, optiheiy
-		addss xmm0, optiaddx
-		addss xmm1, optiaddy
-		addss xmm0, xmm4
-		addss xmm1, xmm5
+		and	eax, 0xfffffffc
+		cvtsi2ss	xmm0, eax
+		cvtsi2ss	xmm4, ecx
+		movss	xmm1, xmm0
+		movss	xmm5, xmm4
+		mulss	xmm0, optistrx
+		mulss	xmm1, optistry
+		mulss	xmm4, optiheix
+		mulss	xmm5, optiheiy
+		addss	xmm0, optiaddx
+		addss	xmm1, optiaddy
+		addss	xmm0, xmm4
+		addss	xmm1, xmm5
 
-		mov ecx, zbufoff
-		mov edx, j
-		movd mm6, plc
-		movd mm7, incr
+		mov	ecx, zbufoff
+		mov	edx, j
+		movd	mm6, plc
+		movd	mm7, incr
 
-		shufps xmm0, xmm0, 0
-		shufps xmm1, xmm1, 0
-		movaps xmm2, opti4asm[2*16]
-		movaps xmm3, opti4asm[3*16]
-		addps xmm0, opti4asm[0*16]
-		addps xmm1, opti4asm[1*16]
-			;xmm0 =  xmm0      ^2 +  xmm1      ^2        (p)
-			;xmm2 = (xmm0+xmm2)^2 + (xmm1+xmm3)^2 - xmm0 (v)
-			;xmm1 = ...                                  (a)
-		addps xmm2, xmm0  ;This block converts inner loop...
-		addps xmm3, xmm1  ;from: 1 / sqrt(x*x + y*y), x += xi, y += yi;
-		mulps xmm0, xmm0  ;  to: 1 / sqrt(p), p += v, v += a;
-		mulps xmm1, xmm1
-		mulps xmm2, xmm2
-		mulps xmm3, xmm3
-		addps xmm0, xmm1
-		movaps xmm1, opti4asm[4*16]
-		addps xmm2, xmm3
-		subps xmm2, xmm0
+		shufps	xmm0, xmm0, 0
+		shufps	xmm1, xmm1, 0
+		movaps	xmm2, opti4asm[2*16]
+		movaps	xmm3, opti4asm[3*16]
+		addps	xmm0, opti4asm[0*16]
+		addps	xmm1, opti4asm[1*16]
+			;xmm0	=  xmm0      ^2 +  xmm1      ^2        (p)
+			;xmm2	= (xmm0+xmm2)^2 + (xmm1+xmm3)^2 - xmm0 (v)
+			;xmm1	= ...                                  (a)
+		addps	xmm2, xmm0  ;This block converts inner loop...
+		addps	xmm3, xmm1  ;from: 1 / sqrt(x*x + y*y), x += xi, y += yi;
+		mulps	xmm0, xmm0  ;  to: 1 / sqrt(p), p += v, v += a;
+		mulps	xmm1, xmm1
+		mulps	xmm2, xmm2
+		mulps	xmm3, xmm3
+		addps	xmm0, xmm1
+		movaps	xmm1, opti4asm[4*16]
+		addps	xmm2, xmm3
+		subps	xmm2, xmm0
 
-			;Do first 0-3 pixels to align unrolled loop of 4
-		test edi, 15
-		jz short skip1ha
+			;Do	first 0-3 pixels to align unrolled loop of 4
+		test	edi, 15
+		jz	short skip1ha
 
-		test edi, 8
-		jz short skipshufa
-		shufps xmm0, xmm0, 0x4e ;rotate right by 2
+		test	edi, 8
+		jz	short skipshufa
+		shufps	xmm0, xmm0, 0x4e ;rotate right by 2
 skipshufa:
-		test edi, 4
-		jz short skipshufb
-		shufps xmm0, xmm0, 0x39 ;rotate right by 1
+		test	edi, 4
+		jz	short skipshufb
+		shufps	xmm0, xmm0, 0x39 ;rotate right by 1
 skipshufb:
 
 beg1ha:
-		pextrw eax, mm6, 1
-		paddd mm6, mm7
-		mov eax, angstart[eax*4]
+		pextrw	eax, mm6, 1
+		paddd	mm6, mm7
+		mov	eax, angstart[eax*4]
 
 			;Z
-		cvtsi2ss xmm7, [eax+edx*8+4]
-		rsqrtss xmm3, xmm0
-		mulss xmm7, xmm3
-		shufps xmm0, xmm0, 0x39 ;rotate right by 1
-		movss [edi+ecx], xmm7
+		cvtsi2ss	xmm7, [eax+edx*8+4]
+		rsqrtss	xmm3, xmm0
+		mulss	xmm7, xmm3
+		shufps	xmm0, xmm0, 0x39 ;rotate right by 1
+		movss	[edi+ecx], xmm7
 
 			;Col
-		punpcklbw mm0, [eax+edx*8]
-		psrlw mm0, 8
-		movq mm1, fogcol
-		psubw mm1, mm0
-		paddw mm1, mm1
-		mov eax, [eax+edx*8+4]
-		shr eax, 16+4
-		pmulhw mm1, foglut[eax*8]
-		paddw mm0, mm1
-		packuswb mm0, mm1
-		movd [edi], mm0
+		punpcklbw	mm0, [eax+edx*8]
+		psrlw	mm0, 8
+		movq	mm1, fogcol
+		psubw	mm1, mm0
+		paddw	mm1, mm1
+		mov	eax, [eax+edx*8+4]
+		shr	eax, 16+4
+		pmulhw	mm1, foglut[eax*8]
+		paddw	mm0, mm1
+		packuswb	mm0, mm1
+		movd	[edi], mm0
 
-		add edi, 4
-		cmp edi, esi
-		jz short endh
-		test edi, 15
-		jnz short beg1ha
+		add	edi, 4
+		cmp	edi, esi
+		jz	short endh
+		test	edi, 15
+		jnz	short beg1ha
 
-		addps xmm0, xmm2
-		addps xmm2, xmm1
+		addps	xmm0, xmm2
+		addps	xmm2, xmm1
 skip1ha:
-		lea eax, [edi+16]      ;these 3 lines re-ordered
-		cmp eax, esi
-		ja short skip4h
+		lea	eax, [edi+16]      ;these 3 lines re-ordered
+		cmp	eax, esi
+		ja	short skip4h
 
-		movq mm0, mm6          ;mm0: 0,plc
-		paddd mm0, mm7         ;mm0: 0,plc+inc
-		punpckldq mm7, mm7     ;mm7: inc,inc
-		punpckldq mm6, mm0     ;mm6: plc+inc,plc
-		paddd mm7, mm7         ;mm7: inc+inc,inc+inc
+		movq	mm0, mm6          ;mm0: 0,plc
+		paddd	mm0, mm7         ;mm0: 0,plc+inc
+		punpckldq	mm7, mm7     ;mm7: inc,inc
+		punpckldq	mm6, mm0     ;mm6: plc+inc,plc
+		paddd	mm7, mm7         ;mm7: inc+inc,inc+inc
 
-		sub esi, 16
+		sub	esi, 16
 
-		 ;eax: temp   ³ mm0:  z0 argb0   argb1 argb0 ³ xmm0: plc3 plc2 plc1 plc0
-		 ;ebx:  -     ³ mm1:  z1 argb1               ³ xmm1: acc3 acc2 acc1 acc0
-		 ;ecx:zbufoff ³ mm2:  z2 argb2   argb3 argb2 ³ xmm2: inc3 inc2 inc1 inc0
-		 ;edx:  j     ³ mm3:  z3 argb3               ³ xmm3:  r3   r2   r1   r0
-		 ;esi:  -     ³ mm4:              z1    z0   ³ xmm4:            z3   z2
-		 ;edi:scroff  ³ mm5:              z3    z2   ³ xmm5:
-		 ;ebp:  -     ³ mm6: plc1 plc0               ³ xmm6:
-		 ;esp:  -     ³ mm7: inc1 inc0               ³ xmm7:  z3   z2   z1   z0
+			;eax: temp   ³ mm0:  z0 argb0   argb1 argb0 ³ xmm0: plc3 plc2 plc1 plc0
+			;ebx:  -     ³ mm1:  z1 argb1               ³ xmm1: acc3 acc2 acc1 acc0
+			;ecx:zbufoff ³ mm2:  z2 argb2   argb3 argb2 ³ xmm2: inc3 inc2 inc1 inc0
+			;edx:  j     ³ mm3:  z3 argb3               ³ xmm3:  r3   r2   r1   r0
+			;esi:  -     ³ mm4:              z1    z0   ³ xmm4:            z3   z2
+			;edi:scroff  ³ mm5:              z3    z2   ³ xmm5:
+			;ebp:  -     ³ mm6: plc1 plc0               ³ xmm6:
+			;esp:  -     ³ mm7: inc1 inc0               ³ xmm7:  z3   z2   z1   z0
 
-		movq mm7bak, mm7
+		movq	mm7bak, mm7
 beg4h:
-		pextrw eax, mm6, 1
-		mov eax, angstart[eax*4]
-		movq mm4, [eax+edx*8]
-		pextrw eax, mm6, 3
-		mov eax, angstart[eax*4]
-		movq mm1, [eax+edx*8]
-		paddd mm6, mm7bak
-		pextrw eax, mm6, 1
-		mov eax, angstart[eax*4]
-		movq mm5, [eax+edx*8]
-		pextrw eax, mm6, 3
-		mov eax, angstart[eax*4]
-		movq mm3, [eax+edx*8]
-		paddd mm6, mm7bak
+		pextrw	eax, mm6, 1
+		mov	eax, angstart[eax*4]
+		movq	mm4, [eax+edx*8]
+		pextrw	eax, mm6, 3
+		mov	eax, angstart[eax*4]
+		movq	mm1, [eax+edx*8]
+		paddd	mm6, mm7bak
+		pextrw	eax, mm6, 1
+		mov	eax, angstart[eax*4]
+		movq	mm5, [eax+edx*8]
+		pextrw	eax, mm6, 3
+		mov	eax, angstart[eax*4]
+		movq	mm3, [eax+edx*8]
+		paddd	mm6, mm7bak
 
-		movq mm0, mm4
-		movq mm2, mm5
+		movq	mm0, mm4
+		movq	mm2, mm5
 
-			;Do Z
-		punpckhdq mm4, mm1
-		punpckhdq mm5, mm3
-		cvtpi2ps xmm7, mm4
-		cvtpi2ps xmm4, mm5
-		rsqrtps xmm3, xmm0
-		movlhps xmm7, xmm4
-		mulps xmm7, xmm3
-		movntps [edi+ecx], xmm7
-		addps xmm0, xmm2
-		addps xmm2, xmm1
+			;Do	Z
+		punpckhdq	mm4, mm1
+		punpckhdq	mm5, mm3
+		cvtpi2ps	xmm7, mm4
+		cvtpi2ps	xmm4, mm5
+		rsqrtps	xmm3, xmm0
+		movlhps	xmm7, xmm4
+		mulps	xmm7, xmm3
+		movntps	[edi+ecx], xmm7
+		addps	xmm0, xmm2
+		addps	xmm2, xmm1
 
-			;Do colors
-			;mm4:dist1 dist0
-			;mm5:dist3 dist2
-		pxor mm7, mm7
-		punpcklbw mm0, mm7
-		punpcklbw mm1, mm7
-		punpcklbw mm2, mm7
-		punpcklbw mm3, mm7
+			;Do	colors
+			;mm4:dist1	dist0
+			;mm5:dist3	dist2
+		pxor	mm7, mm7
+		punpcklbw	mm0, mm7
+		punpcklbw	mm1, mm7
+		punpcklbw	mm2, mm7
+		punpcklbw	mm3, mm7
 
-		movq mm7, fogcol
-		psubw mm7, mm0
-		paddw mm7, mm7
-		pextrw eax, mm4, 1
-		shr eax, 4
-		pmulhw mm7, foglut[eax*8]
-		paddw mm0, mm7
+		movq	mm7, fogcol
+		psubw	mm7, mm0
+		paddw	mm7, mm7
+		pextrw	eax, mm4, 1
+		shr	eax, 4
+		pmulhw	mm7, foglut[eax*8]
+		paddw	mm0, mm7
 
-		movq mm7, fogcol
-		psubw mm7, mm1
-		paddw mm7, mm7
-		pextrw eax, mm4, 3
-		shr eax, 4
-		pmulhw mm7, foglut[eax*8]
-		paddw mm1, mm7
+		movq	mm7, fogcol
+		psubw	mm7, mm1
+		paddw	mm7, mm7
+		pextrw	eax, mm4, 3
+		shr	eax, 4
+		pmulhw	mm7, foglut[eax*8]
+		paddw	mm1, mm7
 
-		movq mm7, fogcol
-		psubw mm7, mm2
-		paddw mm7, mm7
-		pextrw eax, mm5, 1
-		shr eax, 4
-		pmulhw mm7, foglut[eax*8]
-		paddw mm2, mm7
+		movq	mm7, fogcol
+		psubw	mm7, mm2
+		paddw	mm7, mm7
+		pextrw	eax, mm5, 1
+		shr	eax, 4
+		pmulhw	mm7, foglut[eax*8]
+		paddw	mm2, mm7
 
-		movq mm7, fogcol
-		psubw mm7, mm3
-		paddw mm7, mm7
-		pextrw eax, mm5, 3
-		shr eax, 4
-		pmulhw mm7, foglut[eax*8]
-		paddw mm3, mm7
+		movq	mm7, fogcol
+		psubw	mm7, mm3
+		paddw	mm7, mm7
+		pextrw	eax, mm5, 3
+		shr	eax, 4
+		pmulhw	mm7, foglut[eax*8]
+		paddw	mm3, mm7
 
-		packuswb mm0, mm1
-		packuswb mm2, mm3
-		movntq [edi], mm0
-		movntq [edi+8], mm2
+		packuswb	mm0, mm1
+		packuswb	mm2, mm3
+		movntq	[edi], mm0
+		movntq	[edi+8], mm2
 
-		add edi, 16
-		cmp edi, esi
-		jbe short beg4h
-		add esi, 16
-		cmp edi, esi
-		jae endh
+		add	edi, 16
+		cmp	edi, esi
+		jbe	short beg4h
+		add	esi, 16
+		cmp	edi, esi
+		jae	endh
 
-		movq mm7, mm7bak
-		psrad mm7, 1    ;Restore mm7 from incr*2 to just incr for single loop
+		movq	mm7, mm7bak
+		psrad	mm7, 1    ;Restore mm7 from incr*2 to just incr for single loop
 skip4h:
 beg1h:
-		pextrw eax, mm6, 1
-		paddd mm6, mm7
-		mov eax, angstart[eax*4]
+		pextrw	eax, mm6, 1
+		paddd	mm6, mm7
+		mov	eax, angstart[eax*4]
 
 			;Z
-		cvtsi2ss xmm7, [eax+edx*8+4]
-		rsqrtss xmm3, xmm0
-		mulss xmm7, xmm3
-		shufps xmm0, xmm0, 0x39 ;rotate right by 1
-		movss [edi+ecx], xmm7
+		cvtsi2ss	xmm7, [eax+edx*8+4]
+		rsqrtss	xmm3, xmm0
+		mulss	xmm7, xmm3
+		shufps	xmm0, xmm0, 0x39 ;rotate right by 1
+		movss	[edi+ecx], xmm7
 
 			;Col
-		punpcklbw mm0, [eax+edx*8]
-		psrlw mm0, 8
-		movq mm1, fogcol
-		psubw mm1, mm0
-		paddw mm1, mm1
-		mov eax, [eax+edx*8+4]
-		shr eax, 16+4
-		pmulhw mm1, foglut[eax*8]
-		paddw mm0, mm1
-		packuswb mm0, mm1
-		movd [edi], mm0
+		punpcklbw	mm0, [eax+edx*8]
+		psrlw	mm0, 8
+		movq	mm1, fogcol
+		psubw	mm1, mm0
+		paddw	mm1, mm1
+		mov	eax, [eax+edx*8+4]
+		shr	eax, 16+4
+		pmulhw	mm1, foglut[eax*8]
+		paddw	mm0, mm1
+		packuswb	mm0, mm1
+		movd	[edi], mm0
 
-		add edi, 4
-		cmp edi, esi
-		jb short beg1h
+		add	edi, 4
+		cmp	edi, esi
+		jb	short beg1h
 endh:
-		pop edi
-		pop esi
+		pop	edi
+		pop	esi
 	}
 }
 
@@ -4156,57 +4255,57 @@ void hrendz3dn (long sx, long sy, long p1, long plc, long incr, long j)
 {
 	_asm
 	{
-		push esi
-		push edi
-		mov eax, sy
-		mov eax, ylookup[eax*4]
-		add eax, frameplace
-		mov esi, p1
-		lea esi, [eax+esi*4]    ;esi = p1
-		mov edi, sx
-		lea edi, [eax+edi*4]    ;edi = p0
+		push	esi
+		push	edi
+		mov	eax, sy
+		mov	eax, ylookup[eax*4]
+		add	eax, frameplace
+		mov	esi, p1
+		lea	esi, [eax+esi*4]    ;esi = p1
+		mov	edi, sx
+		lea	edi, [eax+edi*4]    ;edi = p0
 
-		movd mm0, sx
-		punpckldq mm0, sy
-		pi2fd mm0, mm0          ;mm0: (float)sy (float)sx
-		pshufw mm2, mm0, 0xee   ;mm2: (float)sy (float)sy
-		punpckldq mm0, mm0      ;mm0: (float)sx (float)sx
-		movd mm1, optistrx
-		punpckldq mm1, optistry
-		pfmul mm0, mm1          ;mm0: (float)sx*optistry (float)sx*optistrx
-		movd mm3, optiheix
-		punpckldq mm3, optiheiy
-		pfmul mm2, mm3          ;mm2: (float)sy*optiheiy (float)sy*optiheix
-		pfadd mm0, mm2
-		movd mm3, optiaddx
-		punpckldq mm3, optiaddy ;mm3: optiaddy optiaddx
-		pfadd mm0, mm3          ;mm0: diry diry
+		movd	mm0, sx
+		punpckldq	mm0, sy
+		pi2fd	mm0, mm0          ;mm0: (float)sy (float)sx
+		pshufw	mm2, mm0, 0xee   ;mm2: (float)sy (float)sy
+		punpckldq	mm0, mm0      ;mm0: (float)sx (float)sx
+		movd	mm1, optistrx
+		punpckldq	mm1, optistry
+		pfmul	mm0, mm1          ;mm0: (float)sx*optistry (float)sx*optistrx
+		movd	mm3, optiheix
+		punpckldq	mm3, optiheiy
+		pfmul	mm2, mm3          ;mm2: (float)sy*optiheiy (float)sy*optiheix
+		pfadd	mm0, mm2
+		movd	mm3, optiaddx
+		punpckldq	mm3, optiaddy ;mm3: optiaddy optiaddx
+		pfadd	mm0, mm3          ;mm0: diry diry
 
-		movd mm6, plc
-		movd mm7, incr
-		mov ecx, zbufoff
-		mov edx, j
+		movd	mm6, plc
+		movd	mm7, incr
+		mov	ecx, zbufoff
+		mov	edx, j
 
 beg:
-		pextrw eax, mm6, 1
-		mov eax, angstart[eax*4]
-		movq mm2, [eax+edx*8]   ;mm2:      dist       col
-		pshufw mm3, mm2, 0xee   ;mm3:         ?      dist
-		pi2fd mm3, mm3          ;mm3:         ?   (f)dist
-		movq mm4, mm0           ;mm4:      diry      dirx
-		pfmul mm4, mm4          ;mm4:    diry^2    dirx^2
-		pfadd mm0, mm1          ;mm0: dirx+optx diry+opty (unrelated)
-		pfacc mm4, mm4          ;mm4: (x^2+y^2)   x^2+y^2
-		pfrsqrt mm4, mm4        ;mm4: 1/sqrt(*) 1/sqrt(*)
-		pfmul mm3, mm4          ;mm3:         0    zvalue
-		paddd mm6, mm7          ;mm6:            plc+incr (unrelated)
-		movd [edi], mm2
-		movd [edi+ecx], mm3
-		add edi, 4
-		cmp edi, esi
-		jb short beg
-		pop edi
-		pop esi
+		pextrw	eax, mm6, 1
+		mov	eax, angstart[eax*4]
+		movq	mm2, [eax+edx*8]   ;mm2:      dist       col
+		pshufw	mm3, mm2, 0xee   ;mm3:         ?      dist
+		pi2fd	mm3, mm3          ;mm3:         ?   (f)dist
+		movq	mm4, mm0           ;mm4:      diry      dirx
+		pfmul	mm4, mm4          ;mm4:    diry^2    dirx^2
+		pfadd	mm0, mm1          ;mm0: dirx+optx diry+opty (unrelated)
+		pfacc	mm4, mm4          ;mm4: (x^2+y^2)   x^2+y^2
+		pfrsqrt	mm4, mm4        ;mm4: 1/sqrt(*) 1/sqrt(*)
+		pfmul	mm3, mm4          ;mm3:         0    zvalue
+		paddd	mm6, mm7          ;mm6:            plc+incr (unrelated)
+		movd	[edi], mm2
+		movd	[edi+ecx], mm3
+		add	edi, 4
+		cmp	edi, esi
+		jb	short beg
+		pop	edi
+		pop	esi
 	}
 }
 
@@ -4214,71 +4313,71 @@ void hrendzfog3dn (long sx, long sy, long p1, long plc, long incr, long j)
 {
 	_asm
 	{
-		push esi
-		push edi
-		mov eax, sy
-		mov eax, ylookup[eax*4]
-		add eax, frameplace
-		mov esi, p1
-		lea esi, [eax+esi*4]    ;esi = p1
-		mov edi, sx
-		lea edi, [eax+edi*4]    ;edi = p0
+		push	esi
+		push	edi
+		mov	eax, sy
+		mov	eax, ylookup[eax*4]
+		add	eax, frameplace
+		mov	esi, p1
+		lea	esi, [eax+esi*4]    ;esi = p1
+		mov	edi, sx
+		lea	edi, [eax+edi*4]    ;edi = p0
 
-		movd mm0, sx
-		punpckldq mm0, sy
-		pi2fd mm0, mm0          ;mm0: (float)sy (float)sx
-		pshufw mm2, mm0, 0xee   ;mm2: (float)sy (float)sy
-		punpckldq mm0, mm0      ;mm0: (float)sx (float)sx
-		movd mm1, optistrx
-		punpckldq mm1, optistry
-		pfmul mm0, mm1          ;mm0: (float)sx*optistry (float)sx*optistrx
-		movd mm3, optiheix
-		punpckldq mm3, optiheiy
-		pfmul mm2, mm3          ;mm2: (float)sy*optiheiy (float)sy*optiheix
-		pfadd mm0, mm2
-		movd mm3, optiaddx
-		punpckldq mm3, optiaddy ;mm3: optiaddy optiaddx
-		pfadd mm0, mm3          ;mm0: diry diry
+		movd	mm0, sx
+		punpckldq	mm0, sy
+		pi2fd	mm0, mm0          ;mm0: (float)sy (float)sx
+		pshufw	mm2, mm0, 0xee   ;mm2: (float)sy (float)sy
+		punpckldq	mm0, mm0      ;mm0: (float)sx (float)sx
+		movd	mm1, optistrx
+		punpckldq	mm1, optistry
+		pfmul	mm0, mm1          ;mm0: (float)sx*optistry (float)sx*optistrx
+		movd	mm3, optiheix
+		punpckldq	mm3, optiheiy
+		pfmul	mm2, mm3          ;mm2: (float)sy*optiheiy (float)sy*optiheix
+		pfadd	mm0, mm2
+		movd	mm3, optiaddx
+		punpckldq	mm3, optiaddy ;mm3: optiaddy optiaddx
+		pfadd	mm0, mm3          ;mm0: diry diry
 
-		pxor mm5, mm5
+		pxor	mm5, mm5
 
-		movd mm6, plc
-		movd mm7, incr
-		mov ecx, zbufoff
-		mov edx, j
+		movd	mm6, plc
+		movd	mm7, incr
+		mov	ecx, zbufoff
+		mov	edx, j
 
 beg:
-		pextrw eax, mm6, 1
-		mov eax, angstart[eax*4]
-		movq mm2, [eax+edx*8]   ;mm2:      dist       col
-		pshufw mm3, mm2, 0xee   ;mm3:         ?      dist
-		pi2fd mm3, mm3          ;mm3:         ?   (f)dist
-		movq mm4, mm0           ;mm4:      diry      dirx
-		pfmul mm4, mm4          ;mm4:    diry^2    dirx^2
-		pfadd mm0, mm1          ;mm0: dirx+optx diry+opty (unrelated)
-		pfacc mm4, mm4          ;mm4: (x^2+y^2)   x^2+y^2
-		pfrsqrt mm4, mm4        ;mm4: 1/sqrt(*) 1/sqrt(*)
-		pfmul mm3, mm4          ;mm3:         0    zvalue
-		paddd mm6, mm7          ;mm6:            plc+incr (unrelated)
+		pextrw	eax, mm6, 1
+		mov	eax, angstart[eax*4]
+		movq	mm2, [eax+edx*8]   ;mm2:      dist       col
+		pshufw	mm3, mm2, 0xee   ;mm3:         ?      dist
+		pi2fd	mm3, mm3          ;mm3:         ?   (f)dist
+		movq	mm4, mm0           ;mm4:      diry      dirx
+		pfmul	mm4, mm4          ;mm4:    diry^2    dirx^2
+		pfadd	mm0, mm1          ;mm0: dirx+optx diry+opty (unrelated)
+		pfacc	mm4, mm4          ;mm4: (x^2+y^2)   x^2+y^2
+		pfrsqrt	mm4, mm4        ;mm4: 1/sqrt(*) 1/sqrt(*)
+		pfmul	mm3, mm4          ;mm3:         0    zvalue
+		paddd	mm6, mm7          ;mm6:            plc+incr (unrelated)
 
-			;Extra calculations for fog
-		pextrw eax, mm2, 3
-		punpcklbw mm2, mm5
-		movq mm4, fogcol
-		psubw mm4, mm2
-		paddw mm4, mm4
-		shr eax, 4
-		pmulhw mm4, foglut[eax*8]
-		paddw mm2, mm4
-		packuswb mm2, mm4
+			;Extra	calculations for fog
+		pextrw	eax, mm2, 3
+		punpcklbw	mm2, mm5
+		movq	mm4, fogcol
+		psubw	mm4, mm2
+		paddw	mm4, mm4
+		shr	eax, 4
+		pmulhw	mm4, foglut[eax*8]
+		paddw	mm2, mm4
+		packuswb	mm2, mm4
 
-		movd [edi], mm2
-		movd [edi+ecx], mm3
-		add edi, 4
-		cmp edi, esi
-		jb short beg
-		pop edi
-		pop esi
+		movd	[edi], mm2
+		movd	[edi+ecx], mm3
+		add	edi, 4
+		cmp	edi, esi
+		jb	short beg
+		pop	edi
+		pop	esi
 	}
 }
 
@@ -4286,228 +4385,228 @@ void vrendzsse (long sx, long sy, long p1, long iplc, long iinc)
 {
 	_asm
 	{
-		push ebx
-		push esi
-		push edi
+		push	ebx
+		push	esi
+		push	edi
 begvasm_p3:
-		mov esi, sx
-		mov eax, sy
-		mov edx, p1
-		mov ecx, ylookup[eax*4]
-		add ecx, frameplace
-		lea edx, [ecx+edx*4]
-		lea edi, [ecx+esi*4]
+		mov	esi, sx
+		mov	eax, sy
+		mov	edx, p1
+		mov	ecx, ylookup[eax*4]
+		add	ecx, frameplace
+		lea	edx, [ecx+edx*4]
+		lea	edi, [ecx+esi*4]
 
-		mov ecx, esi
-		and ecx, 0xfffffffc
-		cvtsi2ss xmm0, ecx
-		cvtsi2ss xmm4, eax
-		movss xmm1, xmm0
-		movss xmm5, xmm4
-		mulss xmm0, optistrx
-		mulss xmm1, optistry
-		mulss xmm4, optiheix
-		mulss xmm5, optiheiy
-		addss xmm0, optiaddx
-		addss xmm1, optiaddy
-		addss xmm0, xmm4
-		addss xmm1, xmm5
+		mov	ecx, esi
+		and	ecx, 0xfffffffc
+		cvtsi2ss	xmm0, ecx
+		cvtsi2ss	xmm4, eax
+		movss	xmm1, xmm0
+		movss	xmm5, xmm4
+		mulss	xmm0, optistrx
+		mulss	xmm1, optistry
+		mulss	xmm4, optiheix
+		mulss	xmm5, optiheiy
+		addss	xmm0, optiaddx
+		addss	xmm1, optiaddy
+		addss	xmm0, xmm4
+		addss	xmm1, xmm5
 
-		shufps xmm0, xmm0, 0
-		shufps xmm1, xmm1, 0
-		movaps xmm2, opti4asm[2*16]
-		movaps xmm3, opti4asm[3*16]
-		addps xmm0, opti4asm[0*16]
-		addps xmm1, opti4asm[1*16]
-			;xmm0 =  xmm0      ^2 +  xmm1      ^2        (p)
-			;xmm2 = (xmm0+xmm2)^2 + (xmm1+xmm3)^2 - xmm0 (v)
-			;xmm1 = ...                                  (a)
-		addps xmm2, xmm0  ;This block converts inner loop...
-		addps xmm3, xmm1  ;from: 1 / sqrt(x*x + y*y), x += xi, y += yi;
-		mulps xmm0, xmm0  ;  to: 1 / sqrt(p), p += v, v += a;
-		mulps xmm1, xmm1
-		mulps xmm2, xmm2
-		mulps xmm3, xmm3
-		addps xmm0, xmm1
-		movaps xmm1, opti4asm[4*16]
-		addps xmm2, xmm3
-		subps xmm2, xmm0
+		shufps	xmm0, xmm0, 0
+		shufps	xmm1, xmm1, 0
+		movaps	xmm2, opti4asm[2*16]
+		movaps	xmm3, opti4asm[3*16]
+		addps	xmm0, opti4asm[0*16]
+		addps	xmm1, opti4asm[1*16]
+			;xmm0	=  xmm0      ^2 +  xmm1      ^2        (p)
+			;xmm2	= (xmm0+xmm2)^2 + (xmm1+xmm3)^2 - xmm0 (v)
+			;xmm1	= ...                                  (a)
+		addps	xmm2, xmm0  ;This block converts inner loop...
+		addps	xmm3, xmm1  ;from: 1 / sqrt(x*x + y*y), x += xi, y += yi;
+		mulps	xmm0, xmm0  ;  to: 1 / sqrt(p), p += v, v += a;
+		mulps	xmm1, xmm1
+		mulps	xmm2, xmm2
+		mulps	xmm3, xmm3
+		addps	xmm0, xmm1
+		movaps	xmm1, opti4asm[4*16]
+		addps	xmm2, xmm3
+		subps	xmm2, xmm0
 
-		mov p1, edx
-		mov ecx, zbufoff
-		shl esi, 2
-		add esi, uurend
-		mov ebx, iplc
+		mov	p1, edx
+		mov	ecx, zbufoff
+		shl	esi, 2
+		add	esi, uurend
+		mov	ebx, iplc
 
-		cmp edi, edx
-		jae short endv
+		cmp	edi, edx
+		jae	short endv
 
-			;Do first 0-3 pixels to align unrolled loop of 4
-		test edi, 15
-		jz short skip1va
+			;Do	first 0-3 pixels to align unrolled loop of 4
+		test	edi, 15
+		jz	short skip1va
 
-		test edi, 8
-		jz short skipshufc
-		shufps xmm0, xmm0, 0x4e ;rotate right by 2
+		test	edi, 8
+		jz	short skipshufc
+		shufps	xmm0, xmm0, 0x4e ;rotate right by 2
 skipshufc:
-		test edi, 4
-		jz short skipshufd
-		shufps xmm0, xmm0, 0x39 ;rotate right by 1
+		test	edi, 4
+		jz	short skipshufd
+		shufps	xmm0, xmm0, 0x39 ;rotate right by 1
 skipshufd:
 
 beg1va:
-		mov edx, [esi]
-		mov eax, [esi+MAXXDIM*4]
-		add eax, edx
-		sar edx, 16
-		mov edx, angstart[edx*4]
-		mov [esi], eax
-		mov eax, [edx+ebx*8]
-		mov [edi], eax
-		cvtsi2ss xmm7, [edx+ebx*8+4]
-		rsqrtss xmm3, xmm0
-		mulss xmm7, xmm3
-		shufps xmm0, xmm0, 0x39 ;rotate right by 1
-		movss [edi+ecx], xmm7
-		add ebx, iinc
-		add esi, 4
-		add edi, 4
-		cmp edi, p1
-		jz short endv
-		test edi, 15
-		jnz short beg1va
+		mov	edx, [esi]
+		mov	eax, [esi+MAXXDIM*4]
+		add	eax, edx
+		sar	edx, 16
+		mov	edx, angstart[edx*4]
+		mov	[esi], eax
+		mov	eax, [edx+ebx*8]
+		mov	[edi], eax
+		cvtsi2ss	xmm7, [edx+ebx*8+4]
+		rsqrtss	xmm3, xmm0
+		mulss	xmm7, xmm3
+		shufps	xmm0, xmm0, 0x39 ;rotate right by 1
+		movss	[edi+ecx], xmm7
+		add	ebx, iinc
+		add	esi, 4
+		add	edi, 4
+		cmp	edi, p1
+		jz	short endv
+		test	edi, 15
+		jnz	short beg1va
 
-		addps xmm0, xmm2
-		addps xmm2, xmm1
+		addps	xmm0, xmm2
+		addps	xmm2, xmm1
 skip1va:
-		lea edx, [edi+16]
-		cmp edx, p1
-		ja short prebeg1v
+		lea	edx, [edi+16]
+		cmp	edx, p1
+		ja	short prebeg1v
 
-		cmp iinc, 0
-		jl short beg4vn
+		cmp	iinc, 0
+		jl	short beg4vn
 
 beg4vp:
-		movq mm6, [esi]
-		movq mm7, [esi+8]
-		pextrw eax, mm6, 1
-		pextrw edx, mm6, 3
-		paddd mm6, [esi+MAXXDIM*4]
-		mov eax, angstart[eax*4]
-		mov edx, angstart[edx*4]
-		movq mm0, [eax+ebx*8]
-		movq mm1, [edx+ebx*8+8]
-		pextrw eax, mm7, 1
-		pextrw edx, mm7, 3
-		paddd mm7, [esi+8+MAXXDIM*4]
-		mov eax, angstart[eax*4]
-		mov edx, angstart[edx*4]
-		movq mm2, [eax+ebx*8+16]
-		movq mm3, [edx+ebx*8+24]
-		add ebx, 4
+		movq	mm6, [esi]
+		movq	mm7, [esi+8]
+		pextrw	eax, mm6, 1
+		pextrw	edx, mm6, 3
+		paddd	mm6, [esi+MAXXDIM*4]
+		mov	eax, angstart[eax*4]
+		mov	edx, angstart[edx*4]
+		movq	mm0, [eax+ebx*8]
+		movq	mm1, [edx+ebx*8+8]
+		pextrw	eax, mm7, 1
+		pextrw	edx, mm7, 3
+		paddd	mm7, [esi+8+MAXXDIM*4]
+		mov	eax, angstart[eax*4]
+		mov	edx, angstart[edx*4]
+		movq	mm2, [eax+ebx*8+16]
+		movq	mm3, [edx+ebx*8+24]
+		add	ebx, 4
 
-		movq mm4, mm0
-		movq mm5, mm2
-		punpckldq mm0, mm1
-		punpckldq mm2, mm3
-		movntq [edi], mm0
-		movntq [edi+8], mm2
+		movq	mm4, mm0
+		movq	mm5, mm2
+		punpckldq	mm0, mm1
+		punpckldq	mm2, mm3
+		movntq	[edi], mm0
+		movntq	[edi+8], mm2
 
-		punpckhdq mm4, mm1
-		punpckhdq mm5, mm3
-		cvtpi2ps xmm7, mm4
-		cvtpi2ps xmm4, mm5
-		rsqrtps xmm3, xmm0
-		movlhps xmm7, xmm4
-		mulps xmm7, xmm3
-		movntps [edi+ecx], xmm7
-		addps xmm0, xmm2
-		addps xmm2, xmm1
+		punpckhdq	mm4, mm1
+		punpckhdq	mm5, mm3
+		cvtpi2ps	xmm7, mm4
+		cvtpi2ps	xmm4, mm5
+		rsqrtps	xmm3, xmm0
+		movlhps	xmm7, xmm4
+		mulps	xmm7, xmm3
+		movntps	[edi+ecx], xmm7
+		addps	xmm0, xmm2
+		addps	xmm2, xmm1
 
-		movq [esi], mm6
-		movq [esi+8], mm7
+		movq	[esi], mm6
+		movq	[esi+8], mm7
 
-		add esi, 16
-		add edi, 16
-		lea edx, [edi+16]
-		cmp edx, p1
-		jbe short beg4vp
-		cmp edi, p1
-		jae short endv
-		jmp short prebeg1v
+		add	esi, 16
+		add	edi, 16
+		lea	edx, [edi+16]
+		cmp	edx, p1
+		jbe	short beg4vp
+		cmp	edi, p1
+		jae	short endv
+		jmp	short prebeg1v
 
 beg4vn:
-		movq mm6, [esi]
-		movq mm7, [esi+8]
-		pextrw eax, mm6, 1
-		pextrw edx, mm6, 3
-		paddd mm6, [esi+MAXXDIM*4]
-		mov eax, angstart[eax*4]
-		mov edx, angstart[edx*4]
-		movq mm0, [eax+ebx*8]
-		movq mm1, [edx+ebx*8-8]
-		pextrw eax, mm7, 1
-		pextrw edx, mm7, 3
-		paddd mm7, [esi+8+MAXXDIM*4]
-		mov eax, angstart[eax*4]
-		mov edx, angstart[edx*4]
-		movq mm2, [eax+ebx*8-16]
-		movq mm3, [edx+ebx*8-24]
-		sub ebx, 4
+		movq	mm6, [esi]
+		movq	mm7, [esi+8]
+		pextrw	eax, mm6, 1
+		pextrw	edx, mm6, 3
+		paddd	mm6, [esi+MAXXDIM*4]
+		mov	eax, angstart[eax*4]
+		mov	edx, angstart[edx*4]
+		movq	mm0, [eax+ebx*8]
+		movq	mm1, [edx+ebx*8-8]
+		pextrw	eax, mm7, 1
+		pextrw	edx, mm7, 3
+		paddd	mm7, [esi+8+MAXXDIM*4]
+		mov	eax, angstart[eax*4]
+		mov	edx, angstart[edx*4]
+		movq	mm2, [eax+ebx*8-16]
+		movq	mm3, [edx+ebx*8-24]
+		sub	ebx, 4
 
-		movq mm4, mm0
-		movq mm5, mm2
-		punpckldq mm0, mm1
-		punpckldq mm2, mm3
-		movntq [edi], mm0
-		movntq [edi+8], mm2
+		movq	mm4, mm0
+		movq	mm5, mm2
+		punpckldq	mm0, mm1
+		punpckldq	mm2, mm3
+		movntq	[edi], mm0
+		movntq	[edi+8], mm2
 
-		punpckhdq mm4, mm1
-		punpckhdq mm5, mm3
-		cvtpi2ps xmm7, mm4
-		cvtpi2ps xmm4, mm5
-		rsqrtps xmm3, xmm0
-		movlhps xmm7, xmm4
-		mulps xmm7, xmm3
-		movntps [edi+ecx], xmm7
-		addps xmm0, xmm2
-		addps xmm2, xmm1
+		punpckhdq	mm4, mm1
+		punpckhdq	mm5, mm3
+		cvtpi2ps	xmm7, mm4
+		cvtpi2ps	xmm4, mm5
+		rsqrtps	xmm3, xmm0
+		movlhps	xmm7, xmm4
+		mulps	xmm7, xmm3
+		movntps	[edi+ecx], xmm7
+		addps	xmm0, xmm2
+		addps	xmm2, xmm1
 
-		movq [esi], mm6
-		movq [esi+8], mm7
+		movq	[esi], mm6
+		movq	[esi+8], mm7
 
-		add esi, 16
-		add edi, 16
-		lea edx, [edi+16]
-		cmp edx, p1
-		jbe short beg4vn
-		cmp edi, p1
-		jae short endv
+		add	esi, 16
+		add	edi, 16
+		lea	edx, [edi+16]
+		cmp	edx, p1
+		jbe	short beg4vn
+		cmp	edi, p1
+		jae	short endv
 
 prebeg1v:
 beg1v:
-		mov edx, [esi]
-		mov eax, [esi+MAXXDIM*4]
-		add eax, edx
-		sar edx, 16
-		mov edx, angstart[edx*4]
-		mov [esi], eax
-		mov eax, [edx+ebx*8]
-		mov [edi], eax
-		cvtsi2ss xmm7, [edx+ebx*8+4]
-		rsqrtss xmm3, xmm0
-		mulss xmm7, xmm3
-		shufps xmm0, xmm0, 0x39 ;rotate right by 1
-		movss [edi+ecx], xmm7
-		add ebx, iinc
-		add esi, 4
-		add edi, 4
-		cmp edi, p1
-		jne short beg1v
+		mov	edx, [esi]
+		mov	eax, [esi+MAXXDIM*4]
+		add	eax, edx
+		sar	edx, 16
+		mov	edx, angstart[edx*4]
+		mov	[esi], eax
+		mov	eax, [edx+ebx*8]
+		mov	[edi], eax
+		cvtsi2ss	xmm7, [edx+ebx*8+4]
+		rsqrtss	xmm3, xmm0
+		mulss	xmm7, xmm3
+		shufps	xmm0, xmm0, 0x39 ;rotate right by 1
+		movss	[edi+ecx], xmm7
+		add	ebx, iinc
+		add	esi, 4
+		add	edi, 4
+		cmp	edi, p1
+		jne	short beg1v
 endv:
-		pop edi
-		pop esi
-		pop ebx
+		pop	edi
+		pop	esi
+		pop	ebx
 	}
 }
 
@@ -4515,336 +4614,336 @@ void vrendzfogsse (long sx, long sy, long p1, long iplc, long iinc)
 {
 	_asm
 	{
-		push ebx
-		push esi
-		push edi
+		push	ebx
+		push	esi
+		push	edi
 begvasm_p3:
-		mov esi, sx
-		mov eax, sy
-		mov edx, p1
-		mov ecx, ylookup[eax*4]
-		add ecx, frameplace
-		lea edx, [ecx+edx*4]
-		lea edi, [ecx+esi*4]
+		mov	esi, sx
+		mov	eax, sy
+		mov	edx, p1
+		mov	ecx, ylookup[eax*4]
+		add	ecx, frameplace
+		lea	edx, [ecx+edx*4]
+		lea	edi, [ecx+esi*4]
 
-		mov ecx, esi
-		and ecx, 0xfffffffc
-		cvtsi2ss xmm0, ecx
-		cvtsi2ss xmm4, eax
-		movss xmm1, xmm0
-		movss xmm5, xmm4
-		mulss xmm0, optistrx
-		mulss xmm1, optistry
-		mulss xmm4, optiheix
-		mulss xmm5, optiheiy
-		addss xmm0, optiaddx
-		addss xmm1, optiaddy
-		addss xmm0, xmm4
-		addss xmm1, xmm5
+		mov	ecx, esi
+		and	ecx, 0xfffffffc
+		cvtsi2ss	xmm0, ecx
+		cvtsi2ss	xmm4, eax
+		movss	xmm1, xmm0
+		movss	xmm5, xmm4
+		mulss	xmm0, optistrx
+		mulss	xmm1, optistry
+		mulss	xmm4, optiheix
+		mulss	xmm5, optiheiy
+		addss	xmm0, optiaddx
+		addss	xmm1, optiaddy
+		addss	xmm0, xmm4
+		addss	xmm1, xmm5
 
-		shufps xmm0, xmm0, 0
-		shufps xmm1, xmm1, 0
-		movaps xmm2, opti4asm[2*16]
-		movaps xmm3, opti4asm[3*16]
-		addps xmm0, opti4asm[0*16]
-		addps xmm1, opti4asm[1*16]
-			;xmm0 =  xmm0      ^2 +  xmm1      ^2        (p)
-			;xmm2 = (xmm0+xmm2)^2 + (xmm1+xmm3)^2 - xmm0 (v)
-			;xmm1 = ...                                  (a)
-		addps xmm2, xmm0  ;This block converts inner loop...
-		addps xmm3, xmm1  ;from: 1 / sqrt(x*x + y*y), x += xi, y += yi;
-		mulps xmm0, xmm0  ;  to: 1 / sqrt(p), p += v, v += a;
-		mulps xmm1, xmm1
-		mulps xmm2, xmm2
-		mulps xmm3, xmm3
-		addps xmm0, xmm1
-		movaps xmm1, opti4asm[4*16]
-		addps xmm2, xmm3
-		subps xmm2, xmm0
+		shufps	xmm0, xmm0, 0
+		shufps	xmm1, xmm1, 0
+		movaps	xmm2, opti4asm[2*16]
+		movaps	xmm3, opti4asm[3*16]
+		addps	xmm0, opti4asm[0*16]
+		addps	xmm1, opti4asm[1*16]
+			;xmm0	=  xmm0      ^2 +  xmm1      ^2        (p)
+			;xmm2	= (xmm0+xmm2)^2 + (xmm1+xmm3)^2 - xmm0 (v)
+			;xmm1	= ...                                  (a)
+		addps	xmm2, xmm0  ;This block converts inner loop...
+		addps	xmm3, xmm1  ;from: 1 / sqrt(x*x + y*y), x += xi, y += yi;
+		mulps	xmm0, xmm0  ;  to: 1 / sqrt(p), p += v, v += a;
+		mulps	xmm1, xmm1
+		mulps	xmm2, xmm2
+		mulps	xmm3, xmm3
+		addps	xmm0, xmm1
+		movaps	xmm1, opti4asm[4*16]
+		addps	xmm2, xmm3
+		subps	xmm2, xmm0
 
-		mov p1, edx
-		mov ecx, zbufoff
-		shl esi, 2
-		add esi, uurend
-		mov ebx, iplc
+		mov	p1, edx
+		mov	ecx, zbufoff
+		shl	esi, 2
+		add	esi, uurend
+		mov	ebx, iplc
 
-		cmp edi, edx
-		jae short endv
+		cmp	edi, edx
+		jae	short endv
 
-			;Do first 0-3 pixels to align unrolled loop of 4
-		test edi, 15
-		jz short skip1va
+			;Do	first 0-3 pixels to align unrolled loop of 4
+		test	edi, 15
+		jz	short skip1va
 
-		test edi, 8
-		jz short skipshufc
-		shufps xmm0, xmm0, 0x4e ;rotate right by 2
+		test	edi, 8
+		jz	short skipshufc
+		shufps	xmm0, xmm0, 0x4e ;rotate right by 2
 skipshufc:
-		test edi, 4
-		jz short skipshufd
-		shufps xmm0, xmm0, 0x39 ;rotate right by 1
+		test	edi, 4
+		jz	short skipshufd
+		shufps	xmm0, xmm0, 0x39 ;rotate right by 1
 skipshufd:
 
 beg1va:
-		mov edx, [esi]
-		mov eax, [esi+MAXXDIM*4]
-		add eax, edx
-		sar edx, 16
-		mov edx, angstart[edx*4]
-		mov [esi], eax
+		mov	edx, [esi]
+		mov	eax, [esi+MAXXDIM*4]
+		add	eax, edx
+		sar	edx, 16
+		mov	edx, angstart[edx*4]
+		mov	[esi], eax
 
 			;Z
-		cvtsi2ss xmm7, [edx+ebx*8+4]
-		rsqrtss xmm3, xmm0
-		mulss xmm7, xmm3
-		shufps xmm0, xmm0, 0x39 ;rotate right by 1
-		movss [edi+ecx], xmm7
+		cvtsi2ss	xmm7, [edx+ebx*8+4]
+		rsqrtss	xmm3, xmm0
+		mulss	xmm7, xmm3
+		shufps	xmm0, xmm0, 0x39 ;rotate right by 1
+		movss	[edi+ecx], xmm7
 
 			;Col
-		punpcklbw mm0, [edx+ebx*8]
-		psrlw mm0, 8
-		movq mm1, fogcol
-		psubw mm1, mm0
-		paddw mm1, mm1
-		mov eax, [edx+ebx*8+4]
-		shr eax, 16+4
-		pmulhw mm1, foglut[eax*8]
-		paddw mm0, mm1
-		packuswb mm0, mm1
-		movd [edi], mm0
+		punpcklbw	mm0, [edx+ebx*8]
+		psrlw	mm0, 8
+		movq	mm1, fogcol
+		psubw	mm1, mm0
+		paddw	mm1, mm1
+		mov	eax, [edx+ebx*8+4]
+		shr	eax, 16+4
+		pmulhw	mm1, foglut[eax*8]
+		paddw	mm0, mm1
+		packuswb	mm0, mm1
+		movd	[edi], mm0
 
-		add ebx, iinc
-		add esi, 4
-		add edi, 4
-		cmp edi, p1
-		jz short endv
-		test edi, 15
-		jnz short beg1va
+		add	ebx, iinc
+		add	esi, 4
+		add	edi, 4
+		cmp	edi, p1
+		jz	short endv
+		test	edi, 15
+		jnz	short beg1va
 
-		addps xmm0, xmm2
-		addps xmm2, xmm1
+		addps	xmm0, xmm2
+		addps	xmm2, xmm1
 skip1va:
-		lea edx, [edi+16]
-		cmp edx, p1
-		ja short prebeg1v
+		lea	edx, [edi+16]
+		cmp	edx, p1
+		ja	short prebeg1v
 
-		cmp iinc, 0
-		jl short beg4vn
+		cmp	iinc, 0
+		jl	short beg4vn
 
 beg4vp:
-		movq mm6, [esi]
-		movq mm7, [esi+8]
-		pextrw eax, mm6, 1
-		pextrw edx, mm6, 3
-		paddd mm6, [esi+MAXXDIM*4]
-		mov eax, angstart[eax*4]
-		mov edx, angstart[edx*4]
-		movq mm4, [eax+ebx*8]
-		movq mm1, [edx+ebx*8+8]
-		pextrw eax, mm7, 1
-		pextrw edx, mm7, 3
-		paddd mm7, [esi+8+MAXXDIM*4]
-		mov eax, angstart[eax*4]
-		mov edx, angstart[edx*4]
-		movq mm5, [eax+ebx*8+16]
-		movq mm3, [edx+ebx*8+24]
-		add ebx, 4
+		movq	mm6, [esi]
+		movq	mm7, [esi+8]
+		pextrw	eax, mm6, 1
+		pextrw	edx, mm6, 3
+		paddd	mm6, [esi+MAXXDIM*4]
+		mov	eax, angstart[eax*4]
+		mov	edx, angstart[edx*4]
+		movq	mm4, [eax+ebx*8]
+		movq	mm1, [edx+ebx*8+8]
+		pextrw	eax, mm7, 1
+		pextrw	edx, mm7, 3
+		paddd	mm7, [esi+8+MAXXDIM*4]
+		mov	eax, angstart[eax*4]
+		mov	edx, angstart[edx*4]
+		movq	mm5, [eax+ebx*8+16]
+		movq	mm3, [edx+ebx*8+24]
+		add	ebx, 4
 
-			;Do Z
-		movq mm0, mm4
-		movq mm2, mm5
-		punpckhdq mm4, mm1
-		punpckhdq mm5, mm3
-		cvtpi2ps xmm7, mm4
-		cvtpi2ps xmm4, mm5
-		rsqrtps xmm3, xmm0
-		movlhps xmm7, xmm4
-		mulps xmm7, xmm3
-		movntps [edi+ecx], xmm7
-		addps xmm0, xmm2
-		addps xmm2, xmm1
+			;Do	Z
+		movq	mm0, mm4
+		movq	mm2, mm5
+		punpckhdq	mm4, mm1
+		punpckhdq	mm5, mm3
+		cvtpi2ps	xmm7, mm4
+		cvtpi2ps	xmm4, mm5
+		rsqrtps	xmm3, xmm0
+		movlhps	xmm7, xmm4
+		mulps	xmm7, xmm3
+		movntps	[edi+ecx], xmm7
+		addps	xmm0, xmm2
+		addps	xmm2, xmm1
 
-		movq [esi], mm6
-		movq [esi+8], mm7
+		movq	[esi], mm6
+		movq	[esi+8], mm7
 
-			;Do color
-		pxor mm7, mm7
-		punpcklbw mm0, mm7
-		punpcklbw mm1, mm7
-		punpcklbw mm2, mm7
-		punpcklbw mm3, mm7
+			;Do	color
+		pxor	mm7, mm7
+		punpcklbw	mm0, mm7
+		punpcklbw	mm1, mm7
+		punpcklbw	mm2, mm7
+		punpcklbw	mm3, mm7
 
-		movq mm7, fogcol
-		psubw mm7, mm0
-		paddw mm7, mm7
-		pextrw eax, mm4, 1
-		shr eax, 4
-		pmulhw mm7, foglut[eax*8]
-		paddw mm0, mm7
+		movq	mm7, fogcol
+		psubw	mm7, mm0
+		paddw	mm7, mm7
+		pextrw	eax, mm4, 1
+		shr	eax, 4
+		pmulhw	mm7, foglut[eax*8]
+		paddw	mm0, mm7
 
-		movq mm7, fogcol
-		psubw mm7, mm1
-		paddw mm7, mm7
-		pextrw eax, mm4, 3
-		shr eax, 4
-		pmulhw mm7, foglut[eax*8]
-		paddw mm1, mm7
+		movq	mm7, fogcol
+		psubw	mm7, mm1
+		paddw	mm7, mm7
+		pextrw	eax, mm4, 3
+		shr	eax, 4
+		pmulhw	mm7, foglut[eax*8]
+		paddw	mm1, mm7
 
-		movq mm7, fogcol
-		psubw mm7, mm2
-		paddw mm7, mm7
-		pextrw eax, mm5, 1
-		shr eax, 4
-		pmulhw mm7, foglut[eax*8]
-		paddw mm2, mm7
+		movq	mm7, fogcol
+		psubw	mm7, mm2
+		paddw	mm7, mm7
+		pextrw	eax, mm5, 1
+		shr	eax, 4
+		pmulhw	mm7, foglut[eax*8]
+		paddw	mm2, mm7
 
-		movq mm7, fogcol
-		psubw mm7, mm3
-		paddw mm7, mm7
-		pextrw eax, mm5, 3
-		shr eax, 4
-		pmulhw mm7, foglut[eax*8]
-		paddw mm3, mm7
+		movq	mm7, fogcol
+		psubw	mm7, mm3
+		paddw	mm7, mm7
+		pextrw	eax, mm5, 3
+		shr	eax, 4
+		pmulhw	mm7, foglut[eax*8]
+		paddw	mm3, mm7
 
-		packuswb mm0, mm1
-		packuswb mm2, mm3
-		movntq [edi], mm0
-		movntq [edi+8], mm2
+		packuswb	mm0, mm1
+		packuswb	mm2, mm3
+		movntq	[edi], mm0
+		movntq	[edi+8], mm2
 
-		add esi, 16
-		add edi, 16
-		lea edx, [edi+16]
-		cmp edx, p1
-		jbe short beg4vp
-		cmp edi, p1
-		jae short endv
-		jmp short prebeg1v
+		add	esi, 16
+		add	edi, 16
+		lea	edx, [edi+16]
+		cmp	edx, p1
+		jbe	short beg4vp
+		cmp	edi, p1
+		jae	short endv
+		jmp	short prebeg1v
 
 beg4vn:
-		movq mm6, [esi]
-		movq mm7, [esi+8]
-		pextrw eax, mm6, 1
-		pextrw edx, mm6, 3
-		paddd mm6, [esi+MAXXDIM*4]
-		mov eax, angstart[eax*4]
-		mov edx, angstart[edx*4]
-		movq mm4, [eax+ebx*8]
-		movq mm1, [edx+ebx*8-8]
-		pextrw eax, mm7, 1
-		pextrw edx, mm7, 3
-		paddd mm7, [esi+8+MAXXDIM*4]
-		mov eax, angstart[eax*4]
-		mov edx, angstart[edx*4]
-		movq mm5, [eax+ebx*8-16]
-		movq mm3, [edx+ebx*8-24]
-		sub ebx, 4
+		movq	mm6, [esi]
+		movq	mm7, [esi+8]
+		pextrw	eax, mm6, 1
+		pextrw	edx, mm6, 3
+		paddd	mm6, [esi+MAXXDIM*4]
+		mov	eax, angstart[eax*4]
+		mov	edx, angstart[edx*4]
+		movq	mm4, [eax+ebx*8]
+		movq	mm1, [edx+ebx*8-8]
+		pextrw	eax, mm7, 1
+		pextrw	edx, mm7, 3
+		paddd	mm7, [esi+8+MAXXDIM*4]
+		mov	eax, angstart[eax*4]
+		mov	edx, angstart[edx*4]
+		movq	mm5, [eax+ebx*8-16]
+		movq	mm3, [edx+ebx*8-24]
+		sub	ebx, 4
 
-			;Do Z
-		movq mm0, mm4
-		movq mm2, mm5
-		punpckhdq mm4, mm1
-		punpckhdq mm5, mm3
-		cvtpi2ps xmm7, mm4
-		cvtpi2ps xmm4, mm5
-		rsqrtps xmm3, xmm0
-		movlhps xmm7, xmm4
-		mulps xmm7, xmm3
-		movntps [edi+ecx], xmm7
-		addps xmm0, xmm2
-		addps xmm2, xmm1
+			;Do	Z
+		movq	mm0, mm4
+		movq	mm2, mm5
+		punpckhdq	mm4, mm1
+		punpckhdq	mm5, mm3
+		cvtpi2ps	xmm7, mm4
+		cvtpi2ps	xmm4, mm5
+		rsqrtps	xmm3, xmm0
+		movlhps	xmm7, xmm4
+		mulps	xmm7, xmm3
+		movntps	[edi+ecx], xmm7
+		addps	xmm0, xmm2
+		addps	xmm2, xmm1
 
-		movq [esi], mm6
-		movq [esi+8], mm7
+		movq	[esi], mm6
+		movq	[esi+8], mm7
 
-			;Do color
-		pxor mm7, mm7
-		punpcklbw mm0, mm7
-		punpcklbw mm1, mm7
-		punpcklbw mm2, mm7
-		punpcklbw mm3, mm7
+			;Do	color
+		pxor	mm7, mm7
+		punpcklbw	mm0, mm7
+		punpcklbw	mm1, mm7
+		punpcklbw	mm2, mm7
+		punpcklbw	mm3, mm7
 
-		movq mm7, fogcol
-		psubw mm7, mm0
-		paddw mm7, mm7
-		pextrw eax, mm4, 1
-		shr eax, 4
-		pmulhw mm7, foglut[eax*8]
-		paddw mm0, mm7
+		movq	mm7, fogcol
+		psubw	mm7, mm0
+		paddw	mm7, mm7
+		pextrw	eax, mm4, 1
+		shr	eax, 4
+		pmulhw	mm7, foglut[eax*8]
+		paddw	mm0, mm7
 
-		movq mm7, fogcol
-		psubw mm7, mm1
-		paddw mm7, mm7
-		pextrw eax, mm4, 3
-		shr eax, 4
-		pmulhw mm7, foglut[eax*8]
-		paddw mm1, mm7
+		movq	mm7, fogcol
+		psubw	mm7, mm1
+		paddw	mm7, mm7
+		pextrw	eax, mm4, 3
+		shr	eax, 4
+		pmulhw	mm7, foglut[eax*8]
+		paddw	mm1, mm7
 
-		movq mm7, fogcol
-		psubw mm7, mm2
-		paddw mm7, mm7
-		pextrw eax, mm5, 1
-		shr eax, 4
-		pmulhw mm7, foglut[eax*8]
-		paddw mm2, mm7
+		movq	mm7, fogcol
+		psubw	mm7, mm2
+		paddw	mm7, mm7
+		pextrw	eax, mm5, 1
+		shr	eax, 4
+		pmulhw	mm7, foglut[eax*8]
+		paddw	mm2, mm7
 
-		movq mm7, fogcol
-		psubw mm7, mm3
-		paddw mm7, mm7
-		pextrw eax, mm5, 3
-		shr eax, 4
-		pmulhw mm7, foglut[eax*8]
-		paddw mm3, mm7
+		movq	mm7, fogcol
+		psubw	mm7, mm3
+		paddw	mm7, mm7
+		pextrw	eax, mm5, 3
+		shr	eax, 4
+		pmulhw	mm7, foglut[eax*8]
+		paddw	mm3, mm7
 
-		packuswb mm0, mm1
-		packuswb mm2, mm3
-		movntq [edi], mm0
-		movntq [edi+8], mm2
+		packuswb	mm0, mm1
+		packuswb	mm2, mm3
+		movntq	[edi], mm0
+		movntq	[edi+8], mm2
 
-		add esi, 16
-		add edi, 16
-		lea edx, [edi+16]
-		cmp edx, p1
-		jbe short beg4vn
-		cmp edi, p1
-		jae short endv
+		add	esi, 16
+		add	edi, 16
+		lea	edx, [edi+16]
+		cmp	edx, p1
+		jbe	short beg4vn
+		cmp	edi, p1
+		jae	short endv
 
 prebeg1v:
 beg1v:
-		mov edx, [esi]
-		mov eax, [esi+MAXXDIM*4]
-		add eax, edx
-		sar edx, 16
-		mov edx, angstart[edx*4]
-		mov [esi], eax
+		mov	edx, [esi]
+		mov	eax, [esi+MAXXDIM*4]
+		add	eax, edx
+		sar	edx, 16
+		mov	edx, angstart[edx*4]
+		mov	[esi], eax
 
 			;Z
-		cvtsi2ss xmm7, [edx+ebx*8+4]
-		rsqrtss xmm3, xmm0
-		mulss xmm7, xmm3
-		shufps xmm0, xmm0, 0x39 ;rotate right by 1
-		movss [edi+ecx], xmm7
+		cvtsi2ss	xmm7, [edx+ebx*8+4]
+		rsqrtss	xmm3, xmm0
+		mulss	xmm7, xmm3
+		shufps	xmm0, xmm0, 0x39 ;rotate right by 1
+		movss	[edi+ecx], xmm7
 
 			;Col
-		punpcklbw mm0, [edx+ebx*8]
-		psrlw mm0, 8
-		movq mm1, fogcol
-		psubw mm1, mm0
-		paddw mm1, mm1
-		mov eax, [edx+ebx*8+4]
-		shr eax, 16+4
-		pmulhw mm1, foglut[eax*8]
-		paddw mm0, mm1
-		packuswb mm0, mm1
-		movd [edi], mm0
+		punpcklbw	mm0, [edx+ebx*8]
+		psrlw	mm0, 8
+		movq	mm1, fogcol
+		psubw	mm1, mm0
+		paddw	mm1, mm1
+		mov	eax, [edx+ebx*8+4]
+		shr	eax, 16+4
+		pmulhw	mm1, foglut[eax*8]
+		paddw	mm0, mm1
+		packuswb	mm0, mm1
+		movd	[edi], mm0
 
-		add ebx, iinc
-		add esi, 4
-		add edi, 4
-		cmp edi, p1
-		jne short beg1v
+		add	ebx, iinc
+		add	esi, 4
+		add	edi, 4
+		cmp	edi, p1
+		jne	short beg1v
 endv:
-		pop edi
-		pop esi
-		pop ebx
+		pop	edi
+		pop	esi
+		pop	ebx
 	}
 }
 
@@ -4852,67 +4951,67 @@ void vrendz3dn (long sx, long sy, long p1, long iplc, long iinc)
 {
 	_asm
 	{
-		push ebx
-		push esi
-		push edi
-		mov esi, p1
-		mov edi, sx
-		cmp edi, esi
-		jae short endv
-		mov eax, sy
-		mov eax, ylookup[eax*4]
-		add eax, frameplace
-		lea esi, [eax+esi*4]    ;esi = p1
-		lea edi, [eax+edi*4]    ;edi = p0
+		push	ebx
+		push	esi
+		push	edi
+		mov	esi, p1
+		mov	edi, sx
+		cmp	edi, esi
+		jae	short endv
+		mov	eax, sy
+		mov	eax, ylookup[eax*4]
+		add	eax, frameplace
+		lea	esi, [eax+esi*4]    ;esi = p1
+		lea	edi, [eax+edi*4]    ;edi = p0
 
-		movd mm0, sx
-		punpckldq mm0, sy
-		pi2fd mm0, mm0          ;mm0: (float)sy (float)sx
-		pshufw mm2, mm0, 0xee   ;mm2: (float)sy (float)sy
-		punpckldq mm0, mm0      ;mm0: (float)sx (float)sx
-		movd mm1, optistrx
-		punpckldq mm1, optistry
-		pfmul mm0, mm1          ;mm0: (float)sx*optistry (float)sx*optistrx
-		movd mm3, optiheix
-		punpckldq mm3, optiheiy
-		pfmul mm2, mm3          ;mm2: (float)sy*optiheiy (float)sy*optiheix
-		pfadd mm0, mm2
-		movd mm3, optiaddx
-		punpckldq mm3, optiaddy ;mm3: optiaddy optiaddx
-		pfadd mm0, mm3          ;mm0: diry diry
+		movd	mm0, sx
+		punpckldq	mm0, sy
+		pi2fd	mm0, mm0          ;mm0: (float)sy (float)sx
+		pshufw	mm2, mm0, 0xee   ;mm2: (float)sy (float)sy
+		punpckldq	mm0, mm0      ;mm0: (float)sx (float)sx
+		movd	mm1, optistrx
+		punpckldq	mm1, optistry
+		pfmul	mm0, mm1          ;mm0: (float)sx*optistry (float)sx*optistrx
+		movd	mm3, optiheix
+		punpckldq	mm3, optiheiy
+		pfmul	mm2, mm3          ;mm2: (float)sy*optiheiy (float)sy*optiheix
+		pfadd	mm0, mm2
+		movd	mm3, optiaddx
+		punpckldq	mm3, optiaddy ;mm3: optiaddy optiaddx
+		pfadd	mm0, mm3          ;mm0: diry diry
 
-		mov ecx, zbufoff
-		mov edx, iplc
-		mov ebx, sx
-		mov eax, uurend
-		lea ebx, [eax+ebx*4]
+		mov	ecx, zbufoff
+		mov	edx, iplc
+		mov	ebx, sx
+		mov	eax, uurend
+		lea	ebx, [eax+ebx*4]
 
 begv_3dn:
-		movd mm5, [ebx]
-		pextrw eax, mm5, 1
-		paddd mm5, [ebx+MAXXDIM*4]
-		movd [ebx], mm5
-		mov eax, angstart[eax*4]
-		movq mm2, [eax+edx*8]   ;mm2:      dist       col
-		pshufw mm3, mm2, 0xee   ;mm3:         ?      dist
-		pi2fd mm3, mm3          ;mm3:         ?   (f)dist
-		movq mm4, mm0           ;mm4:      diry      dirx
-		pfmul mm4, mm4          ;mm4:    diry^2    dirx^2
-		pfadd mm0, mm1          ;mm0: dirx+optx diry+opty (unrelated)
-		pfacc mm4, mm4          ;mm4: (x^2+y^2)   x^2+y^2
-		pfrsqrt mm4, mm4        ;mm4: 1/sqrt(*) 1/sqrt(*)
-		pfmul mm3, mm4          ;mm3:         0    zvalue
-		movd [edi], mm2
-		movd [edi+ecx], mm3
-		add edx, iinc
-		add ebx, 4
-		add edi, 4
-		cmp edi, esi
-		jb short begv_3dn
+		movd	mm5, [ebx]
+		pextrw	eax, mm5, 1
+		paddd	mm5, [ebx+MAXXDIM*4]
+		movd	[ebx], mm5
+		mov	eax, angstart[eax*4]
+		movq	mm2, [eax+edx*8]   ;mm2:      dist       col
+		pshufw	mm3, mm2, 0xee   ;mm3:         ?      dist
+		pi2fd	mm3, mm3          ;mm3:         ?   (f)dist
+		movq	mm4, mm0           ;mm4:      diry      dirx
+		pfmul	mm4, mm4          ;mm4:    diry^2    dirx^2
+		pfadd	mm0, mm1          ;mm0: dirx+optx diry+opty (unrelated)
+		pfacc	mm4, mm4          ;mm4: (x^2+y^2)   x^2+y^2
+		pfrsqrt	mm4, mm4        ;mm4: 1/sqrt(*) 1/sqrt(*)
+		pfmul	mm3, mm4          ;mm3:         0    zvalue
+		movd	[edi], mm2
+		movd	[edi+ecx], mm3
+		add	edx, iinc
+		add	ebx, 4
+		add	edi, 4
+		cmp	edi, esi
+		jb	short begv_3dn
 endv:
-		pop edi
-		pop esi
-		pop ebx
+		pop	edi
+		pop	esi
+		pop	ebx
 	}
 }
 
@@ -4920,81 +5019,81 @@ void vrendzfog3dn (long sx, long sy, long p1, long iplc, long iinc)
 {
 	_asm
 	{
-		push ebx
-		push esi
-		push edi
-		mov esi, p1
-		mov edi, sx
-		cmp edi, esi
-		jae short endv
-		mov eax, sy
-		mov eax, ylookup[eax*4]
-		add eax, frameplace
-		lea esi, [eax+esi*4]    ;esi = p1
-		lea edi, [eax+edi*4]    ;edi = p0
+		push	ebx
+		push	esi
+		push	edi
+		mov	esi, p1
+		mov	edi, sx
+		cmp	edi, esi
+		jae	short endv
+		mov	eax, sy
+		mov	eax, ylookup[eax*4]
+		add	eax, frameplace
+		lea	esi, [eax+esi*4]    ;esi = p1
+		lea	edi, [eax+edi*4]    ;edi = p0
 
-		movd mm0, sx
-		punpckldq mm0, sy
-		pi2fd mm0, mm0          ;mm0: (float)sy (float)sx
-		pshufw mm2, mm0, 0xee   ;mm2: (float)sy (float)sy
-		punpckldq mm0, mm0      ;mm0: (float)sx (float)sx
-		movd mm1, optistrx
-		punpckldq mm1, optistry
-		pfmul mm0, mm1          ;mm0: (float)sx*optistry (float)sx*optistrx
-		movd mm3, optiheix
-		punpckldq mm3, optiheiy
-		pfmul mm2, mm3          ;mm2: (float)sy*optiheiy (float)sy*optiheix
-		pfadd mm0, mm2
-		movd mm3, optiaddx
-		punpckldq mm3, optiaddy ;mm3: optiaddy optiaddx
-		pfadd mm0, mm3          ;mm0: diry diry
+		movd	mm0, sx
+		punpckldq	mm0, sy
+		pi2fd	mm0, mm0          ;mm0: (float)sy (float)sx
+		pshufw	mm2, mm0, 0xee   ;mm2: (float)sy (float)sy
+		punpckldq	mm0, mm0      ;mm0: (float)sx (float)sx
+		movd	mm1, optistrx
+		punpckldq	mm1, optistry
+		pfmul	mm0, mm1          ;mm0: (float)sx*optistry (float)sx*optistrx
+		movd	mm3, optiheix
+		punpckldq	mm3, optiheiy
+		pfmul	mm2, mm3          ;mm2: (float)sy*optiheiy (float)sy*optiheix
+		pfadd	mm0, mm2
+		movd	mm3, optiaddx
+		punpckldq	mm3, optiaddy ;mm3: optiaddy optiaddx
+		pfadd	mm0, mm3          ;mm0: diry diry
 
-		pxor mm6, mm6
+		pxor	mm6, mm6
 
-		mov ecx, zbufoff
-		mov edx, iplc
-		mov ebx, sx
-		mov eax, uurend
-		lea ebx, [eax+ebx*4]
+		mov	ecx, zbufoff
+		mov	edx, iplc
+		mov	ebx, sx
+		mov	eax, uurend
+		lea	ebx, [eax+ebx*4]
 
 begv_3dn:
-		movd mm5, [ebx]
-		pextrw eax, mm5, 1
-		paddd mm5, [ebx+MAXXDIM*4]
-		movd [ebx], mm5
-		mov eax, angstart[eax*4]
-		movq mm2, [eax+edx*8]   ;mm2:      dist       col
-		pshufw mm3, mm2, 0xee   ;mm3:         ?      dist
-		pi2fd mm3, mm3          ;mm3:         ?   (f)dist
-		movq mm4, mm0           ;mm4:      diry      dirx
-		pfmul mm4, mm4          ;mm4:    diry^2    dirx^2
-		pfadd mm0, mm1          ;mm0: dirx+optx diry+opty (unrelated)
-		pfacc mm4, mm4          ;mm4: (x^2+y^2)   x^2+y^2
-		pfrsqrt mm4, mm4        ;mm4: 1/sqrt(*) 1/sqrt(*)
-		pfmul mm3, mm4          ;mm3:         0    zvalue
+		movd	mm5, [ebx]
+		pextrw	eax, mm5, 1
+		paddd	mm5, [ebx+MAXXDIM*4]
+		movd	[ebx], mm5
+		mov	eax, angstart[eax*4]
+		movq	mm2, [eax+edx*8]   ;mm2:      dist       col
+		pshufw	mm3, mm2, 0xee   ;mm3:         ?      dist
+		pi2fd	mm3, mm3          ;mm3:         ?   (f)dist
+		movq	mm4, mm0           ;mm4:      diry      dirx
+		pfmul	mm4, mm4          ;mm4:    diry^2    dirx^2
+		pfadd	mm0, mm1          ;mm0: dirx+optx diry+opty (unrelated)
+		pfacc	mm4, mm4          ;mm4: (x^2+y^2)   x^2+y^2
+		pfrsqrt	mm4, mm4        ;mm4: 1/sqrt(*) 1/sqrt(*)
+		pfmul	mm3, mm4          ;mm3:         0    zvalue
 
-			;Extra calculations for fog
-		pextrw eax, mm2, 3
-		punpcklbw mm2, mm6
-		movq mm4, fogcol
-		psubw mm4, mm2
-		paddw mm4, mm4
-		shr eax, 4
-		pmulhw mm4, foglut[eax*8]
-		paddw mm2, mm4
-		packuswb mm2, mm4
+			;Extra	calculations for fog
+		pextrw	eax, mm2, 3
+		punpcklbw	mm2, mm6
+		movq	mm4, fogcol
+		psubw	mm4, mm2
+		paddw	mm4, mm4
+		shr	eax, 4
+		pmulhw	mm4, foglut[eax*8]
+		paddw	mm2, mm4
+		packuswb	mm2, mm4
 
-		movd [edi], mm2
-		movd [edi+ecx], mm3
-		add edx, iinc
-		add ebx, 4
-		add edi, 4
-		cmp edi, esi
-		jb short begv_3dn
+		movd	[edi], mm2
+		movd	[edi+ecx], mm3
+		add	edx, iinc
+		add	ebx, 4
+		add	edi, 4
+		cmp	edi, esi
+		jb	short begv_3dn
 endv:
-		pop edi
-		pop esi
-		pop ebx
+		pop	edi
+		pop	esi
+		pop	ebx
 	}
 }
 #endif
@@ -5172,7 +5271,7 @@ void opticast ()
 				while ((p1 < xres) && (u1 < j)) { u1 += ui; p1++; }
 				if (p0 < p1) hrend(p0,sy,p1,u,ui,i);
 			}
-			CLEARMMX()
+			clearMMX();
 		}
 	}
 
@@ -5208,7 +5307,7 @@ void opticast ()
 			if (giforzsgn < 0)
 				  { for(sy=p0;sy<p1;sy++) vrend(lastx[sy],sy,xres,lastx[sy],1); }
 			else { for(sy=p0;sy<p1;sy++) vrend(lastx[sy],sy,xres,-lastx[sy],-1); }
-			CLEARMMX()
+			clearMMX();
 		}
 	}
 
@@ -5243,7 +5342,7 @@ void opticast ()
 				while ((p1 < xres) && (u1 < j)) { u1 += ui; p1++; }
 				if (p0 < p1) hrend(p0,sy,p1,u,ui,i);
 			}
-			CLEARMMX()
+			clearMMX();
 		}
 	}
 
@@ -5277,7 +5376,7 @@ void opticast ()
 				while ((p1 < yres) && (u < j)) { u += ui; lastx[p1++] = sx; }
 			}
 			for(sy=p0;sy<p1;sy++) vrend(0,sy,lastx[sy]+1,0,giforzsgn);
-			CLEARMMX()
+			clearMMX();
 		}
 	}
 }
@@ -6661,8 +6760,8 @@ long loadsky (const char *skyfilnam)
 	if (skypic) { free((void *)skypic); skypic = skyoff = 0; }
 	xoff = yoff = 0;
 
-	if (!stricmp(skyfilnam,"BLACK")) return(0);
-	if (!stricmp(skyfilnam,"BLUE")) goto loadbluesky;
+	if (!strcasecmp(skyfilnam,"BLACK")) return(0);
+	if (!strcasecmp(skyfilnam,"BLUE")) goto loadbluesky;
 
 	kpzload(skyfilnam,(int *)&skypic,(int *)&skybpl,(int *)&skyxsiz,(int *)&skyysiz);
 	if (!skypic)
@@ -7556,7 +7655,7 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 							{
 								zz = (long)tbuf[oldn+2];
 
-								#ifdef __GNUC__
+								#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 								__asm__ __volatile__ //*(long *)&tbuf[n] = mixc[zz][rand()%mixn[zz]];
 								(    //mixn[zz] = 0;
 									"mov	zz,%eax\n\t"
@@ -7568,7 +7667,7 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 									"pcmpeqb	%mm6,%mm6\n\t"
 									"movq	%mm0,%mm7\n"
 								"vxlmipbeg0:\n\t"
-									"movd	mixc-4(%eax,%ecx,4),%mm1\n\t"
+									"movl	mixc-4(%eax,%ecx,4),%mm1\n\t"
 									"punpcklbw	%mm7,%mm1\n\t"
 									"paddw	%mm1,%mm0\n\t"
 									"dec	%ecx\n\t"
@@ -7578,10 +7677,10 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 									"pmulhw	%mm2,%mm0\n\t"
 									"packuswb	%mm0,%mm0\n\t"
 									"mov	n,%eax\n\t"
-									"movd	%mm0,tbuf(%eax)\n\t"
+									"movl	%mm0,tbuf(%eax)\n\t"
 								);
 								#endif
-								#ifdef _MSC_VER
+								#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 								_asm //*(long *)&tbuf[n] = mixc[zz][rand()%mixn[zz]];
 								{    //mixn[zz] = 0;
 									mov eax, zz
@@ -7625,7 +7724,7 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 							}
 							while ((cz<<1) < z)
 							{
-								#ifdef __GNUC__
+								#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 								__asm__ __volatile__ //*(long *)&tbuf[n] = mixc[cz][rand()%mixn[cz]];
 								(    //mixn[cz] = 0;
 									"mov	cz,%eax\n\t"
@@ -7637,7 +7736,7 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 									"pcmpeqb	%mm6,%mm6\n\t"
 									"movq	%mm0,%mm7\n\t"
 								"vxlmipbeg1:\n"
-									"movd	mixc-4(%eax,%ecx,4),%mm1\n\t"
+									"movl	mixc-4(%eax,%ecx,4),%mm1\n\t"
 									"punpcklbw	%mm7,%mm1\n\t"
 									"paddw	%mm1,%mm0\n\t"
 									"dec	%ecx\n\t"
@@ -7647,10 +7746,10 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 									"pmulhw	%mm2,%mm0\n\t"
 									"packuswb	%mm0,%mm0\n\t"
 									"mov	n,%eax\n\t"
-									"movd	%mm0,tbuf(%eax)\n\t"
+									"movl	%mm0,tbuf(%eax)\n\t"
 								);
 								#endif
-								#ifdef _MSC_VER
+								#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 								_asm //*(long *)&tbuf[n] = mixc[cz][rand()%mixn[cz]];
 								{    //mixn[cz] = 0;
 									mov eax, cz
@@ -7740,7 +7839,7 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 		gmipnum--;
 	}
 
-	CLEARMMX()
+	clearMMX();
 
 #if 0 //TEMP HACK!!!
 	{
@@ -9085,7 +9184,7 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 
 	if (cputype&(1<<25))
 	{
-		#ifdef __GNUC__
+		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 		__asm__ __volatile__
 		(
 			"mov	$256,%eax\n\t"
@@ -9094,7 +9193,7 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 			"movlhps	%xmm6,%xmm6\n\t"  //xmm6: ?,256,?,256
 		);
 		#endif
-		#ifdef _MSC_VER
+		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 		_asm
 		{
 			mov eax, 256
@@ -9111,22 +9210,24 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 		{
 			if (cputype&(1<<25))
 			{
-				#ifdef __GNUC__
+				#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 				__asm__ __volatile__
 				(
-					"cvtsi2ss	x,%xmm0\n\t"        //xmm0:?,?,?,x
-					"cvtsi2ss	y,%xmm7\n\t"        //xmm7:0,0,0,y
-					"movlhps	%xmm7,%xmm0\n\t"    //xmm0:0,y,?,x
-					"shufps	%xmm0,0x08,%xmm0\n\t"   //xmm0:x,x,y,x
+					".intel_syntax noprefix\n"
+					"cvtsi2ss	xmm0, x\n"      //xmm0:?,?,?,x
+					"cvtsi2ss	xmm7, y\n"      //xmm7:0,0,0,y
+					"movlhps	xmm0, xmm7\n"   //xmm0:0,y,?,x
+					"shufps	xmm0, xmm0, 0x08\n" //xmm0:x,x,y,x
+					".att_syntax prefix"
 				);
 				#endif
-				#ifdef _MSC_VER
+				#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 				_asm
 				{
-					cvtsi2ss xmm0, x        ;xmm0:?,?,?,x
-					cvtsi2ss xmm7, y        ;xmm7:0,0,0,y
-					movlhps xmm0, xmm7      ;xmm0:0,y,?,x
-					shufps xmm0, xmm0, 0x08 ;xmm0:x,x,y,x
+					cvtsi2ss	xmm0, x      //xmm0:?,?,?,x
+					cvtsi2ss	xmm7, y      //xmm7:0,0,0,y
+					movlhps	xmm0, xmm7       //xmm0:0,y,?,x
+					shufps	xmm0, xmm0, 0x08 //xmm0:x,x,y,x
 				}
 				#endif
 			}
@@ -9136,7 +9237,7 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 			{
 				if (cputype&(1<<25))
 				{
-					#ifdef __GNUC__
+					#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 					__asm__ __volatile__
 					(
 						"movhlps	%xmm7,%xmm3\n\t"     //xmm3:?,?,0,0
@@ -9163,7 +9264,7 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 						"movss	%xmm3,v\n\t"
 					);
 					#endif
-					#ifdef _MSC_VER
+					#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 					_asm
 					{
 						movhlps xmm3, xmm7       ;xmm3:?,?,0,0
@@ -9791,7 +9892,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 			{
 				p = ylookup[y] + frameplace;
 				plc = (((x0*ui+u)>>16)<<2) + (vv>>16)*tp + tf;
-				#ifdef __GNUC__
+				#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 				__asm__ __volatile__
 				(
 					"push	%ebx\n\t"
@@ -9803,23 +9904,23 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					"lea	(%ecx,%eax,8),%ecx\n\t"
 					"mov	tp,%edx\n\t"
 					"add	%ecx,%edx\n\t"
-					"neg	%eax\n\t"
-							//eax: x0-x1\n\t"
-							//ebx: p + x1*4\n\t"
-							//ecx: plc + (x1-x0)*8\n\t"
-							//edx: plc + (x1-x0)*8 + tp\n"
+					"neg	%eax\n"
+							//eax: x0-x1
+							//ebx: p + x1*4
+							//ecx: plc + (x1-x0)*8
+							//edx: plc + (x1-x0)*8 + tp
 				"begdthalf:\n\t"
 					"movq	(%ecx,%eax,8),%mm0\n\t" //mm0: A1R1G1B1 A0R0G0B0
 					"pavgb	(%edx,%eax,8),%mm0\n\t" //mm0: A1R1G1B1 A0R0G0B0
 					"pshufw	%mm0,0xe,%mm1\n\t"      //mm1: ???????? A1R1G1B1
 					"pavgb	%mm1,%mm0\n\t"          //mm1: ???????? AaRrGgBb
-					"movd	%mm0,(%ebx,%eax,4)\n\t"
+					"movl	%mm0,(%ebx,%eax,4)\n\t"
 					"inc	%eax\n\t"
 					"jnz	begdthalf\n\t"
 					"pop	%ebx\n\t"
 				);
 				#endif
-				#ifdef _MSC_VER
+				#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 				_asm
 				{
 					push ebx
@@ -9847,7 +9948,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 				}
 				#endif
 			}
-			CLEARMMX()
+			clearMMX();
 		}
 		else
 		{
@@ -9858,7 +9959,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 
 					//for(x=x0,uu=plc;x<x1;x++,uu+=ui)
 					//   *(long *)((x<<2)+p) = *(long *)(((uu>>16)<<2) + j);
-				#ifdef __GNUC__
+				#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 				__asm__ __volatile__
 				(
 					"push	%ebx\n\t"
@@ -9887,7 +9988,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					"lea	(%ecx,%esi),%eax\n\t"   //unrolled once loop; uses movntq
 					"shr	$16,%ecx\n\t"
 					"add	$1,%edx\n\t"
-					"movd	(%ebx,%ecx,4),%mm0\n\t"
+					"movl	(%ebx,%ecx,4),%mm0\n\t"
 					"lea	(%eax,%esi),%ecx\n\t"
 					"jz	preenddtnhalf\n\t"
 					"shr	$16,%eax\n\t"
@@ -9897,7 +9998,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					"jnz	begdtnhalf\n\t"
 					"jmp	enddtnhalf\n"
 				"preenddtnhalf:\n\t"
-					"movd	%mm0,-4(%edi,%edx,4)\n"
+					"movl	%mm0,-4(%edi,%edx,4)\n"
 				#endif
 				"enddtnhalf:\n\t"
 					"pop	%edi\n\t"
@@ -9905,7 +10006,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					"pop	%ebx\n\t"
 				);
 				#endif
-				#ifdef _MSC_VER
+				#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 				_asm
 				{
 					push ebx
@@ -9953,18 +10054,18 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 				}
 				#endif
 			}
-			CLEARMMX()
+			clearMMX();
 		}
 	}
 	else //Use alpha for masking
 	{
 		//Init for black/white code
-		#ifdef __GNUC__
+		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 		__asm__ __volatile__
 		(
 			"pxor	%mm7,%mm7\n\t"
-			"movd	white,%mm5\n\t"
-			"movd	black,%mm4\n\t"
+			"movl	white,%mm5\n\t"
+			"movl	black,%mm4\n\t"
 			"punpcklbw	%mm7,%mm5\n\t"    //mm5: [00Wa00Wr00Wg00Wb]
 			"punpcklbw	%mm7,%mm4\n\t"    //mm4: [00Ba00Br00Bg00Bb]
 			"psubw	%mm4,%mm5\n\t"        //mm5: each word range: -255 to 255
@@ -9978,7 +10079,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 			"movq	rgbmask64,%mm6\n\t"
 		);
 		#endif
-		#ifdef _MSC_VER
+		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 		_asm
 		{
 			pxor mm7, mm7
@@ -10004,7 +10105,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 			{
 				i = *(long *)(((uu>>16)<<2) + j);
 
-				#ifdef __GNUC__
+				#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 				__asm__ __volatile__
 				(
 							//                (mm5)              (mm4)\n\t"
@@ -10012,17 +10113,17 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 							//i.r = i.r*(white.r-black.r)/256 + black.r\n\t"
 							//i.g = i.g*(white.g-black.g)/256 + black.g\n\t"
 							//i.b = i.b*(white.b-black.b)/256 + black.b\n\t"
-					"movd	i,%mm0\n\t"           //mm1: [00000000AaRrGgBb]
+					"movl	i,%mm0\n\t"           //mm1: [00000000AaRrGgBb]
 					"punpcklbw	%mm7,%mm0\n\t"    //mm1: [00Aa00Rr00Gg00Bb]
 					"psllw	$4,%mm0\n\t"          //mm1: [0Aa00Rr00Gg00Bb0]
 					"pmulhw	%mm5,%mm0\n\t"        //mm1: [--Aa--Rr--Gg--Bb]
 					"paddw	%mm4,%mm0\n\t"        //mm1: [00Aa00Rr00Gg00Bb]
 					"movq	%mm0,%mm1\n\t"
 					"packuswb	%mm0,%mm0\n\t"    //mm1: [AaRrGgBbAaRrGgBb]
-					"movd	%mm0,i\n\t"
+					"movl	%mm0,i\n\t"
 				);
 				#endif
-				#ifdef _MSC_VER
+				#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 				_asm
 				{
 						;                (mm5)              (mm4)
@@ -10049,13 +10150,13 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					if (i < 0) *(long *)((x<<2)+p) = i;
 					continue;
 				}
-				#ifdef __GNUC__
+				#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 				__asm__ __volatile__
 				(
 					"mov	x,%eax\n\t"          //mm0 = (mm1-mm0)*a + mm0
 					"mov	p,%edx\n\t"
 					"lea	(%edx,%eax,4),%eax\n\t"
-					"movd	(%eax),%mm0\n\t"     //mm0: [00000000AaRrGgBb]
+					"movl	(%eax),%mm0\n\t"     //mm0: [00000000AaRrGgBb]
 						//movd mm1, i            //mm1: [00000000AaRrGgBb]\n\t"
 					"pand	%mm6,%mm0\n\t"       //zero alpha from screen pixel
 					"punpcklbw	%mm7,%mm0\n\t"   //mm0: [00Aa00Rr00Gg00Bb]
@@ -10068,10 +10169,10 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 						//pmulhw mm1, alphalookup[edx*8]\n\t"
 					"paddw	%mm1,%mm0\n\t"
 					"packuswb	%mm0,%mm0\n\t"
-					"movd	%mm0,(%eax)\n\t"
+					"movl	%mm0,(%eax)\n\t"
 				);
 				#endif
-				#ifdef _MSC_VER
+				#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 				_asm
 				{
 					mov eax, x            ;mm0 = (mm1-mm0)*a + mm0
@@ -10095,7 +10196,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 				#endif
 			}
 		}
-		CLEARMMX()
+		clearMMX();
 	}
 }
 
@@ -10582,7 +10683,7 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 	scaler = 1.f/scaler; t = dx*scaler;
 	if (cputype&(1<<25))
 	{
-		#ifdef __GNUC__
+		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 		__asm__ __volatile__ //SSE
 		(
 			"movss	t,%xmm6\n\t"         //xmm6: -,-,-,dx*scaler
@@ -10592,7 +10693,7 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 			"mulps	dpqfour,%xmm7\n\t"   //xmm7: dx*scaler*4,dx*scaler*4,dx*scaler*4,dx*scaler*4
 		);
 		#endif
-		#ifdef _MSC_VER
+		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 		_asm //SSE
 		{
 			movss xmm6, t         ;xmm6: -,-,-,dx*scaler
@@ -10674,7 +10775,7 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 				iu = iv*rbpl + (iu<<2);
 
 				t *= scaler;
-				#ifdef __GNUC__
+				#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 				__asm__ __volatile__
 				(
 					".intel_syntax noprefix\n"
@@ -10718,7 +10819,7 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 					".att_syntax prefix\n"
 				);
 				#endif
-				#ifdef _MSC_VER
+				#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 				_asm
 				{
 					mov	ecx, sxe
@@ -10964,20 +11065,20 @@ static equivectyp equivec;
 
 static inline long dmulshr0 (long a, long d, long s, long t)
 {
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
 		"mov	eax, a\n"
-		"imul	d\n"
+		"imul	dword ptr d\n"
 		"mov	ecx, eax\n"
 		"mov	eax, s\n"
-		"imul	t\n"
+		"imul	dword ptr t\n"
 		"add	eax, ecx\n"
 		".att_syntax prefix\n"
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		mov	eax, a
@@ -11356,7 +11457,7 @@ static void updatereflects (vx5sprite *spr)
 		((short *)kv6coladd)[1] = (short)((((long)(((short *)&fogcol)[1]))*i)>>1);
 		((short *)kv6coladd)[2] = (short)((((long)(((short *)&fogcol)[2]))*i)>>1);
 	#else
-		#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 		__asm__ __volatile__
 		(
 			".intel_syntax noprefix\n"
@@ -11368,7 +11469,7 @@ static void updatereflects (vx5sprite *spr)
 			".att_syntax prefix\n"
 		);
 		#endif
-		#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 		_asm
 		{
 			movq	mm0, fogcol
@@ -11427,7 +11528,7 @@ static void updatereflects (vx5sprite *spr)
 			lightlist[0][1] = (short)(tp.y*f);
 			lightlist[0][2] = (short)(tp.z*f);
 			lightlist[0][3] = (short)(g*128.f);
-			#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+			#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 			__asm__ __volatile__
 			(
 				".intel_syntax noprefix\n"
@@ -11451,7 +11552,7 @@ static void updatereflects (vx5sprite *spr)
 				".att_syntax prefix\n"
 			);
 			#endif
-			#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+			#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 			_asm
 			{
 				movq	mm6, lightlist[0]
@@ -11481,7 +11582,7 @@ static void updatereflects (vx5sprite *spr)
 			lightlist[0][1] = (short)(tp.y*f);
 			lightlist[0][2] = (short)(tp.z*f);
 			lightlist[0][3] = (short)(g*128.f);
-			#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+			#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 			__asm__ __volatile__
 			(
 				".intel_syntax noprefix\n"
@@ -11508,7 +11609,7 @@ static void updatereflects (vx5sprite *spr)
 				".att_syntax prefix\n"
 			);
 			#endif
-			#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+			#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 			_asm
 			{
 				punpcklbw	mm5, vx5.kv6col
@@ -11600,7 +11701,7 @@ static void updatereflects (vx5sprite *spr)
 		lightlist[lightcnt][1] = (short)((sprh.x*fx + sprh.y*fy + sprh.z*fz)*hh);
 		lightlist[lightcnt][2] = (short)((sprf.x*fx + sprf.y*fy + sprf.z*fz)*hh);
 		lightlist[lightcnt][3] = (short)(hh*(48/16.0));
-		#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 		__asm__ __volatile__
 		(
 			".intel_syntax noprefix\n"
@@ -11636,7 +11737,7 @@ static void updatereflects (vx5sprite *spr)
 			".att_syntax prefix\n"
 		);
 		#endif
-		#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 		_asm
 		{
 			punpcklbw	mm5, vx5.kv6col
@@ -11674,7 +11775,7 @@ static void updatereflects (vx5sprite *spr)
 	}
 }
 
-#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 static inline void movps (point4d *dest, point4d *src)
 {
 	__asm__ __volatile__
@@ -11896,7 +11997,7 @@ static inline void maxps_3dn (point4d *sum, point4d *a, point4d *b)
 	);
 }
 #endif
-#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 static inline void movps (point4d *dest, point4d *src)
 {
 	_asm
@@ -12260,7 +12361,7 @@ static void kv6draw (vx5sprite *spr)
 
 		subps(r1,r1,&cadd4[4]); //ANNOYING HACK!!!
 
-		#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 		__asm__ __volatile__
 		(
 			".intel_syntax noprefix\n"
@@ -12269,7 +12370,7 @@ static void kv6draw (vx5sprite *spr)
 			".att_syntax prefix\n"
 		);
 		#endif
-		#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 		_asm
 		{
 			movq	mm6, qsum0
@@ -12335,7 +12436,7 @@ static void kv6draw (vx5sprite *spr)
 		}
 		if ((unsigned long)inx < (unsigned long)kv->xsiz)
 		{
-			if ((x < nxplanemin) || (x >= nxplanemax)) { { CLEARMMX() } return;}
+			if ((x < nxplanemin) || (x >= nxplanemax)) { { clearMMX(); } return;}
 			yv = xv-kv->xlen[x];
 			subps(r1,r1,&cadd4[1]);
 			addps(r0,r1,r2);
@@ -12371,7 +12472,7 @@ static void kv6draw (vx5sprite *spr)
 
 		subps_3dn(r1,r1,&cadd4[4]); //ANNOYING HACK!!!
 
-		#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 		__asm__ __volatile__
 		(
 			".intel_syntax noprefix\n"
@@ -12380,7 +12481,7 @@ static void kv6draw (vx5sprite *spr)
 			".att_syntax prefix\n"
 		);
 		#endif
-		#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 		_asm
 		{
 			movq	mm6, qsum0
@@ -12446,7 +12547,7 @@ static void kv6draw (vx5sprite *spr)
 		}
 		if ((unsigned long)inx < (unsigned long)kv->xsiz)
 		{
-			if ((x < nxplanemin) || (x >= nxplanemax)) { { CLEARMMX() } return;}
+			if ((x < nxplanemin) || (x >= nxplanemax)) { { clearMMX(); } return;}
 			yv = xv-kv->xlen[x];
 			subps_3dn(r1,r1,&cadd4[1]);
 			addps_3dn(r0,r1,r2);
@@ -12470,7 +12571,7 @@ static void kv6draw (vx5sprite *spr)
 			}
 		}
 	}
-	CLEARMMX()
+	clearMMX();
 }
 
 //#endif huge #ifdef _msc_ver, not sure why needed when nothing is originally portable
@@ -12820,7 +12921,7 @@ void mat2 (point3d *a_s, point3d *a_h, point3d *a_f, point3d *a_o,
 {
 	if (cputype&(1<<25))
 	{
-		#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 		__asm__ __volatile__
 		(
 			".intel_syntax noprefix\n"
@@ -12920,7 +13021,7 @@ void mat2 (point3d *a_s, point3d *a_h, point3d *a_f, point3d *a_o,
 			".att_syntax prefix\n"
 		);
 		#endif
-		#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 		_asm
 		{
 			mov	eax, b_s
@@ -13238,16 +13339,16 @@ void setkv6 (vx5sprite *spr)
 	//dmulshr22 = ((a*b + c*d)>>22)
 static inline long dmulshr22 (long a, long b, long c, long d)
 {
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
 		"mov	eax, a\n"
-		"imul	b\n"
+		"imul	dword ptr b\n"
 		"mov	ecx, eax\n"
 		"push	edx\n"
 		"mov	eax, c\n"
-		"imul	d\n"
+		"imul	dword ptr d\n"
 		"add	eax, ecx\n"
 		"pop	ecx\n"
 		"adc	edx, ecx\n"
@@ -13255,7 +13356,7 @@ static inline long dmulshr22 (long a, long b, long c, long d)
 		".att_syntax prefix\n"
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		mov	eax, a
@@ -14024,7 +14125,7 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 										//g = 1.0/(g*sqrt(g))-lightsub[i]; //1.0/g;
 									if (cputype&(1<<25))
 									{
-										#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+										#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 										__asm__ __volatile__
 										(
 											".intel_syntax noprefix\n"
@@ -14038,7 +14139,7 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 											".att_syntax prefix\n"
 										);
 										#endif
-										#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+										#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 										_asm
 										{
 											movss	xmm0, g        //xmm0=g
@@ -14053,7 +14154,7 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 									}
 									else
 									{
-										#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+										#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 										__asm__ __volatile__
 										(
 											".intel_syntax noprefix\n"
@@ -14068,7 +14169,7 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 											".att_syntax prefix\n"
 										);
 										#endif
-										#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+										#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 										_asm
 										{
 											movd mm0, g
@@ -14607,7 +14708,7 @@ void voxsetframebuffer (long p, long b, long x, long y)
 			while (i < 2048) foglut[i++] = all32767;
 #else
 			i = 0x7fffffff/vx5.maxscandist;
-			#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+			#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 			__asm__ __volatile__
 			(
 				".intel_syntax noprefix\n"
@@ -14634,7 +14735,7 @@ void voxsetframebuffer (long p, long b, long x, long y)
 				".att_syntax prefix\n"
 			);
 			#endif
-			#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+			#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 			_asm
 			{
 				xor	eax, eax
@@ -14673,7 +14774,7 @@ unsigned long pngocrc, pngoadcrc;
 
 static inline unsigned long bswap (unsigned long a)
 {
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -14682,7 +14783,7 @@ static inline unsigned long bswap (unsigned long a)
 		".att_syntax prefix\n"
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		mov	eax, a
@@ -14829,7 +14930,7 @@ long surroundcapture32bit (dpoint3d *pos, const char *fname, long boxsiz)
 static inline void fixsse ()
 {
 	static long asm32;
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -14839,7 +14940,7 @@ static inline void fixsse ()
 		".att_syntax prefix\n"
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		stmxcsr	[asm32]   //Default is:0x1f80

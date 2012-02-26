@@ -6,11 +6,14 @@
 #include <stdlib.h>
 #include "../include/sysmain.h"
 #include "../include/voxlap5.h"
+
+#include "../include/porthacks.h"
+
 #define SCISSORDIST 1.0
 #define STEREOMODE 0  //0:no stereo (normal mode), 1:CrystalEyes, 2:Nuvision
 #define USETDHELP 0 //0:Ken's notepad style help, 1:Tom's keyboard graphic help
 
-#ifndef _WIN32
+#if defined(WIN16) or defined(DOS)
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -204,21 +207,21 @@ void emms ();
 	modify exact []\
 	value
 
-#else
+#endif
+#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+//#pragma warning(disable:4799) //I know how to use EMMS
 
-#pragma warning(disable:4799) //I know how to use EMMS
-
-static _inline void ftol (float f, long *a)
+static inline void ftol (float f, long *a)
 {
 	_asm
 	{
-		mov eax, a
-		fld f
-		fistp dword ptr [eax]
+		"mov eax, a\n\t"
+		"fld f\n\t"
+		"fistpl (%eax)\n\t"
 	}
 }
 
-static _inline void dcossin (double a, double *c, double *s)
+static inline void dcossin (double a, double *c, double *s)
 {
 	_asm
 	{
@@ -231,7 +234,7 @@ static _inline void dcossin (double a, double *c, double *s)
 	}
 }
 
-static _inline void clearbuf (void *d, long c, long a)
+static inline void clearbuf (void *d, long c, long a)
 {
 	_asm
 	{
@@ -242,7 +245,7 @@ static _inline void clearbuf (void *d, long c, long a)
 	}
 }
 
-static _inline void mmxcoloradd (long *a)
+static inline void mmxcoloradd (long *a)
 {
 	_asm
 	{
@@ -253,7 +256,7 @@ static _inline void mmxcoloradd (long *a)
 	}
 }
 
-static _inline void mmxcolorsub (long *a)
+static inline void mmxcolorsub (long *a)
 {
 	_asm
 	{
@@ -264,7 +267,7 @@ static _inline void mmxcolorsub (long *a)
 	}
 }
 
-static _inline long mulshr24 (long a, long d)
+static inline long mulshr24 (long a, long d)
 {
 	_asm
 	{
@@ -275,7 +278,7 @@ static _inline long mulshr24 (long a, long d)
 	}
 }
 
-static _inline long umulshr32 (long a, long d)
+static inline long umulshr32 (long a, long d)
 {
 	_asm
 	{
@@ -286,7 +289,91 @@ static _inline long umulshr32 (long a, long d)
 	}
 }
 
-static _inline void emms () { _asm emms }
+static inline void emms () { _asm emms }
+
+#endif
+#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+#pragma warning(disable:4799) //I know how to use EMMS
+
+static inline void ftol (float f, long *a)
+{
+	_asm
+	{
+		mov eax, a
+		fld f
+		fistp dword ptr [eax]
+	}
+}
+
+static inline void dcossin (double a, double *c, double *s)
+{
+	_asm
+	{
+		fld a
+		fsincos
+		mov eax, c
+		fstp qword ptr [eax]
+		mov eax, s
+		fstp qword ptr [eax]
+	}
+}
+
+static inline void clearbuf (void *d, long c, long a)
+{
+	_asm
+	{
+		mov edi, d
+		mov ecx, c
+		mov eax, a
+		rep stosd
+	}
+}
+
+static inline void mmxcoloradd (long *a)
+{
+	_asm
+	{
+		mov eax, a
+		movd mm0, [eax]
+		paddusb mm0, flashbrival
+		movd [eax], mm0
+	}
+}
+
+static inline void mmxcolorsub (long *a)
+{
+	_asm
+	{
+		mov eax, a
+		movd mm0, [eax]
+		psubusb mm0, flashbrival
+		movd [eax], mm0
+	}
+}
+
+static inline long mulshr24 (long a, long d)
+{
+	_asm
+	{
+		mov eax, a
+		mov edx, d
+		imul edx
+		shrd eax, edx, 24
+	}
+}
+
+static inline long umulshr32 (long a, long d)
+{
+	_asm
+	{
+		mov eax, a
+		mov edx, d
+		mul edx
+		mov eax, edx
+	}
+}
+
+static inline void emms () { _asm emms }
 
 #endif
 
@@ -338,55 +425,55 @@ void rgbcolselrend (long, long, long, long, long);
 static inline void rgbcolselinitinc (long a, long b, long c)
 {
 	__asm__
-	{
-		"mov a, %eax/n/t"
-		"mov b, %edx/n/t"
-		"mov c, %ecx/n/t"
-		"movd %ecx, %mm4/n/t"
-		"movd %edx, %mm0/n/t"
-		"punpckldq %mm0, %mm4/n/t"
-		"movd %eax, %mm5/n/t"
-	}
+	(
+		"mov a, %eax\n\t"
+		"mov b, %edx\n\t"
+		"mov c, %ecx\n\t"
+		"movd %ecx, %mm4\n\t"
+		"movd %edx, %mm0\n\t"
+		"punpckldq %mm0, %mm4\n\t"
+		"movd %eax, %mm5\n\t"
+	);
 }
 
 static inline void rgbcolselrend (long a, long b, long c, long t, long s)
 {
 	__asm__
-	{
-		"push %ebx/n/t"
-		"push %esi/n/t"
-		"push %edi/n/t"
-		"mov a, %eax/n/t"
-		"mov b, %ebx/n/t"
-		"mov c, %ecx/n/t"
-		"mov t, %edi/n/t"
-		"mov s, %esi/n/t"
-		"movd %ecx, %mm2/n/t"
-		"movd %ebx, %mm0/n/t"
-		"punpckldq %mm0, %mm2/n/t"
-		"movd %eax, %mm3/n/t"
-		"sub %esi, %edi/n/t"
-beg:
-		"movq %mm2, %mm0/n/t"
-		"packuswb %mm3, %mm0/n/t"
-		"paddd %mm4, %mm2/n/t"
-		"psrlw $8, %mm0/n/t"
-		"paddd %mm5, %mm3/n/t"
-		"packuswb %mm0, %mm0/n/t"
-		"movd %mm0, (%edi,%esi)/n/t"
-		"add $4, %edi/n/t"
-		"js short beg/n/t"
+	(
+		"push %ebx\n\t"
+		"push %esi\n\t"
+		"push %edi\n\t"
+		"mov a, %eax\n\t"
+		"mov b, %ebx\n\t"
+		"mov c, %ecx\n\t"
+		"mov t, %edi\n\t"
+		"mov s, %esi\n\t"
+		"movd %ecx, %mm2\n\t"
+		"movd %ebx, %mm0\n\t"
+		"punpckldq %mm0, %mm2\n\t"
+		"movd %eax, %mm3\n\t"
+		"sub %esi, %edi\n"
+	"beg:\n\t"
+		"movq %mm2, %mm0\n\t"
+		"packuswb %mm3, %mm0\n\t"
+		"paddd %mm4, %mm2\n\t"
+		"psrlw $8, %mm0\n\t"
+		"paddd %mm5, %mm3\n\t"
+		"packuswb %mm0, %mm0\n\t"
+		"movd %mm0, (%edi,%esi)\n\t"
+		"add $4, %edi\n\t"
+		"js short beg\n\t"
 
-		"pop %edi/n/t"
-		"pop %esi/n/t"
-		"pop %ebx/n/t"
-	}
+		"pop %edi\n\t"
+		"pop %esi\n\t"
+		"pop %ebx\n\t"
+	);
 }
 
 #endif
 #ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 
-static _inline void rgbcolselinitinc (long a, long b, long c)
+static inline void rgbcolselinitinc (long a, long b, long c)
 {
 	_asm
 	{
@@ -400,7 +487,7 @@ static _inline void rgbcolselinitinc (long a, long b, long c)
 	}
 }
 
-static _inline void rgbcolselrend (long a, long b, long c, long t, long s)
+static inline void rgbcolselrend (long a, long b, long c, long t, long s)
 {
 	_asm
 	{
@@ -2307,7 +2394,7 @@ long notepadinput ()
 }
 
 #if (USETDHELP != 0)
-#include "../include/kbdhelp.h"
+#include "kbdhelp.h"
 
 static struct {
 	long tf, tp, tx, ty; // tile
@@ -3037,9 +3124,9 @@ void doframe ()
 	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov dx, 0x378
-		mov al, byte ptr i
-		out dx, al
+		mov	dx, 0x378
+		mov	al, byte ptr i
+		out	dx, al
 	}
 	#endif
 #endif
@@ -4171,7 +4258,7 @@ void doframe ()
 			if (v = (char *)loadfileselect("LOAD SXL/VXL file...","SXL, VXL\0*.sxl;*.vxl\0All files (*.*)\0*.*\0\0","SXL"))
 			{
 				i = strlen(v);
-				if ((i >= 3) && (!stricmp(&v[i-4],".sxl")))
+				if ((i >= 3) && (!strcasecmp(&v[i-4],".sxl")))
 				{
 					strcpy(tfilenam,skyfilnam);
 					if (voxedloadsxl(v))
@@ -4697,9 +4784,9 @@ long initapp (long argc, char **argv)
 	for(i=argc-1;i>0;i--)
 	{
 		if (argv[i][0] != '/') { argfilindex = i; continue; }
-		if (!stricmp(&argv[i][1],"3dn")) { dausesse = 0; continue; }
-		if (!stricmp(&argv[i][1],"sse")) { dausesse = 1; continue; }
-		if (!stricmp(&argv[i][1],"win")) { fullscreen = 0; continue; }
+		if (!strcasecmp(&argv[i][1],"3dn")) { dausesse = 0; continue; }
+		if (!strcasecmp(&argv[i][1],"sse")) { dausesse = 1; continue; }
+		if (!strcasecmp(&argv[i][1],"win")) { fullscreen = 0; continue; }
 		//if (argv[i][1] == '?') { showinfo(); return(-1); }
 		if ((argv[i][1] >= '0') && (argv[i][1] <= '9'))
 		{
@@ -4754,17 +4841,17 @@ long initapp (long argc, char **argv)
 				//Hack to remove spaces at end (but why is this necessary?)
 			while ((i) && (vxlfilnam[i-1] == ' ')) { vxlfilnam[i-1] = 0; i--; }
 
-			if ((i >= 5) && (!stricmp(&vxlfilnam[i-4],".BSP")))
+			if ((i >= 5) && (!strcasecmp(&vxlfilnam[i-4],".BSP")))
 			{
 				loadbsp(vxlfilnam,&ipos,&istr,&ihei,&ifor);
 				initsxl();
 			}
-			else if ((i >= 5) && (!stricmp(&vxlfilnam[i-4],".PNG")))
+			else if ((i >= 5) && (!strcasecmp(&vxlfilnam[i-4],".PNG")))
 			{
 				loadpng(vxlfilnam,&ipos,&istr,&ihei,&ifor);
 				initsxl();
 			}
-			else if ((i >= 5) && (!stricmp(&vxlfilnam[i-4],".SXL")))
+			else if ((i >= 5) && (!strcasecmp(&vxlfilnam[i-4],".SXL")))
 			{
 				strcpy(sxlfilnam,vxlfilnam);
 				if (voxedloadsxl(sxlfilnam))
