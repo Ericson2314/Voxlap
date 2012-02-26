@@ -1,14 +1,14 @@
 // VOXLAP engine by Ken Silverman (http://advsys.net/ken)
 // This file has been modified from Ken Silverman's original release
 
-//#include "../include/inlineasm.h"
-
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include "../include/sysmain.h"
 #include "../include/voxlap5.h"
+
+#include "../include/porthacks.h"
 
 	//NUMSECRETS:actual num,1:1,2:1,4:2,8:5,16:8,32:14,64:26,128:49,256:87
 	//512:168,1024:293,2048:480,4096:711,8192:931
@@ -369,7 +369,11 @@ void botinit ()
 
 static inline void fcossin (float a, float *c, float *s)
 {
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#if defined(__NOASM__)
+	*c = cos(a);
+	*s = sin(a);
+	#endif
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -382,15 +386,15 @@ static inline void fcossin (float a, float *c, float *s)
 		".att_syntax prefix\n"
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		fld a
+		fld	a
 		fsincos
-		mov eax, c
-		fstp dword ptr [eax]
-		mov eax, s
-		fstp dword ptr [eax]
+		mov	eax, c
+		fstp	dword ptr [eax]
+		mov	eax, s
+		fstp	dword ptr [eax]
 	}
 	#endif
 }
@@ -521,7 +525,7 @@ long initmap ()
 				if (numsprites >= MAXSPRITES) continue; //OOPS! Just to be safe
 
 					//KLIGHT is dummy sprite for light sources - don't load it!
-				if (!stricmp(kv6nam,"KV6\\KLIGHT.KV6"))
+				if (!strcasecmp(kv6nam,"KV6\\KLIGHT.KV6"))
 				{
 					//Copy light position info here!
 					continue;
@@ -633,11 +637,11 @@ long initapp (long argc, char **argv)
 	for(i=argc-1;i>0;i--)
 	{
 		if ((argv[i][0] != '/') && (argv[i][0] != '-')) { argfilindex = i; continue; }
-		if (!stricmp(&argv[i][1],"win")) { fullscreen = 0; continue; }
-		if (!stricmp(&argv[i][1],"3dn")) { cpuoption = 0; continue; }
-		if (!stricmp(&argv[i][1],"sse")) { cpuoption = 1; continue; }
-		if (!stricmp(&argv[i][1],"sse2")) { cpuoption = 2; continue; }
-		//if (!stricmp(&argv[i][1],"?")) { showinfo(); return(-1); }
+		if (!strcasecmp(&argv[i][1],"win")) { fullscreen = 0; continue; }
+		if (!strcasecmp(&argv[i][1],"3dn")) { cpuoption = 0; continue; }
+		if (!strcasecmp(&argv[i][1],"sse")) { cpuoption = 1; continue; }
+		if (!strcasecmp(&argv[i][1],"sse2")) { cpuoption = 2; continue; }
+		//if (!strcasecmp(&argv[i][1],"?")) { showinfo(); return(-1); }
 		if ((argv[i][1] >= '0') && (argv[i][1] <= '9'))
 		{
 			k = 0; z = 0;
@@ -1326,14 +1330,14 @@ skipalldraw:;
 					typemessage[j-1] = 0;
 					if (typemessage[0] == '/')
 					{
-						if (!stricmp(&typemessage[1],"fps")) { showfps ^= 1; typemessage[0] = 0; }
-						if (!stricmp(&typemessage[1],"fallcheck")) { vx5.fallcheck ^= 1; typemessage[0] = 0; }
-						if (!stricmp(&typemessage[1],"sideshademode"))
+						if (!strcasecmp(&typemessage[1],"fps")) { showfps ^= 1; typemessage[0] = 0; }
+						if (!strcasecmp(&typemessage[1],"fallcheck")) { vx5.fallcheck ^= 1; typemessage[0] = 0; }
+						if (!strcasecmp(&typemessage[1],"sideshademode"))
 						{
 							if (!vx5.sideshademode) setsideshades(0,28,8,24,12,12); else setsideshades(0,4,1,3,2,2); //setsideshades(0,0,0,0,0,0);
 							typemessage[0] = 0;
 						}
-						if (!_memicmp(&typemessage[1],"faceshade=",10))
+						if (!memcasecmp(&typemessage[1],"faceshade=",10))
 						{
 							char *cptr;
 							tempbuf[0] = tempbuf[1] = tempbuf[2] = tempbuf[3] = tempbuf[4] = tempbuf[5] = 0;
@@ -1350,9 +1354,9 @@ skipalldraw:;
 							setsideshades(tempbuf[0],tempbuf[1],tempbuf[2],tempbuf[3],tempbuf[4],tempbuf[5]);
 							typemessage[0] = 0;
 						}
-						if (!stricmp(&typemessage[1],"curvy")) { if (curvystp >= 0) curvystp = ~curvystp; typemessage[0] = 0; }
-						if (!stricmp(&typemessage[1],"monst")) { disablemonsts ^= 1; typemessage[0] = 0; }
-						if (!stricmp(&typemessage[1],"light"))
+						if (!strcasecmp(&typemessage[1],"curvy")) { if (curvystp >= 0) curvystp = ~curvystp; typemessage[0] = 0; }
+						if (!strcasecmp(&typemessage[1],"monst")) { disablemonsts ^= 1; typemessage[0] = 0; }
+						if (!strcasecmp(&typemessage[1],"light"))
 						{
 							if (vx5.numlights < MAXLIGHTS)
 							{
@@ -1368,7 +1372,7 @@ skipalldraw:;
 							}
 							typemessage[0] = 0;
 						}
-						if (!stricmp(&typemessage[1],"lightclear"))
+						if (!strcasecmp(&typemessage[1],"lightclear"))
 						{
 							i = 128; //radius to use
 							for(j=vx5.numlights-1;j>=0;j--)
@@ -1376,13 +1380,13 @@ skipalldraw:;
 											  (long)vx5.lightsrc[j].p.x+i,(long)vx5.lightsrc[j].p.y+i,(long)vx5.lightsrc[j].p.z+i,0);
 							vx5.numlights = 0; typemessage[0] = 0;
 						}
-						if (!_memicmp(&typemessage[1],"lightmode=",10))
+						if (!memcasecmp(&typemessage[1],"lightmode=",10))
 						{
 							 vx5.lightmode = min(max(atoi(&typemessage[11]),0),2);
 							 updatebbox(0,0,0,VSID,VSID,MAXZDIM,0);
 							 typemessage[0] = 0;
 						}
-						if (!_memicmp(&typemessage[1],"curvy=",6))
+						if (!memcasecmp(&typemessage[1],"curvy=",6))
 						{
 							if (curvystp < 0) curvystp = ~curvystp;
 
@@ -1406,18 +1410,18 @@ skipalldraw:;
 							typemessage[0] = 0;
 						}
 
-						if (!_memicmp(&typemessage[1],"curvystp=",9)) { curvystp = atoi(&typemessage[10]); typemessage[0] = 0; }
-						if (!_memicmp(&typemessage[1],"scandist=",9)) { vx5.maxscandist = atoi(&typemessage[10]); typemessage[0] = 0; }
-						if (!_memicmp(&typemessage[1],"fogcol=",7)) { vx5.fogcol = strtol(&typemessage[8],0,0); typemessage[0] = 0; }
-						if (!_memicmp(&typemessage[1],"kv6col=",7)) { vx5.kv6col = strtol(&typemessage[8],0,0); typemessage[0] = 0; }
-						if (!_memicmp(&typemessage[1],"anginc=",7)) { vx5.anginc = atoi(&typemessage[8]); if (vx5.anginc > 0) lockanginc = 1; else { lockanginc = 0; vx5.anginc = 1; } typemessage[0] = 0; }
-						if (!_memicmp(&typemessage[1],"vxlmip=",7)) { vx5.mipscandist = atoi(&typemessage[8]); typemessage[0] = 0; }
-						if (!_memicmp(&typemessage[1],"kv6mip=",7)) { vx5.kv6mipfactor = atoi(&typemessage[8]); typemessage[0] = 0; }
-						if (!_memicmp(&typemessage[1],"health=",7)) { myhealth = atoi(&typemessage[8]); typemessage[0] = 0; }
-						if (!_memicmp(&typemessage[1],"numdynamite=",12)) { numdynamite = atoi(&typemessage[13]); typemessage[0] = 0; }
-						if (!_memicmp(&typemessage[1],"numjoystick=",12)) { numjoystick = atoi(&typemessage[13]); typemessage[0] = 0; }
-						if (!_memicmp(&typemessage[1],"showtarget=",11)) { showtarget = atoi(&typemessage[12]); typemessage[0] = 0; }
-						if (!_memicmp(&typemessage[1],"showhealth=",11)) { showhealth = atoi(&typemessage[12]); typemessage[0] = 0; }
+						if (!memcasecmp(&typemessage[1],"curvystp=",9)) { curvystp = atoi(&typemessage[10]); typemessage[0] = 0; }
+						if (!memcasecmp(&typemessage[1],"scandist=",9)) { vx5.maxscandist = atoi(&typemessage[10]); typemessage[0] = 0; }
+						if (!memcasecmp(&typemessage[1],"fogcol=",7)) { vx5.fogcol = strtol(&typemessage[8],0,0); typemessage[0] = 0; }
+						if (!memcasecmp(&typemessage[1],"kv6col=",7)) { vx5.kv6col = strtol(&typemessage[8],0,0); typemessage[0] = 0; }
+						if (!memcasecmp(&typemessage[1],"anginc=",7)) { vx5.anginc = atoi(&typemessage[8]); if (vx5.anginc > 0) lockanginc = 1; else { lockanginc = 0; vx5.anginc = 1; } typemessage[0] = 0; }
+						if (!memcasecmp(&typemessage[1],"vxlmip=",7)) { vx5.mipscandist = atoi(&typemessage[8]); typemessage[0] = 0; }
+						if (!memcasecmp(&typemessage[1],"kv6mip=",7)) { vx5.kv6mipfactor = atoi(&typemessage[8]); typemessage[0] = 0; }
+						if (!memcasecmp(&typemessage[1],"health=",7)) { myhealth = atoi(&typemessage[8]); typemessage[0] = 0; }
+						if (!memcasecmp(&typemessage[1],"numdynamite=",12)) { numdynamite = atoi(&typemessage[13]); typemessage[0] = 0; }
+						if (!memcasecmp(&typemessage[1],"numjoystick=",12)) { numjoystick = atoi(&typemessage[13]); typemessage[0] = 0; }
+						if (!memcasecmp(&typemessage[1],"showtarget=",11)) { showtarget = atoi(&typemessage[12]); typemessage[0] = 0; }
+						if (!memcasecmp(&typemessage[1],"showhealth=",11)) { showhealth = atoi(&typemessage[12]); typemessage[0] = 0; }
 					}
 					if (typemessage[0])
 					{

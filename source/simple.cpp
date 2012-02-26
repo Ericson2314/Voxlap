@@ -3,6 +3,9 @@
 
 #include "../include/sysmain.h"
 #include "../include/voxlap5.h"
+
+#include "../include/porthacks.h"
+
 dpoint3d ipos, istr, ihei, ifor;
 
 vx5sprite desklamp;

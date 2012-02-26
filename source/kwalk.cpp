@@ -15,6 +15,8 @@
 #include "../include/sysmain.h"
 #include "../include/voxlap5.h"
 
+#include "../include/porthacks.h"
+
 long kfatim = -1, okfatim = -1;
 
 dpoint3d ipos, istr, ihei, ifor;
@@ -89,7 +91,7 @@ seqtyp seq[MAXSEQS]; //32K
 
 extern "C" long zbufoff;
 
-static _inline void ftol (float f, long *a)
+static inline void ftol (float f, long *a)
 {
 	_asm
 	{
@@ -99,7 +101,7 @@ static _inline void ftol (float f, long *a)
 	}
 }
 
-static _inline void fcossin (float a, float *c, float *s)
+static inline void fcossin (float a, float *c, float *s)
 {
 	_asm
 	{
@@ -112,7 +114,7 @@ static _inline void fcossin (float a, float *c, float *s)
 	}
 }
 
-static _inline long scale (long a, long d, long c)
+static inline long scale (long a, long d, long c)
 {
 	_asm
 	{
@@ -124,7 +126,7 @@ static _inline long scale (long a, long d, long c)
 	}
 }
 
-static _inline long mulshr16 (long a, long d)
+static inline long mulshr16 (long a, long d)
 {
 	_asm
 	{
@@ -135,7 +137,7 @@ static _inline long mulshr16 (long a, long d)
 	}
 }
 
-static _inline long shldiv16 (long a, long b)
+static inline long shldiv16 (long a, long b)
 {
 	_asm
 	{
@@ -727,7 +729,7 @@ long initapp (long argc, char **argv)
 	for(i=argc-1;i>0;i--)
 	{
 		if (argv[i][0] != '/') { argfilindex = i; continue; }
-		if (!stricmp(&argv[i][1],"win")) { fullscreen = 0; continue; }
+		if (!strcasecmp(&argv[i][1],"win")) { fullscreen = 0; continue; }
 		//if (argv[i][1] == '?') { showinfo(); return(-1); }
 		if ((argv[i][1] >= '0') && (argv[i][1] <= '9'))
 		{
