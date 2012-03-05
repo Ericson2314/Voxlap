@@ -2385,13 +2385,13 @@ long clearscreen (long fillcolor)
 			{
 				j = p+i-12;
 				for(x=p;x<=j;x+=12)
-				{                             //  x-j ³0123³4567³89AB
-					*(long *)(x  ) = dacol[0]; // ÚÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄ¿
-					*(long *)(x+4) = dacol[1]; // ³ 12 ³    ³    ³    ³
-					*(long *)(x+8) = dacol[2]; // ³  9 ³BGR ³    ³    ³
-				}                             // ³  6 ³BGRB³GR  ³    ³
-				switch(x-j)                   // ³  3 ³BGRB³GRBG³R   ³
-				{                             // ÀÄÄÄÄÁÄÄÄÄÁÄÄÄÄÁÄÄÄÄÙ
+				{                             //  x-j Â³0123Â³4567Â³89AB
+					*(long *)(x  ) = dacol[0]; // ÃšÃ„Ã„Ã„Ã„Ã…Ã„Ã„Ã„Ã„Ã…Ã„Ã„Ã„Ã„Ã…Ã„Ã„Ã„Ã„Â¿
+					*(long *)(x+4) = dacol[1]; // Â³ 12 Â³    Â³    Â³    Â³
+					*(long *)(x+8) = dacol[2]; // Â³  9 Â³BGR Â³    Â³    Â³
+				}                             // Â³  6 Â³BGRBÂ³GR  Â³    Â³
+				switch(x-j)                   // Â³  3 Â³BGRBÂ³GRBGÂ³R   Â³
+				{                             // Ã€Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã™
 					case 9: *(short *)x = (short)dacol[0]; *(char *)(x+2) = (char)dacol[2]; break;
 					case 6: *(long *)x = dacol[0]; *(short *)(x+4) = (short)dacol[1]; break;
 					case 3: *(long *)x = dacol[0]; *(long *)(x+4) = dacol[1]; *(char *)(x+8) = (char)dacol[2]; break;

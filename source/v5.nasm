@@ -1,3 +1,4 @@
+; This file has been modified from Ken Silverman's original release
 ;CPU 686
 CPU P3
 

@@ -9,20 +9,20 @@ default:                      $(locBIN)/game.$(EXESuf) $(locBIN)/simple.$(EXESuf
 
 # executable (.$(EXESuf)) (meta)targets
 game:                         $(locBIN)/game.$(EXESuf)
-$(locBIN)/game.$(EXESuf):     $(locBIN)/game.$(OBJSuf)   $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kpLIB.$(OBJSuf) $(locBIN)/$(GFXdep)main1.$(OBJSuf)
-	$(LNK) $(LNKFLAGS)        $(locBIN)/game.$(OBJSuf)   $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kpLIB.$(OBJSuf) $(locBIN)/$(GFXdep)main1.$(OBJSuf) $(gameLIBs)
+$(locBIN)/game.$(EXESuf):     $(locBIN)/game.$(OBJSuf)   $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kplib.$(OBJSuf) $(locBIN)/$(GFXdep)main1.$(OBJSuf)
+	$(LNK) $(LNKFLAGS)        $(locBIN)/game.$(OBJSuf)   $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kplib.$(OBJSuf) $(locBIN)/$(GFXdep)main1.$(OBJSuf) $(gameLIBs)
 
 simple:                       $(locBIN)/simple.$(OBJSuf)
-$(locBIN)/simple.$(EXESuf):   $(locBIN)/simple.$(OBJSuf) $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kpLIB.$(OBJSuf) $(locBIN)/$(GFXdep)main1.$(OBJSuf)
-	$(LNK) $(LNKFLAGS)        $(locBIN)/simple.$(OBJSuf) $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kpLIB.$(OBJSuf) $(locBIN)/$(GFXdep)main1.$(OBJSuf) $(simpleLIBs)
+$(locBIN)/simple.$(EXESuf):   $(locBIN)/simple.$(OBJSuf) $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kplib.$(OBJSuf) $(locBIN)/$(GFXdep)main1.$(OBJSuf)
+	$(LNK) $(LNKFLAGS)        $(locBIN)/simple.$(OBJSuf) $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kplib.$(OBJSuf) $(locBIN)/$(GFXdep)main1.$(OBJSuf) $(simpleLIBs)
 
 voxed:                        $(locBIN)/voxed.$(OBJSuf)
-$(locBIN)/voxed.$(EXESuf):    $(locBIN)/voxed.$(OBJSuf)  $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kpLIB.$(OBJSuf) $(locBIN)/$(GFXdep)main2.$(OBJSuf)
-	$(LNK) $(LNKFLAGS)        $(locBIN)/voxed.$(OBJSuf)  $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kpLIB.$(OBJSuf) $(locBIN)/$(GFXdep)main2.$(OBJSuf) $(voxedLIBs)
+$(locBIN)/voxed.$(EXESuf):    $(locBIN)/voxed.$(OBJSuf)  $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kplib.$(OBJSuf) $(locBIN)/$(GFXdep)main2.$(OBJSuf)
+	$(LNK) $(LNKFLAGS)        $(locBIN)/voxed.$(OBJSuf)  $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kplib.$(OBJSuf) $(locBIN)/$(GFXdep)main2.$(OBJSuf) $(voxedLIBs)
 
 kwalk:                        $(locBIN)/kwalk.$(OBJSuf)
-$(locBIN)/kwalk.$(EXESuf):    $(locBIN)/kwalk.$(OBJSuf)  $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kpLIB.$(OBJSuf) $(locBIN)/$(GFXdep)main2.$(OBJSuf)
-	$(LNK) $(LNKFLAGS)        $(locBIN)/kwalk.$(OBJSuf)  $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kpLIB.$(OBJSuf) $(locBIN)/$(GFXdep)main2.$(OBJSuf) $(kwalkLIBs)
+$(locBIN)/kwalk.$(EXESuf):    $(locBIN)/kwalk.$(OBJSuf)  $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kplib.$(OBJSuf) $(locBIN)/$(GFXdep)main2.$(OBJSuf)
+	$(LNK) $(LNKFLAGS)        $(locBIN)/kwalk.$(OBJSuf)  $(locBIN)/voxlap5.$(OBJSuf) $(locBIN)/v5.$(OBJSuf) $(locBIN)/kplib.$(OBJSuf) $(locBIN)/$(GFXdep)main2.$(OBJSuf) $(kwalkLIBs)
 
 
 # binary object (.$(OBJSuf)) targets
