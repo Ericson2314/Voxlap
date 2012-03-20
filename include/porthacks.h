@@ -115,8 +115,8 @@ static int filnamcmp (const char *st0, const char *st1)
 #ifdef _MSC_VER
 //#if defined(_WIN32) & !defined(__GNUC__) //maybe this is better
 
-//#define strcasecmp _stricmp
-//#define memcasecmp _memicmp
+#define strcasecmp _stricmp
+#define memcasecmp _memicmp
 
 #endif
 

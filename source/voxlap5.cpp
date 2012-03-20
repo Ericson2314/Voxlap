@@ -10,10 +10,12 @@
 
 #define USEZBUFFER 1
 
+//#define __NOASM__
+
 #define PREC (256*4096)
 #define CMPPREC (256*4096)
 #define FPREC (256*4096)
-#define USEV5ASM 1
+//#define USEV5ASM 1 //now done via makefile
 #define SCISDIST 1.0
 #define GOLDRAT 0.3819660112501052 //Golden Ratio: 1 - 1/((sqrt(5)+1)/2)
 #define ESTNORMRAD 2 //Specially optimized for 2: DON'T CHANGE unless testing!
@@ -21,13 +23,15 @@
 #ifdef _WIN32
 	#define WIN32_LEAN_AND_MEAN
 	#include <windows.h>
-#elifdef DOS
+#else
+#ifdef _DOS
 	#include <stdarg.h>
 	#include <stdio.h>
 	#include <string.h>
 	#include <conio.h>
 	#include <dos.h>
 	#define MAX_PATH 260
+#endif
 #endif
 #include <stdlib.h>
 
@@ -95,7 +99,7 @@ typedef struct { long x, y; } lpoint2d;
 typedef struct { float x, y; } point2d;
 #pragma pack(pop)
 
-#if USEV5ASM
+#if (defined(USEV5ASM) && (USEV5ASM != 0)) //if true
 #ifndef __cplusplus
 	extern void *cfasm;
 	extern castdat skycast;
@@ -1436,7 +1440,7 @@ void gline (long leng, float x0, float y0, float x1, float y1)
 	float f, f1, f2, vd0, vd1, vz0, vx1, vy1, vz1;
 	long j;
 	cftype *c;
-#if (USEV5ASM == 0)
+#if (!defined(USEV5ASM) || (USEV5ASM == 0)) //if false
 	long gx, ogx, gy, ixy, col, dax, day;
 	cftype *c2, *ce;
 	char *v;
@@ -1497,7 +1501,7 @@ void gline (long leng, float x0, float y0, float x1, float y1)
 #endif
 
 		//Clip borders safely (MUST use integers!) - don't wrap around
-#if ((USEZBUFFER == 1) && (USEV5ASM != 0))
+#if ((USEZBUFFER == 1) && (defined(USEV5ASM) && (USEV5ASM != 0))) //if USEV5ASM is true
 	skycast.dist = gxmax;
 #endif
 	if (gixy[0] < 0) j = glipos.x; else j = VSID-1-glipos.x;
@@ -1505,7 +1509,7 @@ void gline (long leng, float x0, float y0, float x1, float y1)
 	if (q < (unsigned __int64)gxmax)
 	{
 		gxmax = (long)q;
-#if ((USEZBUFFER == 1) && (USEV5ASM != 0))
+#if ((USEZBUFFER == 1) && (defined(USEV5ASM) && (USEV5ASM != 0)))
 		skycast.dist = 0x7fffffff;
 #endif
 	}
@@ -1514,7 +1518,7 @@ void gline (long leng, float x0, float y0, float x1, float y1)
 	if (q < (unsigned __int64)gxmax)
 	{
 		gxmax = (long)q;
-#if ((USEZBUFFER == 1) && (USEV5ASM != 0))
+#if ((USEZBUFFER == 1) && (defined(USEV5ASM) && (USEV5ASM != 0)))
 		skycast.dist = 0x7fffffff;
 #endif
 	}
@@ -1525,7 +1529,7 @@ void gline (long leng, float x0, float y0, float x1, float y1)
 		gcsub[1] = gcsub[(((unsigned long)gixy[1])>>31)+6];
 	}
 
-#if USEV5ASM
+#if (defined(USEV5ASM) && (USEV5ASM != 0)) //if true
 	if (nskypic)
 	{
 		if (skycurlng < 0)
@@ -3521,6 +3525,222 @@ void vrendzfogsse (long sx, long sy, long p1, long iplc, long iinc)
 		"lea	(%ecx,%edx,4),%edx\n\t"
 		"lea	(%ecx,%esi,4),%edi\n\t"
 
+		shufps	xmm0, xmm0, 0
+		shufps	xmm1, xmm1, 0
+		movaps	xmm2, opti4asm[2*16]
+		movaps	xmm3, opti4asm[3*16]
+		addps	xmm0, opti4asm[0*16]
+		addps	xmm1, opti4asm[1*16]
+			;xmm0	=  xmm0      ^2 +  xmm1      ^2        (p)
+			;xmm2	= (xmm0+xmm2)^2 + (xmm1+xmm3)^2 - xmm0 (v)
+			;xmm1	= ...                                  (a)
+		addps	xmm2, xmm0  ;This block converts inner loop...
+		addps	xmm3, xmm1  ;from: 1 / sqrt(x*x + y*y), x += xi, y += yi;
+		mulps	xmm0, xmm0  ;  to: 1 / sqrt(p), p += v, v += a;
+		mulps	xmm1, xmm1
+		mulps	xmm2, xmm2
+		mulps	xmm3, xmm3
+		addps	xmm0, xmm1
+		movaps	xmm1, opti4asm[4*16]
+		addps	xmm2, xmm3
+		subps	xmm2, xmm0
+
+		mov	p1, edx
+		mov	ecx, zbufoff
+		shl	esi, 2
+		add	esi, uurend
+		mov	ebx, iplc
+
+		cmp	edi, edx
+		jae	short endv
+
+			;Do	first 0-3 pixels to align unrolled loop of 4
+		test	edi, 15
+		jz	short skip1va
+
+		test	edi, 8
+		jz	short skipshufc
+		shufps	xmm0, xmm0, 0x4e ;rotate right by 2
+skipshufc:
+		test	edi, 4
+		jz	short skipshufd
+		shufps	xmm0, xmm0, 0x39 ;rotate right by 1
+skipshufd:
+
+beg1va:
+		mov	edx, [esi]
+		mov	eax, [esi+MAXXDIM*4]
+		add	eax, edx
+		sar	edx, 16
+		mov	edx, angstart[edx*4]
+		mov	[esi], eax
+		mov	eax, [edx+ebx*8]
+		mov	[edi], eax
+		cvtsi2ss	xmm7, [edx+ebx*8+4]
+		rsqrtss	xmm3, xmm0
+		mulss	xmm7, xmm3
+		shufps	xmm0, xmm0, 0x39 ;rotate right by 1
+		movss	[edi+ecx], xmm7
+		add	ebx, iinc
+		add	esi, 4
+		add	edi, 4
+		cmp	edi, p1
+		jz	short endv
+		test	edi, 15
+		jnz	short beg1va
+
+		addps	xmm0, xmm2
+		addps	xmm2, xmm1
+skip1va:
+		lea	edx, [edi+16]
+		cmp	edx, p1
+		ja	short prebeg1v
+
+		cmp	iinc, 0
+		jl	short beg4vn
+
+beg4vp:
+		movq	mm6, [esi]
+		movq	mm7, [esi+8]
+		pextrw	eax, mm6, 1
+		pextrw	edx, mm6, 3
+		paddd	mm6, [esi+MAXXDIM*4]
+		mov	eax, angstart[eax*4]
+		mov	edx, angstart[edx*4]
+		movq	mm0, [eax+ebx*8]
+		movq	mm1, [edx+ebx*8+8]
+		pextrw	eax, mm7, 1
+		pextrw	edx, mm7, 3
+		paddd	mm7, [esi+8+MAXXDIM*4]
+		mov	eax, angstart[eax*4]
+		mov	edx, angstart[edx*4]
+		movq	mm2, [eax+ebx*8+16]
+		movq	mm3, [edx+ebx*8+24]
+		add	ebx, 4
+
+		movq	mm4, mm0
+		movq	mm5, mm2
+		punpckldq	mm0, mm1
+		punpckldq	mm2, mm3
+		movntq	[edi], mm0
+		movntq	[edi+8], mm2
+
+		punpckhdq	mm4, mm1
+		punpckhdq	mm5, mm3
+		cvtpi2ps	xmm7, mm4
+		cvtpi2ps	xmm4, mm5
+		rsqrtps	xmm3, xmm0
+		movlhps	xmm7, xmm4
+		mulps	xmm7, xmm3
+		movntps	[edi+ecx], xmm7
+		addps	xmm0, xmm2
+		addps	xmm2, xmm1
+
+		movq	[esi], mm6
+		movq	[esi+8], mm7
+
+		add	esi, 16
+		add	edi, 16
+		lea	edx, [edi+16]
+		cmp	edx, p1
+		jbe	short beg4vp
+		cmp	edi, p1
+		jae	short endv
+		jmp	short prebeg1v
+
+beg4vn:
+		movq	mm6, [esi]
+		movq	mm7, [esi+8]
+		pextrw	eax, mm6, 1
+		pextrw	edx, mm6, 3
+		paddd	mm6, [esi+MAXXDIM*4]
+		mov	eax, angstart[eax*4]
+		mov	edx, angstart[edx*4]
+		movq	mm0, [eax+ebx*8]
+		movq	mm1, [edx+ebx*8-8]
+		pextrw	eax, mm7, 1
+		pextrw	edx, mm7, 3
+		paddd	mm7, [esi+8+MAXXDIM*4]
+		mov	eax, angstart[eax*4]
+		mov	edx, angstart[edx*4]
+		movq	mm2, [eax+ebx*8-16]
+		movq	mm3, [edx+ebx*8-24]
+		sub	ebx, 4
+
+		movq	mm4, mm0
+		movq	mm5, mm2
+		punpckldq	mm0, mm1
+		punpckldq	mm2, mm3
+		movntq	[edi], mm0
+		movntq	[edi+8], mm2
+
+		punpckhdq	mm4, mm1
+		punpckhdq	mm5, mm3
+		cvtpi2ps	xmm7, mm4
+		cvtpi2ps	xmm4, mm5
+		rsqrtps	xmm3, xmm0
+		movlhps	xmm7, xmm4
+		mulps	xmm7, xmm3
+		movntps	[edi+ecx], xmm7
+		addps	xmm0, xmm2
+		addps	xmm2, xmm1
+
+		movq	[esi], mm6
+		movq	[esi+8], mm7
+
+		add	esi, 16
+		add	edi, 16
+		lea	edx, [edi+16]
+		cmp	edx, p1
+		jbe	short beg4vn
+		cmp	edi, p1
+		jae	short endv
+
+prebeg1v:
+beg1v:
+		mov	edx, [esi]
+		mov	eax, [esi+MAXXDIM*4]
+		add	eax, edx
+		sar	edx, 16
+		mov	edx, angstart[edx*4]
+		mov	[esi], eax
+		mov	eax, [edx+ebx*8]
+		mov	[edi], eax
+		cvtsi2ss	xmm7, [edx+ebx*8+4]
+		rsqrtss	xmm3, xmm0
+		mulss	xmm7, xmm3
+		shufps	xmm0, xmm0, 0x39 ;rotate right by 1
+		movss	[edi+ecx], xmm7
+		add	ebx, iinc
+		add	esi, 4
+		add	edi, 4
+		cmp	edi, p1
+		jne	short beg1v
+endv:
+		pop	edi
+		pop	esi
+		pop	ebx
+	}
+	#endif
+}
+
+void vrendzfogsse (long sx, long sy, long p1, long iplc, long iinc)
+{
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		"push	%ebx\n\t"
+		"push	%esi\n\t"
+		"push	%edi\n"
+"begvasm_p3:\n\t"
+		"mov	sx,%esi\n\t"
+		"mov	sy,%eax\n\t"
+		"mov	p1,%edx\n\t"
+		"mov	ylookup(,%eax,4),%ecx\n\t"
+		"add	frameplace,%ecx\n\t"
+		"lea	(%ecx,%edx,4),%edx\n\t"
+		"lea	(%ecx,%esi,4),%edi\n\t"
+
 		"mov	%esi,%ecx\n\t"
 		"and	$0xfffffffc,%ecx\n\t"
 		"cvtsi2ss	%ecx,%xmm0\n\t"
@@ -4289,16 +4509,16 @@ void hrendz3dn (long sx, long sy, long p1, long plc, long incr, long j)
 beg:
 		pextrw	eax, mm6, 1
 		mov	eax, angstart[eax*4]
-		movq	mm2, [eax+edx*8]   ;mm2:      dist       col
-		pshufw	mm3, mm2, 0xee   ;mm3:         ?      dist
-		pi2fd	mm3, mm3          ;mm3:         ?   (f)dist
-		movq	mm4, mm0           ;mm4:      diry      dirx
-		pfmul	mm4, mm4          ;mm4:    diry^2    dirx^2
-		pfadd	mm0, mm1          ;mm0: dirx+optx diry+opty (unrelated)
-		pfacc	mm4, mm4          ;mm4: (x^2+y^2)   x^2+y^2
-		pfrsqrt	mm4, mm4        ;mm4: 1/sqrt(*) 1/sqrt(*)
-		pfmul	mm3, mm4          ;mm3:         0    zvalue
-		paddd	mm6, mm7          ;mm6:            plc+incr (unrelated)
+		movq	mm2, [eax+edx*8] //mm2:      dist       col
+		pshufw	mm3, mm2, 0xee   //mm3:         ?      dist
+		pi2fd	mm3, mm3         //mm3:         ?   (f)dist
+		movq	mm4, mm0         //mm4:      diry      dirx
+		pfmul	mm4, mm4         //mm4:    diry^2    dirx^2
+		pfadd	mm0, mm1         //mm0: dirx+optx diry+opty (unrelated)
+		pfacc	mm4, mm4         //mm4: (x^2+y^2)   x^2+y^2
+		pfrsqrt	mm4, mm4         //mm4: 1/sqrt(*) 1/sqrt(*)
+		pfmul	mm3, mm4         //mm3:         0    zvalue
+		paddd	mm6, mm7         //mm6:            plc+incr (unrelated)
 		movd	[edi], mm2
 		movd	[edi+ecx], mm3
 		add	edi, 4
@@ -4311,6 +4531,77 @@ beg:
 
 void hrendzfog3dn (long sx, long sy, long p1, long plc, long incr, long j)
 {
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		"push	%esi\n\t"
+		"push	%edi\n\t"
+		"mov	sy,%eax\n\t"
+		"mov	ylookup(,%eax,4),%eax\n\t"
+		"add	frameplace,%eax\n\t"
+		"mov	p1,%esi\n\t"
+		"lea	(%eax,%esi,4),%esi   \n\t" //esi = p1
+		"mov	sx,%edi\n\t"
+		"lea	(%eax,%edi,4),%edi   \n\t" //edi = p0
+
+		"movl	sx,%mm0\n\t"
+		"punpckldq	sy,%mm0\n\t"
+		"pi2fd	%mm0,%mm0         \n\t" //mm0: (float)sy (float)sx
+		"pshufw	%mm0,0xee,%mm2  \n\t" //mm2: (float)sy (float)sy
+		"punpckldq	%mm0,%mm0     \n\t" //mm0: (float)sx (float)sx
+		"movl	optistrx,%mm1\n\t"
+		"punpckldq	optistry,%mm1\n\t"
+		"pfmul	%mm1,%mm0         \n\t" //mm0: (float)sx*optistry (float)sx*optistrx
+		"movl	optiheix,%mm3\n\t"
+		"punpckldq	optiheiy,%mm3\n\t"
+		"pfmul	%mm3,%mm2         \n\t" //mm2: (float)sy*optiheiy (float)sy*optiheix
+		"pfadd	%mm2,%mm0\n\t"
+		"movl	optiaddx,%mm3\n\t"
+		"punpckldq	optiaddy,%mm3\n\t" //mm3: optiaddy optiaddx
+		"pfadd	%mm3,%mm0         \n\t" //mm0: diry diry
+
+		"pxor	%mm5,%mm5\n\t"
+
+		"movl	plc,%mm6\n\t"
+		"movl	incr,%mm7\n\t"
+		"mov	zbufoff,%ecx\n\t"
+		"mov	j,%edx\n"
+
+"beg:\n\t"
+		"pextrw	%mm6,1,%eax\n\t"
+		"mov	angstart(,%eax,4),%eax\n\t"
+		"movq	(%eax,%edx,8),%mm2  \n\t" //mm2:      dist       col
+		"pshufw	%mm2,0xee,%mm3  \n\t" //mm3:         ?      dist
+		"pi2fd	%mm3,%mm3         \n\t" //mm3:         ?   (f)dist
+		"movq	%mm0,%mm4          \n\t" //mm4:      diry      dirx
+		"pfmul	%mm4,%mm4         \n\t" //mm4:    diry^2    dirx^2
+		"pfadd	%mm1,%mm0         \n\t" //mm0: dirx+optx diry+opty (unrelated)
+		"pfacc	%mm4,%mm4         \n\t" //mm4: (x^2+y^2)   x^2+y^2
+		"pfrsqrt	%mm4,%mm4       \n\t" //mm4: 1/sqrt(*) 1/sqrt(*)
+		"pfmul	%mm4,%mm3         \n\t" //mm3:         0    zvalue
+		"paddd	%mm7,%mm6         \n\t" //mm6:            plc+incr (unrelated)
+
+				//Extra calculations for fog\n\t"
+		"pextrw	%mm2,3,%eax\n\t"
+		"punpcklbw	%mm5,%mm2\n\t"
+		"movq	fogcol,%mm4\n\t"
+		"psubw	%mm2,%mm4\n\t"
+		"paddw	%mm4,%mm4\n\t"
+		"shr	$4,%eax\n\t"
+		"pmulhw	foglut(,%eax,8),%mm4\n\t"
+		"paddw	%mm4,%mm2\n\t"
+		"packuswb	%mm4,%mm2\n\t"
+
+		"movl	%mm2,(%edi)\n\t"
+		"movl	%mm3,(%edi,%ecx)\n\t"
+		"add	$4,%edi\n\t"
+		"cmp	%esi,%edi\n\t"
+		"jb	beg\n\t"
+		"pop	%edi\n\t"
+		"pop	%esi\n\t"
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		push	esi
@@ -4383,6 +4674,73 @@ beg:
 
 void vrendzsse (long sx, long sy, long p1, long iplc, long iinc)
 {
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		"push	%ebx\n\t"
+		"push	%esi\n\t"
+		"push	%edi\n\t"
+		"mov	p1,%esi\n\t"
+		"mov	sx,%edi\n\t"
+		"cmp	%esi,%edi\n\t"
+		"jae	endv\n\t"
+		"mov	sy,%eax\n\t"
+		"mov	ylookup(,%eax,4),%eax\n\t"
+		"add	frameplace,%eax\n\t"
+		"lea	(%eax,%esi,4),%esi   \n\t" //esi = p1
+		"lea	(%eax,%edi,4),%edi   \n\t" //edi = p0
+
+		"movl	sx,%mm0\n\t"
+		"punpckldq	sy,%mm0\n\t"
+		"pi2fd	%mm0,%mm0         \n\t" //mm0: (float)sy (float)sx
+		"pshufw	%mm0,0xee,%mm2  \n\t" //mm2: (float)sy (float)sy
+		"punpckldq	%mm0,%mm0     \n\t" //mm0: (float)sx (float)sx
+		"movl	optistrx,%mm1\n\t"
+		"punpckldq	optistry,%mm1\n\t"
+		"pfmul	%mm1,%mm0         \n\t" //mm0: (float)sx*optistry (float)sx*optistrx
+		"movl	optiheix,%mm3\n\t"
+		"punpckldq	optiheiy,%mm3\n\t"
+		"pfmul	%mm3,%mm2         \n\t" //mm2: (float)sy*optiheiy (float)sy*optiheix
+		"pfadd	%mm2,%mm0\n\t"
+		"movl	optiaddx,%mm3\n\t"
+		"punpckldq	optiaddy,%mm3\n\t" //mm3: optiaddy optiaddx
+		"pfadd	%mm3,%mm0         \n\t" //mm0: diry diry
+
+		"mov	zbufoff,%ecx\n\t"
+		"mov	iplc,%edx\n\t"
+		"mov	sx,%ebx\n\t"
+		"mov	uurend,%eax\n\t"
+		"lea	(%eax,%ebx,4),%ebx\n"
+
+"begv_3dn:\n\t"
+		"movl	(%ebx),%mm5\n\t"
+		"pextrw	%mm5,1,%eax\n\t"
+		"paddd	MAXXDIM(,%ebx,4),%mm5\n\t"
+		"movl	%mm5,(%ebx)\n\t"
+		"mov	angstart(,%eax,4),%eax\n\t"
+		"movq	(%eax,%edx,8),%mm2  \n\t" //mm2:      dist       col
+		"pshufw	%mm2,0xee,%mm3  \n\t" //mm3:         ?      dist
+		"pi2fd	%mm3,%mm3         \n\t" //mm3:         ?   (f)dist
+		"movq	%mm0,%mm4          \n\t" //mm4:      diry      dirx
+		"pfmul	%mm4,%mm4         \n\t" //mm4:    diry^2    dirx^2
+		"pfadd	%mm1,%mm0         \n\t" //mm0: dirx+optx diry+opty (unrelated)
+		"pfacc	%mm4,%mm4         \n\t" //mm4: (x^2+y^2)   x^2+y^2
+		"pfrsqrt	%mm4,%mm4       \n\t" //mm4: 1/sqrt(*) 1/sqrt(*)
+		"pfmul	%mm4,%mm3         \n\t" //mm3:         0    zvalue
+		"movl	%mm2,(%edi)\n\t"
+		"movl	%mm3,(%edi,%ecx)\n\t"
+		"add	iinc,%edx\n\t"
+		"add	$4,%ebx\n\t"
+		"add	$4,%edi\n\t"
+		"cmp	%esi,%edi\n\t"
+		"jb	begv_3dn\n"
+"endv:\n\t"
+		"pop	%edi\n\t"
+		"pop	%esi\n\t"
+		"pop	%ebx\n\t"
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		push	ebx
@@ -4441,9 +4799,23 @@ begvasm_p3:
 		cmp	edi, edx
 		jae	short endv
 
-			;Do	first 0-3 pixels to align unrolled loop of 4
-		test	edi, 15
-		jz	short skip1va
+void vrendzfog3dn (long sx, long sy, long p1, long iplc, long iinc)
+{
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		"push	%ebx\n\t"
+		"push	%esi\n\t"
+		"push	%edi\n\t"
+		"mov	p1,%esi\n\t"
+		"mov	sx,%edi\n\t"
+		"cmp	%esi,%edi\n\t"
+		"jae	endv\n\t"
+		"mov	sy,%eax\n\t"
+		"mov	ylookup(,%eax,4),%eax\n\t"
+		"add	frameplace,%eax\n\t"
+		"lea	(%eax,%esi,4),%esi   \n\t" //esi = p1
+		"lea	(%eax,%edi,4),%edi   \n\t" //edi = p0
 
 		test	edi, 8
 		jz	short skipshufc
@@ -5153,7 +5525,7 @@ void opticast ()
 	ftol(gipos.z*PREC-.5f,&gposz);
 	gposxfrac[1] = gipos.x - (float)glipos.x; gposxfrac[0] = 1-gposxfrac[1];
 	gposyfrac[1] = gipos.y - (float)glipos.y; gposyfrac[0] = 1-gposyfrac[1];
-#if USEV5ASM
+#if (defined(USEV5ASM) && (USEV5ASM != 0)) //if true
 	for(j=u=0;j<gmipnum;j++,u+=i)
 		for(i=0;i<(256>>j)+4;i++)
 			gylookup[i+u] = ((((gposz>>j)-i*PREC)>>(16-j))&0x0000ffff);
