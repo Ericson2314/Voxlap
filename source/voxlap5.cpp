@@ -12,12 +12,12 @@
 
 #define USEZBUFFER 1
 
-#define __NOASM__
+//#define __NOASM__
 
 #define PREC (256*4096)
 #define CMPPREC (256*4096)
 #define FPREC (256*4096)
-#define USEV5ASM 0 //was 1, aka v5.?asm was used instead of portable C/C++
+//#define USEV5ASM 1 //now done via makefile
 #define SCISDIST 1.0
 #define GOLDRAT 0.3819660112501052 //Golden Ratio: 1 - 1/((sqrt(5)+1)/2)
 #define ESTNORMRAD 2 //Specially optimized for 2: DON'T CHANGE unless testing!
@@ -25,7 +25,8 @@
 #ifdef _WIN32
 	#define WIN32_LEAN_AND_MEAN
 	#include <windows.h>
-#elifdef _DOS
+#else
+#ifdef _DOS
 	#include <stdarg.h>
 	#include <stdio.h>
 	#include <string.h>
@@ -34,6 +35,7 @@
 	#define MAX_PATH 260
 #else //POSIX
 	#define MAX_PATH PATH_MAX
+#endif
 #endif
 #include <stdlib.h>
 
@@ -101,7 +103,7 @@ typedef struct { long x, y; } lpoint2d;
 typedef struct { float x, y; } point2d;
 #pragma pack(pop)
 
-#if USEV5ASM
+#if (defined(USEV5ASM) && (USEV5ASM != 0)) //if true
 	#ifndef __cplusplus
 		extern void *cfasm;
 		extern castdat skycast;
@@ -1465,7 +1467,7 @@ void gline (long leng, float x0, float y0, float x1, float y1)
 	float f, f1, f2, vd0, vd1, vz0, vx1, vy1, vz1;
 	long j;
 	cftype *c;
-#if (USEV5ASM == 0)
+#if (!defined(USEV5ASM) || (USEV5ASM == 0)) //if false
 	long gx, ogx, gy, ixy, col, dax, day;
 	cftype *c2, *ce;
 	char *v;
@@ -1526,7 +1528,7 @@ void gline (long leng, float x0, float y0, float x1, float y1)
 #endif
 
 		//Clip borders safely (MUST use integers!) - don't wrap around
-#if ((USEZBUFFER == 1) && (USEV5ASM != 0))
+#if ((USEZBUFFER == 1) && (defined(USEV5ASM) && (USEV5ASM != 0))) //if USEV5ASM is true
 	skycast.dist = gxmax;
 #endif
 	if (gixy[0] < 0) j = glipos.x; else j = VSID-1-glipos.x;
@@ -1534,7 +1536,7 @@ void gline (long leng, float x0, float y0, float x1, float y1)
 	if (q < (uint64_t)gxmax)
 	{
 		gxmax = (long)q;
-#if ((USEZBUFFER == 1) && (USEV5ASM != 0))
+#if ((USEZBUFFER == 1) && (defined(USEV5ASM) && (USEV5ASM != 0)))
 		skycast.dist = 0x7fffffff;
 #endif
 	}
@@ -1543,18 +1545,18 @@ void gline (long leng, float x0, float y0, float x1, float y1)
 	if (q < (uint64_t)gxmax)
 	{
 		gxmax = (long)q;
-#if ((USEZBUFFER == 1) && (USEV5ASM != 0))
+#if ((USEZBUFFER == 1) && (defined(USEV5ASM) && (USEV5ASM != 0)))
 		skycast.dist = 0x7fffffff;
 #endif
 	}
-
+	
 	if (vx5.sideshademode)
 	{
 		gcsub[0] = gcsub[(((unsigned long)gixy[0])>>31)+4];
 		gcsub[1] = gcsub[(((unsigned long)gixy[1])>>31)+6];
 	}
 
-#if USEV5ASM
+#if (defined(USEV5ASM) && (USEV5ASM != 0)) //if true
 	if (nskypic)
 	{
 		if (skycurlng < 0)
@@ -3848,7 +3850,7 @@ endv:
 
 void vrendzfogsse (long sx, long sy, long p1, long iplc, long iinc)
 {
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
 		"push	%ebx\n\t"
@@ -4626,7 +4628,7 @@ beg:
 		pfacc	mm4, mm4         //mm4: (x^2+y^2)   x^2+y^2
 		pfrsqrt	mm4, mm4         //mm4: 1/sqrt(*) 1/sqrt(*)
 		pfmul	mm3, mm4         //mm3:         0    zvalue
-		paddd	mm6, mm7         mm6:            plc+incr (unrelated)
+		paddd	mm6, mm7         //mm6:            plc+incr (unrelated)
 		movd	[edi], mm2
 		movd	[edi+ecx], mm3
 		add	edi, 4
@@ -4640,7 +4642,7 @@ beg:
 
 void hrendzfog3dn (long sx, long sy, long p1, long plc, long incr, long j)
 {
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
 		"push	%esi\n\t"
@@ -4784,7 +4786,7 @@ beg:
 
 void vrendz3dn (long sx, long sy, long p1, long iplc, long iinc)
 {
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
 		"push	%ebx\n\t"
@@ -4920,7 +4922,7 @@ endv:
 
 void vrendzfog3dn (long sx, long sy, long p1, long iplc, long iinc)
 {
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
 		"push	%ebx\n\t"
@@ -5138,7 +5140,7 @@ void opticast ()
 	ftol(gipos.z*PREC-.5f,&gposz);
 	gposxfrac[1] = gipos.x - (float)glipos.x; gposxfrac[0] = 1-gposxfrac[1];
 	gposyfrac[1] = gipos.y - (float)glipos.y; gposyfrac[0] = 1-gposyfrac[1];
-#if USEV5ASM
+#if (defined(USEV5ASM) && (USEV5ASM != 0)) //if true
 	for(j=u=0;j<gmipnum;j++,u+=i)
 		for(i=0;i<(256>>j)+4;i++)
 			gylookup[i+u] = ((((gposz>>j)-i*PREC)>>(16-j))&0x0000ffff);

@@ -29,6 +29,9 @@ GFXdep                 =sdl
 # "win32" for Windows 32-bit, "posix" for POSIX (32-bit for now)
 PLATdep                =posix
 
+# "1" to use v5.$(AsmName), "0" to not use
+USEV5ASM               =0
+
 # END Choices 
 # -----------------------------------
 
@@ -69,9 +72,9 @@ sdl_ld_LIBs            =`sdl-config --static-libs`
 sdl_cl_FLAGS           =/D_GNU_SOURCE=1 /Dmain=SDL_main
 sdl_link_LIBs          =$(LNKlibPre)opengl32$(LNKlibSuf) $(LNKlibPre)glu32$(LNKlibSuf) $(LNKlibPre)sdl$(LNKlibSuf) $(LNKlibPre)sdlmain$(LNKlibSuf)
 
-win_gcc_FLAGS           =
-win_cl_FLAGS            =
-win_$(LNK)_LIBs         =$(LNKlibPre)ddraw$(LNKlibSuf) $(LNKlibPre)dinput$(LNKlibSuf) $(LNKlibPre)dxguid$(LNKlibSuf)
+win_gcc_FLAGS          =
+win_cl_FLAGS           =
+win_$(LNK)_LIBs        =$(LNKlibPre)ddraw$(LNKlibSuf) $(LNKlibPre)dinput$(LNKlibSuf) $(LNKlibPre)dxguid$(LNKlibSuf)
 
 
 # END Graphics
@@ -86,22 +89,31 @@ posix_EXESuf           =
 posix_nasm_FLAGS       =-f elf32
 posix_ld_LIBs          =
 
-Win32_LIBs               =
+Win32_LIBs             =
 
-win32_OBJSuf             =obj
-win32_EXESuf             =exe
+win32_OBJSuf           =obj
+win32_EXESuf           =exe
 
-win32_nasm_FLAGS         =-f win32
-win32_ld_LIBs            =$(LNKlibPre)mingw32$(LNKlibSuf)
+win32_nasm_FLAGS       =-f win32
+win32_ld_LIBs          =$(LNKlibPre)mingw32$(LNKlibSuf)
 
 win32_gameLIBs	       =$(LNKlibPre)ole32$(LNKlibSuf)
-win32_simpleLIBs         =$(LNKlibPre)ole32$(LNKlibSuf)
+win32_simpleLIBs       =$(LNKlibPre)ole32$(LNKlibSuf)
 win32_voxedLIBs	       =                              $(LNKlibPre)comdlg32$(LNKlibSuf)
 win32_kwalkLIBs	       =$(LNKlibPre)ole32$(LNKlibSuf) $(LNKlibPre)comdlg32$(LNKlibSuf)
 
-win32_LIBs               =$(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf)
+win32_LIBs             =$(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf)
 
 # END Platform
+# -----------------------------------
+
+# -----------------------------------
+# Toggle Random Macros
+ifeq "$(USEV5ASM)" "1"
+if_USEV5ASM            =$(locBIN)/v5.$(OBJSuf)
+endif
+Random_Macros          =$(CMacroPre)USEV5ASM=$(USEV5ASM)
+# END Toggle Random Macros
 # -----------------------------------
 
 # -----------------------------------
@@ -113,10 +125,10 @@ AS                     =$(AsmName)
 endif
 AFLAGS                 =$($(AsmName)_FLAGS) $($(PLATdep)_$(AsmName)_FLAGS)
 
-CXXFLAGS               =$($(CXX)_FLAGS)     $($(GFXdep)_$(CXX)_FLAGS)    $($(PLATdep)_$(CXX)_FLAGS)
+CXXFLAGS               =$($(CXX)_FLAGS)     $($(GFXdep)_$(CXX)_FLAGS)      $($(PLATdep)_$(CXX)_FLAGS) $(Random_Macros)
 CMacroPre              =$($(CXX)_MacroPre)
 
-LNKFLAGS               =$($(LNK)_FLAGS)     $($(GFXdep)_$(LNK)_FLAGS)    $($(PLATdep)_$(LNK)_FLAGS)
+LNKFLAGS               =$($(LNK)_FLAGS)     $($(GFXdep)_$(LNK)_FLAGS)      $($(PLATdep)_$(LNK)_FLAGS) $(if_USEV5ASM)
 LNKlibPre              =$($(LNK)_libPre)
 LNKlibSuf              =$($(LNK)_libSuf)
 

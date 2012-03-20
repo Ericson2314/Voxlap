@@ -102,8 +102,8 @@ static int memcasecmp (const void* ptr0, const void* ptr1, size_t n)
 #ifdef _MSC_VER
 //#if defined(_WIN32) & !defined(__GNUC__) //maybe this is better
 
-//#define strcasecmp _stricmp
-//#define memcasecmp _memicmp
+#define strcasecmp _stricmp
+#define memcasecmp _memicmp
 
 #endif
 
