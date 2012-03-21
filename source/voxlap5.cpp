@@ -1,43 +1,48 @@
-// VOXLAP engine by Ken Silverman (http://advsys.net/ken)
-// This file has been modified from Ken Silverman's original release
+/**************************************************************************************************
+ * VOXLAP engine                                                                                  *
+ * by Ken Silverman (http://advsys.net/ken)                                                       *
+ **************************************************************************************************/
 
+	//This file has been modified from Ken Silverman's original release
+
+	//C Standard Library includes
 #include <math.h>
 #include <stdio.h>
-#include <stdarg.h> //Coppied from #if _DOS
-#include <string.h> //Coppied from #if _DOS
-#define VOXLAP5
-#include "../include/voxlap5.h"
+#include <stdlib.h> //was below system-specific includes before
 
+	//Ericson2314's dirty porting tricks
 #include "../include/porthacks.h"
 
-#define USEZBUFFER 1
-
-//#define __NOASM__
-
-#define PREC (256*4096)
-#define CMPPREC (256*4096)
-#define FPREC (256*4096)
-//#define USEV5ASM 1 //now done via makefile
-#define SCISDIST 1.0
-#define GOLDRAT 0.3819660112501052 //Golden Ratio: 1 - 1/((sqrt(5)+1)/2)
-#define ESTNORMRAD 2 //Specially optimized for 2: DON'T CHANGE unless testing!
-
-#ifdef _WIN32
+	//Basic System Specific Stuff
+#ifdef _WIN32 //Windows (hypothetically 6 64-bit too)
 	#define WIN32_LEAN_AND_MEAN
 	#include <windows.h>
 #else
-#ifdef _DOS
-	#include <stdarg.h>
-	#include <stdio.h>
-	#include <string.h>
-	#include <conio.h>
-	#include <dos.h>
-	#define MAX_PATH 260
-#else //POSIX
-	#define MAX_PATH PATH_MAX
+	#include <stdarg.h> //Moved from #if _DOS, included via windows.h for Windows
+	#include <string.h> //Moved from #if _DOS, included via windows.h for Windows
+	#ifdef _DOS //MS-DOS
+		#include <conio.h>
+		#include <dos.h>
+		#define MAX_PATH 260
+	#else //POSIX
+		#define MAX_PATH PATH_MAX //is a bad variable, should not be used for filename related things
+	#endif
 #endif
-#endif
-#include <stdlib.h>
+
+//Voxlap Preprocessor stuff
+#define VOXLAP5
+#include "../include/voxlap5.h"
+
+#define USEZBUFFER 1                 //Should a Z-Buffer be Used?
+//#define __NOASM__                  //Instructs compiler to use C(++) alternatives
+#define PREC (256*4096)
+#define CMPPREC (256*4096)
+#define FPREC (256*4096)
+//#define USEV5ASM 1                 //now done via makefile
+#define SCISDIST 1.0
+#define GOLDRAT 0.3819660112501052 //Golden Ratio: 1 - 1/((sqrt(5)+1)/2)
+#define ESTNORMRAD 2               //Specially optimized for 2: DON'T CHANGE unless testing!
+
 
 extern char keystatus[256];
 extern void readkeyboard ();
@@ -12622,7 +12627,7 @@ static void kv6draw (vx5sprite *spr)
 	clearMMX();
 }
 
-#endif huge #ifndef _DOS
+#endif //huge #ifndef _DOS
 
 //-------------------------- KFA sprite code begins --------------------------
 

@@ -2,9 +2,9 @@
  * porthacks.h: Macros-out differences between GCC & VS, and GNUC & MSVC                          *
  **************************************************************************************************/
 
-/********************************
- * Inline Assembly Syntax Hacks *
- ********************************/
+/**
+ * Inline Assembly Syntax Hacks
+ **/
 
 static inline void clearMMX () // inserts opcode emms, used to avoid many compiler checks
 {
@@ -43,9 +43,9 @@ static inline void clearMMX () // inserts opcode emms, used to avoid many compil
 #endif
 */
 
-/****************************
- * Compiler Directive Hacks *
- ****************************/
+/**
+ * Compiler Directive Hacks
+ **/
 
 #ifdef __GNUC__
 	// Maps __assume() to __builtin_unreachable()
@@ -59,9 +59,9 @@ static inline void clearMMX () // inserts opcode emms, used to avoid many compil
 	#define __ALIGN(num) __declspec(align(num))
 #endif
 
-/**************************
- * Standard Library Hacks *
- **************************/
+/**
+ * Standard Library Hacks
+ **/
 
 #if defined(__GNUC__) && !( defined(_WIN32) || defined(_WINDOWS_) )
 #include <ctype.h>
@@ -107,9 +107,9 @@ static int memcasecmp (const void* ptr0, const void* ptr1, size_t n)
 
 #endif
 
-/*****************************
- * Visual Studio Type  Hacks *
- *****************************/
+/**
+ * Visual Studio Type  Hacks
+ **/
 
 
 #if defined(_MSC_VER) && _MSC_VER<1600 //if Visual studio before 2010
@@ -123,9 +123,9 @@ typedef unsigned __int64 uint64_t;
 #endif
 
 
-/************************************
- * Pastebin for assembly rewritting *
- ************************************/
+/**
+ * Pastebin for assembly rewritting
+ **/
 
 /*
 
