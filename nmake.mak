@@ -13,7 +13,7 @@ LIB                    =$(locLIB);$(LIB)
 
 # "1" to use v5.$(AsmName), "0" to not use
 !IFNDEF USEV5ASM
-USEV5ASM               =1
+USEV5ASM               =0
 !ENDIF
 
 # -----------------------------------
@@ -68,7 +68,7 @@ AFLAGS                 =-o $(@) -f win32
 
 # -----------------------------------
 # Toggle Random Macros
-!IFDEF  "$(USEV5ASM)"=="1"
+!IF "$(USEV5ASM)"=="1"
 if_USEV5ASM            =$(locBIN)/v5.$(OBJSuf)
 !ENDIF
 Random_Macros          =$(CMacroPre)USEV5ASM=$(USEV5ASM)

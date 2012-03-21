@@ -2,9 +2,9 @@
  * porthacks.h: Macros-out differences between GCC & VS, and GNUC & MSVC                          *
  **************************************************************************************************/
 
-/********************************
- * Inline Assembly Syntax Hacks *
- ********************************/
+/**
+ * Inline Assembly Syntax Hacks
+ **/
 
 static inline void clearMMX () // inserts opcode emms, used to avoid many compiler checks
 {
@@ -43,9 +43,9 @@ static inline void clearMMX () // inserts opcode emms, used to avoid many compil
 #endif
 */
 
-/****************************
- * Compiler Directive Hacks *
- ****************************/
+/**
+ * Compiler Directive Hacks
+ **/
 
 #ifdef __GNUC__
 	// Maps __assume() to __builtin_unreachable()
@@ -55,9 +55,9 @@ static inline void clearMMX () // inserts opcode emms, used to avoid many compil
 #ifdef _MSC_VER
 #endif
 
-/**************************
- * Standard Library Hacks *
- **************************/
+/**
+ * Standard Library Hacks
+ **/
 
 #if defined(__GNUC__) && !( defined(_WIN32) || defined(_WINDOWS_) )
 #include <ctype.h>
@@ -120,8 +120,25 @@ static int filnamcmp (const char *st0, const char *st1)
 
 #endif
 
+/**
+ * Visual Studio Type  Hacks
+ **/
 
-//Pastebin for assembly rewritting
+
+#if defined(_MSC_VER) && _MSC_VER<1600 //if Visual studio before 2010
+typedef          __int32 int32_t;
+typedef unsigned __int32 uint32_t;
+typedef          __int64 int64_t;
+typedef unsigned __int64 uint64_t;
+
+#else
+#include <stdint.h>
+#endif
+
+
+/**
+ * Pastebin for assembly rewritting
+ **/
 
 /*
 
