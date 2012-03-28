@@ -13,7 +13,7 @@
 #define STEREOMODE 0  //0:no stereo (normal mode), 1:CrystalEyes, 2:Nuvision
 #define USETDHELP 0 //0:Ken's notepad style help, 1:Tom's keyboard graphic help
 
-#if defined(_WIN16) &|| defined(_DOS)
+#if defined(_WIN16) || defined(_DOS)
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

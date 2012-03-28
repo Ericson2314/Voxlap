@@ -11,10 +11,21 @@ LIB                    =$(locLIB);$(LIB)
 !ENDIF
 #PATH                   =$(locBIN);$(PATH)
 
-# "1" to use v5.$(AsmName), "0" to not use
+# -----------------------------------
+# Importing Environment Variables
 !IFNDEF USEV5ASM
 USEV5ASM               =0
 !ENDIF
+
+GFXdep                 =win
+GFXdep                 =$(_GFXDEP)
+
+AsmName                =masm
+AsmName                =$(_ASMNAME)
+
+
+# END Importing Environment Variables
+# -----------------------------------
 
 # -----------------------------------
 # GNU Compiler Collection Macros
