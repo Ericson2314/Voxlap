@@ -1,4 +1,4 @@
-# sub-directory macros
+﻿# sub-directory macros
 locSRC                 =./source
 locINC                 =./include
 locLIB                 =./libraries
