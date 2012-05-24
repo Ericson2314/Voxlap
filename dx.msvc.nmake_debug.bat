@@ -26,6 +26,8 @@ set GFXOBJ=ddraw.lib dinput.lib dxguid.lib
 
 
 
+set USEV5ASM=1
+
 @rem compile game
 nmake -y -f nmake.mak /d /n /p > "dx.msvc.nmake.mak - debug.txt"
 pause

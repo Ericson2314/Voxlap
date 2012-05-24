@@ -26,6 +26,8 @@ set LIB=/Program Files/Microsoft Visual Studio 10.0/VC/lib/;%LIB%
 set GFXOBJ=opengl32.lib glu32.lib sdl.lib sdlmain.lib
 set GFXCFLAGS=/D_GNU_SOURCE=1 /Dmain=SDL_main
 
+
+
 @rem compile game
 nmake -y -f nmake.mak
 pause

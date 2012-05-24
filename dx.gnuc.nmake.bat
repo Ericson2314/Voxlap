@@ -26,6 +26,8 @@ set GFXOBJ=-l mingw32 -l ddraw -l dinput -l dxguid
 
 
 
+set USEV5ASM=1
+
 @rem compile game
 nmake -y -f nmake.mak
 pause
