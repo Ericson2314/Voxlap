@@ -16,33 +16,6 @@ static inline void clearMMX () // inserts opcode emms, used to avoid many compil
 	#endif
 }
 
-/*
-#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
-	#define STARTASMB() {__asm__ \
-	( \
-	.intel_syntax \
-	}
-
-	#define STARTASML "\t
-	#define ENDASML \n"
-
-	#define ENDASMB() {.at&t_syntax
-	);
-	}
-#endif
-
-#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-	#define STARTASMB() {_asm \
-	\{ \
-	}
-	
-	#define STARTASML
-	#define ENDASML
-	
-	#define ENDASMB() {\}}
-#endif
-*/
-
 /**
  * Compiler Directive Hacks
  **/
@@ -88,15 +61,6 @@ static int memcasecmp (const void* ptr0, const void* ptr1, size_t n)
 	return 0;
 }
 
-//-----------------------------------
-// windows.h min() & max()
-
-#define min(a, b)  (((a) < (b)) ? (a) : (b))
-#define max(a, b)  (((a) > (b)) ? (a) : (b))
-
-// END windows.h min() & max()
-//-----------------------------------
-
 #endif
 
 #ifdef _MSC_VER
@@ -108,7 +72,7 @@ static int memcasecmp (const void* ptr0, const void* ptr1, size_t n)
 #endif
 
 /**
- * Visual Studio Type  Hacks
+ * Visual Studio Type Hacks
  **/
 
 
@@ -124,26 +88,18 @@ typedef unsigned __int64 uint64_t;
 
 
 /**
- * Pastebin for assembly rewritting
+ * Usefully macros
  **/
 
-/*
+#define COSSIN(degree, cos_, sin_) \
+    do \
+    { \
+        sin_ = sin(degree); \
+        cos_ = cos(degree); \
+    } while(0)
 
-	#if defined(__NOASM__)
-	#endif
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
-	__asm__ __volatile__
-	(
+#define MIN(a, b)  (((a) < (b)) ? (a) : (b))
 
-	);
-	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
-	_asm
-	{
-
-	}
-	#endif
-
-*/
-
-
+#define MAX(a, b)  (((a) > (b)) ? (a) : (b))
+	
+#define BOUND(value, min, max)  ((value)>(max)?(max):((value)<(min)?(min):(value)))

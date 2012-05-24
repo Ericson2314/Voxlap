@@ -52,7 +52,7 @@ float fsynctics;
 long frameval[AVERAGEFRAMES], numframes = 0, averagefps = 0;
 
 char kfanam[MAX_PATH] = "", kv6nam[MAX_PATH] = "";
-char tempbuf[max(MAX_PATH+256,4096)];
+char tempbuf[MAX(MAX_PATH+256,4096)];
 
 	//LIMB information
 #define MAXSPRITES 1024
@@ -1127,9 +1127,9 @@ void doframe ()
 
 		//Print MAX FRAME RATE
 	ftol(1000.0/fsynctics,&frameval[numframes&(AVERAGEFRAMES-1)]);
-	for(j=AVERAGEFRAMES-1,i=frameval[0];j>0;j--) i = max(i,frameval[j]);
+	for(j=AVERAGEFRAMES-1,i=frameval[0];j>0;j--) i = MAX(i,frameval[j]);
 	averagefps = ((averagefps*3+i)>>2);
-	print4x6(0,0,0xc0c0c0,-1,"%.1f (%0.2fms)",(float)averagefps*.001,1000000.0/max((float)averagefps,1));
+	print4x6(0,0,0xc0c0c0,-1,"%.1f (%0.2fms)",(float)averagefps*.001,1000000.0/MAX((float)averagefps,1));
 
 	stopdirectdraw();
 	nextpage();
@@ -1163,7 +1163,7 @@ skipalldraw:;
 	{
 		if (!bstatus)
 		{
-			f = min(vx5hx/vx5hz,1.0);
+			f = MIN(vx5hx/vx5hz,1.0);
 			dorthorotate(istr.z*.1,fmousy*f*.008*fmousymul,fmousx*f*.008,&istr,&ihei,&ifor);
 		}
 

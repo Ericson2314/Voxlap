@@ -848,14 +848,14 @@ static char *fileselect (char *filespec)
 	sortfilenames();
 	if (!menunamecnt) return(0);
 
-	newhighlight = menuhighlight = min(max(menuhighlight,0),menunamecnt-1);
+	newhighlight = menuhighlight = MIN(MAX(menuhighlight,0),menunamecnt-1);
 	while (1)
 	{
 		startdirectdraw(&frameplace,&b,&x,&y);
 		voxsetframebuffer(frameplace,b,x,y);
 		for(y=0,i=frameplace;y<yres;y++,i+=bytesperline) clearbuf((void *)i,xres,0);
 
-		topplc = max(min(newhighlight-(menuheight>>1),menunamecnt-menuheight-1),0);
+		topplc = MAX(MIN(newhighlight-(menuheight>>1),menunamecnt-menuheight-1),0);
 		for(i=0;i<menunamecnt;i++)
 		{
 			if (i == newhighlight)
@@ -915,10 +915,10 @@ static char *fileselect (char *filespec)
 		}
 #endif
 
-		if ((ch == 75) || (ch == 72)) newhighlight = max(newhighlight-1,0);
-		if ((ch == 77) || (ch == 80)) newhighlight = min(newhighlight+1,menunamecnt-1);
-		if (ch == 73) newhighlight = max(newhighlight-menuheight,0);
-		if (ch == 81) newhighlight = min(newhighlight+menuheight,menunamecnt-1);
+		if ((ch == 75) || (ch == 72)) newhighlight = MAX(newhighlight-1,0);
+		if ((ch == 77) || (ch == 80)) newhighlight = MIN(newhighlight+1,menunamecnt-1);
+		if (ch == 73) newhighlight = MAX(newhighlight-menuheight,0);
+		if (ch == 81) newhighlight = MIN(newhighlight+menuheight,menunamecnt-1);
 		if (ch == 71) newhighlight = 0;
 		if (ch == 79) newhighlight = menunamecnt-1;
 		if (ch == 13)
@@ -1109,7 +1109,7 @@ void photonflash (dpoint3d *ipos, long brightness, long numrays)
 	flashbrival = brightness;
 	for(j=numrays;j>0;j-=256)
 	{
-		n = min(j,256);
+		n = MIN(j,256);
 		for(i=0;i<n;i++)
 		{
 				//UNIFORM spherical randomization (see spherand.c)
@@ -1196,7 +1196,7 @@ void aligncyltexture (float ox, float oy, float oz, float dx, float dy, float dz
 	if (vx5.xsiz > 0)
 	{
 		ftol((float)vx5.currad*PI*2,&vx5.xoru);
-		vx5.xoru = max(vx5.xoru/vx5.xsiz,1)*vx5.xsiz;
+		vx5.xoru = MAX(vx5.xoru/vx5.xsiz,1)*vx5.xsiz;
 	}
 }
 
@@ -1246,7 +1246,7 @@ void voxredraw ()
 			break;
 
 		case SETREC:         //Ins/Del (Draw Solid, numcurs == 2)
-			voxbackup(min(thit[0].x,thit[1].x),min(thit[0].y,thit[1].y),max(thit[0].x,thit[1].x)+1,max(thit[0].y,thit[1].y)+1,SETREC);
+			voxbackup(MIN(thit[0].x,thit[1].x),MIN(thit[0].y,thit[1].y),MAX(thit[0].x,thit[1].x)+1,MAX(thit[0].y,thit[1].y)+1,SETREC);
 			setrect(&thit[0],&thit[1],vx5.curcol|tsolid);
 			break;
 		case SETTRI:
@@ -1271,7 +1271,7 @@ void voxredraw ()
 			setcylinder(&thit[0],&thit[1],vx5.currad,vx5.curcol|tsolid,SETCYL);
 			break;
 		case SETHUL:         //H (Insert/Delete 3D convex hull)
-			j = min(32,MAXCURS>>1);
+			j = MIN(32,MAXCURS>>1);
 			for(i=j-1;i>=0;i--)
 			{
 				do  //Uniform distribution on solid sphere
@@ -1292,14 +1292,14 @@ void voxredraw ()
 			thit[0].x = thit[0].y = VSID; thit[0].z = MAXZDIM; thit[1].x = thit[1].y = thit[1].z = 0;
 			for(i=numcurs-1;i>=0;i--)
 			{
-				ftol(curs[i].x-.5,&x); thit[0].x = min(thit[0].x,x); thit[1].x = max(thit[1].x,x);
-				ftol(curs[i].y-.5,&y); thit[0].y = min(thit[0].y,y); thit[1].y = max(thit[1].y,y);
-				ftol(curs[i].z-.5,&z); thit[0].z = min(thit[0].z,z); thit[1].z = max(thit[1].z,z);
-				ftol(curs[i].x+cursnoff.x-.5,&x); thit[0].x = min(thit[0].x,x); thit[1].x = max(thit[1].x,x);
-				ftol(curs[i].y+cursnoff.y-.5,&y); thit[0].y = min(thit[0].y,y); thit[1].y = max(thit[1].y,y);
-				ftol(curs[i].z+cursnoff.z-.5,&z); thit[0].z = min(thit[0].z,z); thit[1].z = max(thit[1].z,z);
+				ftol(curs[i].x-.5,&x); thit[0].x = MIN(thit[0].x,x); thit[1].x = MAX(thit[1].x,x);
+				ftol(curs[i].y-.5,&y); thit[0].y = MIN(thit[0].y,y); thit[1].y = MAX(thit[1].y,y);
+				ftol(curs[i].z-.5,&z); thit[0].z = MIN(thit[0].z,z); thit[1].z = MAX(thit[1].z,z);
+				ftol(curs[i].x+cursnoff.x-.5,&x); thit[0].x = MIN(thit[0].x,x); thit[1].x = MAX(thit[1].x,x);
+				ftol(curs[i].y+cursnoff.y-.5,&y); thit[0].y = MIN(thit[0].y,y); thit[1].y = MAX(thit[1].y,y);
+				ftol(curs[i].z+cursnoff.z-.5,&z); thit[0].z = MIN(thit[0].z,z); thit[1].z = MAX(thit[1].z,z);
 			}
-			voxbackup(min(thit[0].x,thit[1].x)-vx5.currad,min(thit[0].y,thit[1].y)-vx5.currad,max(thit[0].x,thit[1].x)+vx5.currad,max(thit[0].y,thit[1].y)+vx5.currad,SETWAL);
+			voxbackup(MIN(thit[0].x,thit[1].x)-vx5.currad,MIN(thit[0].y,thit[1].y)-vx5.currad,MAX(thit[0].x,thit[1].x)+vx5.currad,MAX(thit[0].y,thit[1].y)+vx5.currad,SETWAL);
 
 			if (numcurs == 2)
 			{
@@ -1357,12 +1357,12 @@ void voxredraw ()
 					setsector(tempoint,point2,4,2.0,vx5.curcol|tsolid,0);
 				}
 			}
-			vx5.minx = min(thit[0].x,thit[1].x)-vx5.currad;
-			vx5.miny = min(thit[0].y,thit[1].y)-vx5.currad;
-			vx5.minz = min(thit[0].z,thit[1].z)-vx5.currad;
-			vx5.maxx = max(thit[0].x,thit[1].x)+vx5.currad;
-			vx5.maxy = max(thit[0].y,thit[1].y)+vx5.currad;
-			vx5.maxz = max(thit[0].z,thit[1].z)+vx5.currad;
+			vx5.minx = MIN(thit[0].x,thit[1].x)-vx5.currad;
+			vx5.miny = MIN(thit[0].y,thit[1].y)-vx5.currad;
+			vx5.minz = MIN(thit[0].z,thit[1].z)-vx5.currad;
+			vx5.maxx = MAX(thit[0].x,thit[1].x)+vx5.currad;
+			vx5.maxy = MAX(thit[0].y,thit[1].y)+vx5.currad;
+			vx5.maxz = MAX(thit[0].z,thit[1].z)+vx5.currad;
 			break;
 
 		case SETCEI:        //C (Draw Ceiling)
@@ -1371,11 +1371,11 @@ void voxredraw ()
 			//thit[0].x = thit[0].y = VSID; thit[0].z = MAXZDIM; thit[1].x = thit[1].y = thit[1].z = 0;
 			//for(i=numcurs-1;i>=0;i--)
 			//{
-			//   ftol(curs[i].x+cursnoff.x-.5,&x); thit[0].x = min(thit[0].x,x); thit[1].x = max(thit[1].x,x);
-			//   ftol(curs[i].y+cursnoff.y-.5,&y); thit[0].y = min(thit[0].y,y); thit[1].y = max(thit[1].y,y);
-			//   ftol(curs[i].z+cursnoff.z-.5,&z); thit[0].z = min(thit[0].z,z); thit[1].z = max(thit[1].z,z);
+			//   ftol(curs[i].x+cursnoff.x-.5,&x); thit[0].x = MIN(thit[0].x,x); thit[1].x = MAX(thit[1].x,x);
+			//   ftol(curs[i].y+cursnoff.y-.5,&y); thit[0].y = MIN(thit[0].y,y); thit[1].y = MAX(thit[1].y,y);
+			//   ftol(curs[i].z+cursnoff.z-.5,&z); thit[0].z = MIN(thit[0].z,z); thit[1].z = MAX(thit[1].z,z);
 			//}
-			//voxbackup(min(thit[0].x,thit[1].x)-vx5.currad,min(thit[0].y,thit[1].y)-vx5.currad,max(thit[0].x,thit[1].x)+vx5.currad,max(thit[0].y,thit[1].y)+vx5.currad,SETCEI);
+			//voxbackup(MIN(thit[0].x,thit[1].x)-vx5.currad,MIN(thit[0].y,thit[1].y)-vx5.currad,MAX(thit[0].x,thit[1].x)+vx5.currad,MAX(thit[0].y,thit[1].y)+vx5.currad,SETCEI);
 
 			for(i=numcurs-1;i>=0;i--)
 			{
@@ -1394,14 +1394,14 @@ void voxredraw ()
 			//thit[0].x = thit[0].y = VSID; thit[0].z = MAXZDIM; thit[1].x = thit[1].y = thit[1].z = 0;
 			//for(i=numcurs-1;i>=0;i--)
 			//{
-			//   ftol(curs[i].x-.5,&x); thit[0].x = min(thit[0].x,x); thit[1].x = max(thit[1].x,x);
-			//   ftol(curs[i].y-.5,&y); thit[0].y = min(thit[0].y,y); thit[1].y = max(thit[1].y,y);
-			//   ftol(curs[i].z-.5,&z); thit[0].z = min(thit[0].z,z); thit[1].z = max(thit[1].z,z);
-			//   ftol(curs[i].x+cursnoff.x-.5,&x); thit[0].x = min(thit[0].x,x); thit[1].x = max(thit[1].x,x);
-			//   ftol(curs[i].y+cursnoff.y-.5,&y); thit[0].y = min(thit[0].y,y); thit[1].y = max(thit[1].y,y);
-			//   ftol(curs[i].z+cursnoff.z-.5,&z); thit[0].z = min(thit[0].z,z); thit[1].z = max(thit[1].z,z);
+			//   ftol(curs[i].x-.5,&x); thit[0].x = MIN(thit[0].x,x); thit[1].x = MAX(thit[1].x,x);
+			//   ftol(curs[i].y-.5,&y); thit[0].y = MIN(thit[0].y,y); thit[1].y = MAX(thit[1].y,y);
+			//   ftol(curs[i].z-.5,&z); thit[0].z = MIN(thit[0].z,z); thit[1].z = MAX(thit[1].z,z);
+			//   ftol(curs[i].x+cursnoff.x-.5,&x); thit[0].x = MIN(thit[0].x,x); thit[1].x = MAX(thit[1].x,x);
+			//   ftol(curs[i].y+cursnoff.y-.5,&y); thit[0].y = MIN(thit[0].y,y); thit[1].y = MAX(thit[1].y,y);
+			//   ftol(curs[i].z+cursnoff.z-.5,&z); thit[0].z = MIN(thit[0].z,z); thit[1].z = MAX(thit[1].z,z);
 			//}
-			//voxbackup(min(thit[0].x,thit[1].x),min(thit[0].y,thit[1].y),max(thit[0].x,thit[1].x),max(thit[0].y,thit[1].y),SETSEC);
+			//voxbackup(MIN(thit[0].x,thit[1].x),MIN(thit[0].y,thit[1].y),MAX(thit[0].x,thit[1].x),MAX(thit[0].y,thit[1].y),SETSEC);
 
 			for(i=numcurs-1;i>=0;i--)
 			{
@@ -1466,8 +1466,8 @@ void voxredraw ()
 							else templongbuf[z+thit[1].z] = *(long *)l;
 						}
 					scum(x+thit[1].x,y+thit[1].y,0,MAXZDIM,
-					/* max(min(thit[0].z,thit[1].z),0),
-						min(max(thit[0].z,thit[1].z)+1,MAXZDIM), */
+					/* MAX(MIN(thit[0].z,thit[1].z),0),
+						MIN(MAX(thit[0].z,thit[1].z)+1,MAXZDIM), */
 						templongbuf); scumfinish();
 				}
 			break;
@@ -1491,14 +1491,14 @@ void voxredraw ()
 					v = sptr[p.y*VSID+p.x]; //Fast method!
 					while (1)
 					{
-						p.z = max(v[1],z); l = min(v[2],zz);
+						p.z = MAX(v[1],z); l = MIN(v[2],zz);
 						for(;p.z<=l;p.z++) *(long *)&v[(p.z-v[1])*4+4] = vx5.colfunc(&p);
 
 						l = v[2]-v[1]-v[0]+2;
 						if (!v[0]) break;
 						v += v[0]*4;
 
-						p.z = max(v[3]+l,z); l = min(v[3],zz+1);
+						p.z = MAX(v[3]+l,z); l = MIN(v[3],zz+1);
 						for(;p.z<l;p.z++) *(long *)&v[(p.z-v[3])*4] = vx5.colfunc(&p);
 					}
 					//for(p.z=z;p.z<=zz;p.z++) //Slow and simple method
@@ -1528,8 +1528,8 @@ void xorgrid ()
 	long x, y, x0, y0, x1, y1, i;
 	char *v;
 
-	x0 = max(((long)ipos.x-192)&~(gridmode-1),0); x1 = min(((long)ipos.x+192)&~(gridmode-1),VSID);
-	y0 = max(((long)ipos.y-192)&~(gridmode-1),0); y1 = min(((long)ipos.y+192)&~(gridmode-1),VSID);
+	x0 = MAX(((long)ipos.x-192)&~(gridmode-1),0); x1 = MIN(((long)ipos.x+192)&~(gridmode-1),VSID);
+	y0 = MAX(((long)ipos.y-192)&~(gridmode-1),0); y1 = MIN(((long)ipos.y+192)&~(gridmode-1),VSID);
 
 	if (!(xorgridcnt&1)) gridclock = (totclk>>5);
 	xorgridcnt++;
@@ -1617,21 +1617,21 @@ void gridalignline (point3d *p, long daxmov, long gmode)
 	{
 		t = (1-ifor.x*ifor.x); if (t == 0) return;
 		t = (((p->y-ipos.y)*ifor.y + (p->z-ipos.z)*ifor.z)*ifor.x) / t + ipos.x;
-		p->x = min(max(t,0),VSID-1);
+		p->x = MIN(MAX(t,0),VSID-1);
 		if (gmode) p->x = (float)(((long)p->x+(gmode>>1))&~(gmode-1));
 	}
 	if (daxmov&2)
 	{
 		t = (1-ifor.y*ifor.y); if (t == 0) return;
 		t = (((p->x-ipos.x)*ifor.x + (p->z-ipos.z)*ifor.z)*ifor.y) / t + ipos.y;
-		p->y = min(max(t,0),VSID-1);
+		p->y = MIN(MAX(t,0),VSID-1);
 		if (gmode) p->y = (float)(((long)p->y+(gmode>>1))&~(gmode-1));
 	}
 	if (daxmov&4)
 	{
 		t = (1-ifor.z*ifor.z); if (t == 0) return;
 		t = (((p->x-ipos.x)*ifor.x + (p->y-ipos.y)*ifor.y)*ifor.z) / t + ipos.z;
-		p->z = min(max(t,0),MAXZDIM-1);
+		p->z = MIN(MAX(t,0),MAXZDIM-1);
 		if (gmode) p->z = (float)(((long)p->z+(gmode>>1))&~(gmode-1));
 	}
 }
@@ -2087,7 +2087,7 @@ void getkparrows (lpoint3d *retv)
 				  { if (ifor.y < 0) x--; else x++; }
 			else { if (ifor.x < 0) y++; else y--; }
 		}
-		keystatus[0x4f] = min(keystatus[0x4f]+i,255);
+		keystatus[0x4f] = MIN(keystatus[0x4f]+i,255);
 	}
 	if (keystatus[0x51]) //KP3
 	{
@@ -2097,7 +2097,7 @@ void getkparrows (lpoint3d *retv)
 				  { if (ifor.y < 0) x++; else x--; }
 			else { if (ifor.x < 0) y--; else y++; }
 		}
-		keystatus[0x51] = min(keystatus[0x51]+i,255);
+		keystatus[0x51] = MIN(keystatus[0x51]+i,255);
 	}
 	if (keystatus[0x4c]) //KP5
 	{
@@ -2107,7 +2107,7 @@ void getkparrows (lpoint3d *retv)
 				  { if (ifor.y < 0) y--; else y++; }
 			else { if (ifor.x < 0) x--; else x++; }
 		}
-		keystatus[0x4c] = min(keystatus[0x4c]+i,255);
+		keystatus[0x4c] = MIN(keystatus[0x4c]+i,255);
 	}
 	if (keystatus[0x50]) //KP2
 	{
@@ -2117,17 +2117,17 @@ void getkparrows (lpoint3d *retv)
 				  { if (ifor.y < 0) y++; else y--; }
 			else { if (ifor.x < 0) x++; else x--; }
 		}
-		keystatus[0x50] = min(keystatus[0x50]+i,255);
+		keystatus[0x50] = MIN(keystatus[0x50]+i,255);
 	}
 	if (keystatus[0x4b]) //KP4
 	{
 		if ((keystatus[0x4b] == 1) || (keystatus[0x4b] == 255)) z--;
-		keystatus[0x4b] = min(keystatus[0x4b]+i,255);
+		keystatus[0x4b] = MIN(keystatus[0x4b]+i,255);
 	}
 	if (keystatus[0x9c]) //KPEnter
 	{
 		if ((keystatus[0x9c] == 1) || (keystatus[0x9c] == 255)) z++;
-		keystatus[0x9c] = min(keystatus[0x9c]+i,255);
+		keystatus[0x9c] = MIN(keystatus[0x9c]+i,255);
 	}
 	retv->x = x; retv->y = y; retv->z = z;
 }
@@ -2337,7 +2337,7 @@ long notepadinput ()
 					if (i)
 					{
 						for(k=i-1;(k) && (sxlbuf[sxlind[curspri]+k-1]);k--);
-						notepadmode = min(k+(notepadmode-i),i-1);
+						notepadmode = MIN(k+(notepadmode-i),i-1);
 					}
 					break;
 				case 0xd0: //Down
@@ -2347,7 +2347,7 @@ long notepadinput ()
 					{
 						for(i=notepadmode;(i) && (sxlbuf[sxlind[curspri]+i-1]);i--);
 						for(l=k;(l < j) && (sxlbuf[sxlind[curspri]+l]);l++);
-						notepadmode = min(notepadmode-i,l-k)+k;
+						notepadmode = MIN(notepadmode-i,l-k)+k;
 					}
 					break;
 				case 0xd3: if (notepadmode < sxlind[curspri+1]-sxlind[curspri]-1) sxldelete(curspri,notepadmode,1); break; //Delete
@@ -2356,8 +2356,8 @@ long notepadinput ()
 		}
 	}
 	obstatus = bstatus; readmouse(&fmousx,&fmousy,&bstatus);
-	fcmousx = min(max(fcmousx+fmousx,3),xres-3); ftol(fcmousx-.5,&cmousx);
-	fcmousy = min(max(fcmousy+fmousy,4),yres-4); ftol(fcmousy-.5,&cmousy);
+	fcmousx = MIN(MAX(fcmousx+fmousx,3),xres-3); ftol(fcmousx-.5,&cmousx);
+	fcmousy = MIN(MAX(fcmousy+fmousy,4),yres-4); ftol(fcmousy-.5,&cmousy);
 	if ((~obstatus)&bstatus&1) //LMB (moves text cursor)
 	{
 			//Find dimensions of text box
@@ -2383,7 +2383,7 @@ long notepadinput ()
 				if (cmousy < k)
 				{
 					k = (cmousx-(xx+4))/6;
-					notepadmode = min(max(k,0),j-i)+i; break;
+					notepadmode = MIN(MAX(k,0),j-i)+i; break;
 				}
 				k += 8; i = j+1;
 			} while (i < l);
@@ -2546,7 +2546,7 @@ void helpdraw ()
 		i = j+1; if (i >= helpleng) break;
 		if ((helpbuf[i] == 13) || (helpbuf[i] == 10)) i++;
 	}
-	x = max((xres-80*4)>>1,0);
+	x = MAX((xres-80*4)>>1,0);
 
 	for(y=16;y<22-((helpypos>>10)%6);y++)
 		memset((void *)(y*bytesperline+frameplace+(x<<2)),0xc0,80<<4);
@@ -2605,7 +2605,7 @@ void doframe ()
 	lpoint3d lp, lipos; //lipos for speed purposes only
 	float f, t, ox, oy, oz, dx, dy, dz, rr[9], fmousx, fmousy;
 	long i, j, k, l, m, x, y, z, xx, yy, zz, r, g, b, bakcol;
-	char snotbuf[max(MAX_PATH+1,256)], ch, *v;
+	char snotbuf[MAX(MAX_PATH+1,256)], ch, *v;
 
 	startdirectdraw(&frameplace,&bytesperline,&x,&y);
 	voxsetframebuffer(frameplace,bytesperline,x,y);
@@ -2627,7 +2627,7 @@ void doframe ()
 		{
 			hit.x = ((hit.x+(gridmode>>1))&~(gridmode-1));
 			hit.y = ((hit.y+(gridmode>>1))&~(gridmode-1));
-			hit.z = min(max(hit.z,0),MAXZDIM-1);
+			hit.z = MIN(MAX(hit.z,0),MAXZDIM-1);
 			hind = 0;
 			if (((unsigned long)hit.x < VSID) && ((unsigned long)hit.y < VSID))
 				for(i=1;i<512;i++)
@@ -2807,7 +2807,7 @@ void doframe ()
 
 	if ((gridmode) && ((unsigned long)editcurs < numcurs))
 	{
-		i = gridmode; j = max(gridmode*3,64);
+		i = gridmode; j = MAX(gridmode*3,64);
 		k = (labs(((totclk-(i<<5))&255)-128)>>1)+64;
 		ox = curs[editcurs].x; oy = curs[editcurs].y; oz = curs[editcurs].z;
 		ftol(ox,&xx); ftol(oy,&yy); ftol(oz,&zz);
@@ -3044,9 +3044,9 @@ void doframe ()
 	frameval[numframes&(AVERAGEFRAMES-1)] = i;
 		//Print MAX FRAME RATE
 	i = frameval[0];
-	for(j=AVERAGEFRAMES-1;j>0;j--) i = max(i,frameval[j]);
+	for(j=AVERAGEFRAMES-1;j>0;j--) i = MAX(i,frameval[j]);
 	averagefps = ((averagefps*3+i)>>2);
-	print4x6(0,0,0xc0c0c0,-1,"%.1f (%0.2fms)",(float)averagefps*.001,1000000.0/max((float)averagefps,1));
+	print4x6(0,0,0xc0c0c0,-1,"%.1f (%0.2fms)",(float)averagefps*.001,1000000.0/MAX((float)averagefps,1));
 
 	if ((unsigned long)lastcurs < numcurs)
 		print4x6(0L,8,0xc0c0c0,-1,"(%.2f,%.2f,%.2f)",curs[lastcurs].x,curs[lastcurs].y,curs[lastcurs].z);
@@ -3149,24 +3149,24 @@ void doframe ()
 	}
 	else
 	{
-		if (keystatus[0xc8]) helpypos = max(helpypos-(long)(fsynctics*(float)(keystatus[0x36]*16+4-keystatus[0x2a]*3)*32768),0);
+		if (keystatus[0xc8]) helpypos = MAX(helpypos-(long)(fsynctics*(float)(keystatus[0x36]*16+4-keystatus[0x2a]*3)*32768),0);
 		if (keystatus[0xd0]) helpypos += (long)(fsynctics*(float)(keystatus[0x36]*16+4-keystatus[0x2a]*3)*32768);
 	}
 
 	if (keystatus[0x37]) //KP*
 	{
-		f = vx5hz; vx5hz = min((1.0+fsynctics)*vx5hz,vx5hx*8);
+		f = vx5hz; vx5hz = MIN((1.0+fsynctics)*vx5hz,vx5hx*8);
 		if ((f < vx5hx) && (vx5hz >= vx5hx))
 			{ vx5hz = vx5hx; keystatus[0x37] = 0; }
 	}
 	if (keystatus[0xb5]) //KP/
 	{
-		f = vx5hz; vx5hz = max((1.0-fsynctics)*vx5hz,vx5hx*.125);
+		f = vx5hz; vx5hz = MAX((1.0-fsynctics)*vx5hz,vx5hx*.125);
 		if ((f > vx5hx) && (vx5hz <= vx5hx))
 			{ vx5hz = vx5hx; keystatus[0xb5] = 0; }
 	}
-	if (keystatus[0x33]) { keystatus[0x33] = 0; vx5.anginc = max(vx5.anginc-1,1); angincmode = 0; } //,
-	if (keystatus[0x34]) { keystatus[0x34] = 0; vx5.anginc = min(vx5.anginc+1,16); angincmode = 0; } //.
+	if (keystatus[0x33]) { keystatus[0x33] = 0; vx5.anginc = MAX(vx5.anginc-1,1); angincmode = 0; } //,
+	if (keystatus[0x34]) { keystatus[0x34] = 0; vx5.anginc = MIN(vx5.anginc+1,16); angincmode = 0; } //.
 	if (keystatus[0x35]) // / (reset angles, etc...)
 	{
 		keystatus[0x35] = 0;
@@ -3348,7 +3348,7 @@ void doframe ()
 			{
 				if ((unsigned long)(curspri-1) < (numsprites-1))
 				{
-					f = max(1-fsynctics,.75);
+					f = MAX(1-fsynctics,.75);
 					if (!(keystatus[0x2a]|keystatus[0x36])) { keystatus[0x4a] = 0; f = 0.5; }
 					spr[curspri].s.x *= f; spr[curspri].s.y *= f; spr[curspri].s.z *= f;
 					spr[curspri].h.x *= f; spr[curspri].h.y *= f; spr[curspri].h.z *= f;
@@ -3368,7 +3368,7 @@ void doframe ()
 			{
 				if ((unsigned long)(curspri-1) < (numsprites-1))
 				{
-					f = min(1+fsynctics,1.25);
+					f = MIN(1+fsynctics,1.25);
 					if (!(keystatus[0x2a]|keystatus[0x36])) { keystatus[0x4e] = 0; f = 2.0; }
 					spr[curspri].s.x *= f; spr[curspri].s.y *= f; spr[curspri].s.z *= f;
 					spr[curspri].h.x *= f; spr[curspri].h.y *= f; spr[curspri].h.z *= f;
@@ -3427,7 +3427,7 @@ void doframe ()
 	if (keystatus[0xe])    //Backspace (delete most recent cursor)
 	{
 		keystatus[0xe] = 0;
-		if (colselectmode) colselectmode = 0; else numcurs = max(numcurs-1,0);
+		if (colselectmode) colselectmode = 0; else numcurs = MAX(numcurs-1,0);
 	}
 	if (keystatus[0x2b])   //\ (undo/redo most recent editing changes)
 	{
@@ -3552,7 +3552,7 @@ void doframe ()
 			vx5.currad--; if (backedup >= 0) { voxrestore(); voxredraw(); }
 		}
 		if (keystatus[0x1a])
-			keystatus[0x1a] = min(keystatus[0x1a]+(long)(fsynctics*1000),255);
+			keystatus[0x1a] = MIN(keystatus[0x1a]+(long)(fsynctics*1000),255);
 	}
 	if ((keystatus[0x1b]) && (vx5.currad < 64)) //]
 	{
@@ -3561,7 +3561,7 @@ void doframe ()
 			vx5.currad++; if (backedup >= 0) { voxrestore(); voxredraw(); }
 		}
 		if (keystatus[0x1b])
-			keystatus[0x1b] = min(keystatus[0x1b]+(long)(fsynctics*1000),255);
+			keystatus[0x1b] = MIN(keystatus[0x1b]+(long)(fsynctics*1000),255);
 	}
 
 	if ((keystatus[0x27]) && (vx5.curpow > .16)) //;
@@ -3574,7 +3574,7 @@ void doframe ()
 			if (backedup >= 0) { voxrestore(); voxredraw(); }
 		}
 		if (keystatus[0x27])
-			keystatus[0x27] = min(keystatus[0x27]+(long)(fsynctics*1000),255);
+			keystatus[0x27] = MIN(keystatus[0x27]+(long)(fsynctics*1000),255);
 	}
 	if ((keystatus[0x28]) && (vx5.curpow < 16.0)) //;
 	{
@@ -3586,7 +3586,7 @@ void doframe ()
 			if (backedup >= 0) { voxrestore(); voxredraw(); }
 		}
 		if (keystatus[0x28])
-			keystatus[0x28] = min(keystatus[0x28]+(long)(fsynctics*1000),255);
+			keystatus[0x28] = MIN(keystatus[0x28]+(long)(fsynctics*1000),255);
 	}
 
 	if ((keystatus[0xc9]) && ((unsigned long)(curspri-1) >= (numsprites-1)))  //PGUP
@@ -3611,17 +3611,17 @@ void doframe ()
 			if ((keystatus[0xc9] == 1) || (keystatus[0xc9] == 255))
 			{
 				j = keystatus[0x2a]*3+1;
-				if (numcurs == 2) curs[1].z = max(curs[1].z-j,0);
+				if (numcurs == 2) curs[1].z = MAX(curs[1].z-j,0);
 				else if (numcurs > 2)
 				{
-					vx5.curhei = min(vx5.curhei+j,MAXZDIM-1);
+					vx5.curhei = MIN(vx5.curhei+j,MAXZDIM-1);
 					cursnoff.x = cursnorm.x*vx5.curhei;
 					cursnoff.y = cursnorm.y*vx5.curhei;
 					cursnoff.z = cursnorm.z*vx5.curhei;
 				}
 				if (backedup >= 0) { voxrestore(); voxredraw(); }
 			}
-			keystatus[0xc9] = min(keystatus[0xc9]+(long)(fsynctics*1000),255);
+			keystatus[0xc9] = MIN(keystatus[0xc9]+(long)(fsynctics*1000),255);
 		}
 	}
 	if ((keystatus[0xd1]) && ((unsigned long)(curspri-1) >= (numsprites-1)))  //PGDN
@@ -3661,17 +3661,17 @@ void doframe ()
 			if ((keystatus[0xd1] == 1) || (keystatus[0xd1] == 255))
 			{
 				j = keystatus[0x2a]*3+1;
-				if (numcurs == 2) curs[1].z = min(curs[1].z+j,MAXZDIM-1);
+				if (numcurs == 2) curs[1].z = MIN(curs[1].z+j,MAXZDIM-1);
 				else if (numcurs > 2)
 				{
-					vx5.curhei = max(vx5.curhei-j,-(MAXZDIM-1));
+					vx5.curhei = MAX(vx5.curhei-j,-(MAXZDIM-1));
 					cursnoff.x = cursnorm.x*vx5.curhei;
 					cursnoff.y = cursnorm.y*vx5.curhei;
 					cursnoff.z = cursnorm.z*vx5.curhei;
 				}
 				if (backedup >= 0) { voxrestore(); voxredraw(); }
 			}
-			keystatus[0xd1] = min(keystatus[0xd1]+(long)(fsynctics*1000),255);
+			keystatus[0xd1] = MIN(keystatus[0xd1]+(long)(fsynctics*1000),255);
 		}
 	}
 
@@ -4677,15 +4677,15 @@ dragfloatcurs:;
 	{
 		if (!(bstatus&2))
 		{
-			fcmousx = min(max(fcmousx+fmousx,xres-CGRAD*2  ),xres-1  );
-			fcmousy = min(max(fcmousy+fmousy,yres-CGRAD*2-4),yres-1-4);
+			fcmousx = MIN(MAX(fcmousx+fmousx,xres-CGRAD*2  ),xres-1  );
+			fcmousy = MIN(MAX(fcmousy+fmousy,yres-CGRAD*2-4),yres-1-4);
 			ftol(fcmousx,&cmousx);
 			ftol(fcmousy,&cmousy);
 		}
 		else
 		{
 			i = cub2rgb(cmousx-(xres-CGRAD),cmousy-(yres-CGRAD-4),gbri);
-			gbri = min(max(gbri-fmousy*65536,0),(256<<16)-1);
+			gbri = MIN(MAX(gbri-fmousy*65536,0),(256<<16)-1);
 			if (i != -1)
 			{
 				if (fmousy > 0) i = -1; else i = 1;
@@ -4697,7 +4697,7 @@ dragfloatcurs:;
 		fmousx = fmousy = 0; //Don't allow any other mouse movement
 	}
 
-	f = min(vx5hx/vx5hz,1.0);
+	f = MIN(vx5hx/vx5hz,1.0);
 	if (!anglemode) //Latitude/longitude mode
 	{
 		anglng += fmousx*f*.008;

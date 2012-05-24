@@ -38,11 +38,14 @@ typedef struct __attribute__ ((packed)) tWAVEFORMATEX {
 } WAVEFORMATEX;
 #define WAVE_FORMAT_PCM 1
 
-#if !defined(max)
-#define max(a,b) (((a) > (b)) ? (a) : (b))
+	//min & max failsafe
+#undef max
+#undef min
+#if !defined(MAX)
+#define MAX(a,b) (((a) > (b)) ? (a) : (b))
 #endif
-#if !defined(min)
-#define min(a,b) (((a) < (b)) ? (a) : (b))
+#if !defined(MIN)
+#define MIN(a,b) (((a) < (b)) ? (a) : (b))
 #endif
 
 #endif
@@ -424,7 +427,7 @@ int KSoundBuffer_Lock(KSoundBuffer *ksb, long wroffs, long wrlen,
 	if (flags & KSBLOCK_ENTIREBUFFER) {
 		wrlen = ksb->buflen;
 	} else {
-		wrlen = min(ksb->buflen, wrlen);
+		wrlen = MIN(ksb->buflen, wrlen);
 	}
 
 	*ptr1 = (void*)((long)ksb->buf + wroffs);
@@ -983,16 +986,16 @@ static void kensoundbreath (long minleng)
 				if (f <= SNDMINDIST*SNDMINDIST) { f = SNDMINDIST; h = (float)rendersnd[j].ivolsc; } else { f = sqrt(f); h = ((float)rendersnd[j].ivolsc)*SNDMINDIST/f; }
 				g /= f;  //g=-1:pure left, g=0:center, g=1:pure right
 					//Should use exponential scaling to keep volume constant!
-				volsci0 = (long)((1.f-max(g*VOLSEPARATION,0))*h);
-				volsci1 = (long)((1.f+min(g*VOLSEPARATION,0))*h);
+				volsci0 = (long)((1.f-MAX(g*VOLSEPARATION,0))*h);
+				volsci1 = (long)((1.f+MIN(g*VOLSEPARATION,0))*h);
 				volsci0 = (volsci0-rendersnd[j].ivolsc0)/n;
 				volsci1 = (volsci1-rendersnd[j].ivolsc1)/n;
 
 					//ispos? = ispos + (f voxels)*(.00025sec/voxel) * (isinc*samplerate subsamples/sec);
 				m = rendersnd[j].isinc*samplerate;
 				k = rendersnd[j].isinc*n + rendersnd[j].ispos;
-				h = max((f-SNDMINDIST)+g*(EARSEPARATION*.5f),0); nsinc0 = k - mulshr16((long)(h*(65536.f/SNDSPEED)),m);
-				h = max((f-SNDMINDIST)-g*(EARSEPARATION*.5f),0); nsinc1 = k - mulshr16((long)(h*(65536.f/SNDSPEED)),m);
+				h = MAX((f-SNDMINDIST)+g*(EARSEPARATION*.5f),0); nsinc0 = k - mulshr16((long)(h*(65536.f/SNDSPEED)),m);
+				h = MAX((f-SNDMINDIST)-g*(EARSEPARATION*.5f),0); nsinc1 = k - mulshr16((long)(h*(65536.f/SNDSPEED)),m);
 				nsinc0 = (nsinc0-rendersnd[j].ispos0)/n;
 				nsinc1 = (nsinc1-rendersnd[j].ispos1)/n;
 			}
@@ -1264,12 +1267,12 @@ void playsound (const char *filnam, long volperc, float frqmul, void *pos, long 
 		if (f <= SNDMINDIST*SNDMINDIST) { f = SNDMINDIST; h = (float)ivolsc; } else { f = sqrt(f); h = ((float)ivolsc)*SNDMINDIST/f; }
 		g /= f;  //g=-1:pure left, g=0:center, g=1:pure right
 			//Should use exponential scaling to keep volume constant!
-		ivolsc0 = (long)((1.f-max(g*VOLSEPARATION,0))*h);
-		ivolsc1 = (long)((1.f+min(g*VOLSEPARATION,0))*h);
+		ivolsc0 = (long)((1.f-MAX(g*VOLSEPARATION,0))*h);
+		ivolsc1 = (long)((1.f+MIN(g*VOLSEPARATION,0))*h);
 			//ispos? = ispos + (f voxels)*(.00025sec/voxel) * (isinc*samplerate subsamples/sec);
 		m = isinc*samplerate;
-		h = max((f-SNDMINDIST)+g*(EARSEPARATION*.5f),0); ispos0 = -mulshr16((long)(h*(65536.f/SNDSPEED)),m);
-		h = max((f-SNDMINDIST)-g*(EARSEPARATION*.5f),0); ispos1 = -mulshr16((long)(h*(65536.f/SNDSPEED)),m);
+		h = MAX((f-SNDMINDIST)+g*(EARSEPARATION*.5f),0); ispos0 = -mulshr16((long)(h*(65536.f/SNDSPEED)),m);
+		h = MAX((f-SNDMINDIST)-g*(EARSEPARATION*.5f),0); ispos1 = -mulshr16((long)(h*(65536.f/SNDSPEED)),m);
 	}
 	else { ispos0 = ispos1 = 0; ivolsc0 = ivolsc1 = ivolsc; }
 
@@ -1371,7 +1374,7 @@ void sdlmixcallback(void *userdata, Uint8 *stream, int len)
 	if (!streambuf) return;
 	
 	// copy over the normal kensound mixing buffer
-	amt = min(streambuf->buflen - streambuf->writecur, len);
+	amt = MIN(streambuf->buflen - streambuf->writecur, len);
 	memcpy(stream, &((Uint8*)streambuf->buf)[ streambuf->writecur ], amt);
 	streambuf->writecur += amt;
 	if (streambuf->writecur == streambuf->buflen) streambuf->writecur = 0;
