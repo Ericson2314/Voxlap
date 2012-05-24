@@ -1017,7 +1017,7 @@ void doframe ()
 		{
 			if ((tempbuf[i] >= '0') && (tempbuf[i] <= '9')) k = tempbuf[i]-'0'; else k = 10;
 			drawtile(numb[k].f,numb[k].p,numb[k].x,numb[k].y,0,numb[k].y<<16,
-				((i*24-j*12)<<l)+(xres<<15),(yres-6)<<16,1<<l,1<<l,0,(min(max(100-myhealth,0),100)*0x010202)^-1);
+				((i*24-j*12)<<l)+(xres<<15),(yres-6)<<16,1<<l,1<<l,0,(MIN(MAX(100-myhealth,0),100)*0x010202)^-1);
 		}
 	}
 
@@ -1059,7 +1059,7 @@ void doframe ()
 		j = strlen(message); l = 0; lp.x = xres/FONTXDIM; lp.y = 0;
 		while (l < j)
 		{
-			lp.z = min(l+lp.x,j);
+			lp.z = MIN(l+lp.x,j);
 			if (!l) m = ((-l)*FONTXDIM-(((lp.z-l)*FONTXDIM)>>1));
 				else m = ((-l)*FONTXDIM-((lp.x*FONTXDIM)>>1));
 			for(i=l;i<lp.z;i++)
@@ -1081,7 +1081,7 @@ void doframe ()
 		lp.x = xres/FONTXDIM; lp.y = yres-32-6-((j-1)/lp.x)*(FONTYDIM+2);
 		for(l=0;l<j;l+=lp.x)
 		{
-			lp.z = min(l+lp.x,j);
+			lp.z = MIN(l+lp.x,j);
 			if (!l) m = ((-l)*FONTXDIM-(((lp.z-l)*FONTXDIM)>>1));
 				else m = ((-l)*FONTXDIM-((lp.x*FONTXDIM)>>1));
 			for(i=l;i<lp.z;i++)
@@ -1172,7 +1172,7 @@ void doframe ()
 	if (showfps)
 	{
 			//Fast sort when already sorted... otherwise slow!
-		j = min(numframes,FPSSIZ)-1;
+		j = MIN(numframes,FPSSIZ)-1;
 		for(k=0;k<j;k++)
 			if (fpsometer[fpsind[k]] > fpsometer[fpsind[k+1]])
 			{
@@ -1187,7 +1187,7 @@ void doframe ()
 		i = ((fpsometer[fpsind[j>>1]]+fpsometer[fpsind[(j+1)>>1]])>>1); //Median
 
 		drawline2d(0,i>>4,FPSSIZ,i>>4,0xe06060);
-		for(k=0;k<FPSSIZ;k++) drawpoint2d(k,min(fpsometer[(numframes+k)&(FPSSIZ-1)]>>4,yres-1),0xc0c0c0);
+		for(k=0;k<FPSSIZ;k++) drawpoint2d(k,MIN(fpsometer[(numframes+k)&(FPSSIZ-1)]>>4,yres-1),0xc0c0c0);
 		print4x6(0,0,0xc0c0c0,-1,"%d.%02dms %.2ffps",i/100,i%100,100000.0/(float)i);
 	}
 
@@ -1382,7 +1382,7 @@ skipalldraw:;
 						}
 						if (!memcasecmp(&typemessage[1],"lightmode=",10))
 						{
-							 vx5.lightmode = min(max(atoi(&typemessage[11]),0),2);
+							 vx5.lightmode = MIN(MAX(atoi(&typemessage[11]),0),2);
 							 updatebbox(0,0,0,VSID,VSID,MAXZDIM,0);
 							 typemessage[0] = 0;
 						}
@@ -1637,7 +1637,7 @@ skipalldraw:;
 			spr[i].v.z += fsynctics*64;
 
 				//Do rotation
-			f = min(totclk-spr[i].tim,250)*fsynctics*.01;
+			f = MIN(totclk-spr[i].tim,250)*fsynctics*.01;
 			axisrotate(&spr[i].s,&spr[i].r,f);
 			axisrotate(&spr[i].h,&spr[i].r,f);
 			axisrotate(&spr[i].f,&spr[i].r,f);
@@ -2056,7 +2056,7 @@ skipalldraw:;
 									  else playsound(BLOWUP,100,1.0,&spr[i].p,KSND_3D);
 
 							spr[i].tag = -17; spr[i].tim = totclk; spr[i].owner = 0;
-							f = min(256.0/(float)j,1.0);
+							f = MIN(256.0/(float)j,1.0);
 							spr[i].v.x *= f; spr[i].v.y *= f; spr[i].v.z *= f;
 							vecrand(1.0,&spr[i].r);
 							//spr[i].r.x = ((float)rand()/16383.5f)-1.f;
@@ -2123,7 +2123,7 @@ skipalldraw:;
 		{
 			f = ((float)spr[i].tag*PI/180.0);
 			if (spr[i].owner) f /= (float)spr[i].owner;
-			j = min((long)(fsynctics*1000.0),spr[i].tim);
+			j = MIN((long)(fsynctics*1000.0),spr[i].tim);
 			orthorotate(j*f,0,0,&spr[i].s,&spr[i].h,&spr[i].f);
 			spr[i].tim -= j;
 			continue;
@@ -2206,7 +2206,7 @@ skipalldraw:;
 	if (keystatus[0x4a]) //KP-
 	{
 		keystatus[0x4a] = 0;
-		volpercent = max(volpercent-10,0);
+		volpercent = MAX(volpercent-10,0);
 		sprintf(message,"Volume: %d%%",volpercent);
 		quitmessagetimeout = messagetimeout = totclk+4000;
 		setvolume(volpercent);
@@ -2214,7 +2214,7 @@ skipalldraw:;
 	if (keystatus[0x4e]) //KP-
 	{
 		keystatus[0x4e] = 0;
-		volpercent = min(volpercent+10,100);
+		volpercent = MIN(volpercent+10,100);
 		sprintf(message,"Volume: %d%%",volpercent);
 		quitmessagetimeout = messagetimeout = totclk+4000;
 		setvolume(volpercent);

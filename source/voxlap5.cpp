@@ -178,7 +178,7 @@ static float cmprecip[CMPRECIPSIZ], wx0, wy0, wx1, wy1;
 static long iwx0, iwy0, iwx1, iwy1;
 static point3d gcorn[4];
 		 point3d ginor[4]; //Should be static, but... necessary for stupid pingball hack :/
-static long lastx[max(MAXYDIM,VSID)], uurendmem[MAXXDIM*2+8], *uurend;
+static long lastx[MAX(MAXYDIM,VSID)], uurendmem[MAXXDIM*2+8], *uurend;
 
 void mat0(point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *);
 void mat1(point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *);
@@ -893,9 +893,9 @@ long lightvox (long i)
 	long r, g, b;
 
 	b = ((unsigned long)i>>24);
-	r = min((((i>>16)&255)*b)>>7,255);
-	g = min((((i>>8 )&255)*b)>>7,255);
-	b = min((((i    )&255)*b)>>7,255);
+	r = MIN((((i>>16)&255)*b)>>7,255);
+	g = MIN((((i>>8 )&255)*b)>>7,255);
+	b = MIN((((i    )&255)*b)>>7,255);
 	return((r<<16)+(g<<8)+b);
 }
 
@@ -2311,7 +2311,7 @@ normflash_exwhile2:;
 				{
 					xx = ipx+x; yy = ipy+y;
 					if ((unsigned long)(xx|yy) >= VSID) goto normflash_exwhile3;
-					k = max(labs(x),labs(y));
+					k = MAX(labs(x),labs(y));
 
 					v = sptr[yy*VSID+xx]; sq = x*x+y*y;
 					while (1)
@@ -2350,7 +2350,7 @@ normflash_exwhile3:;
 				{
 					xx = ipx+x; yy = ipy+y;
 					if ((unsigned long)(xx|yy) >= VSID) goto normflash_exwhile4;
-					k = max(labs(x),labs(y)); m = ((x+xi != xe) && (y+yi != ye));
+					k = MAX(labs(x),labs(y)); m = ((x+xi != xe) && (y+yi != ye));
 
 					v = sptr[yy*VSID+xx]; i = 0; sq = x*x+y*y;
 					while (1)
@@ -2396,7 +2396,7 @@ void hline (float x0, float y0, float x1, float y1, long *ix0, long *ix1)
 	else if (y1 > wy1) ftol((wy1-y0)/dyx+x0,ix1);
 	else ftol(x1,ix1);
 	if ((*ix0) < iwx0) (*ix0) = iwx0;
-	if ((*ix0) > iwx1) (*ix0) = iwx1; //(*ix1) = min(max(*ix1,wx0),wx1);
+	if ((*ix0) > iwx1) (*ix0) = iwx1; //(*ix1) = MIN(MAX(*ix1,wx0),wx1);
 	gline(labs((*ix1)-(*ix0)),(float)(*ix0),((*ix0)-x1)*dyx + y1,
 									  (float)(*ix1),((*ix1)-x1)*dyx + y1);
 }
@@ -5538,11 +5538,11 @@ void opticast ()
 	for(j=u=0;j<gmipnum;j++,u+=i)
 		for(i=0;i<(256>>j)+4;i++)
 			gylookup[i+u] = ((((gposz>>j)-i*PREC)>>(16-j))&0x0000ffff);
-	gxmip = max(vx5.mipscandist,4)*PREC;
+	gxmip = MAX(vx5.mipscandist,4)*PREC;
 #else
 	for(i=0;i<256+4;i++) gylookup[i] = (i*PREC-gposz);
 #endif
-	gmaxscandist = min(max(vx5.maxscandist,1),2047)*PREC;
+	gmaxscandist = MIN(MAX(vx5.maxscandist,1),2047)*PREC;
 
 #if (USEZBUFFER != 1)
 	hrend = hrendnoz; vrend = vrendnoz;
@@ -5576,7 +5576,7 @@ void opticast ()
 	gstartz1 = gstartv[1];
 
 	if (gifor.z == 0) f = 32000; else f = gihz/gifor.z;
-	f = min(max(f,-32000),32000);
+	f = MIN(MAX(f,-32000),32000);
 	cx = gistr.z*f + gihx;
 	cy = gihei.z*f + gihy;
 
@@ -5802,8 +5802,8 @@ double findmaxcr (double px, double py, double pz, double cr)
 	x = (long)px; y = (long)py; z = (long)pz; i0 = i1 = 0; ix = x; y0 = y1 = y;
 	while (1)
 	{
-		f = max(fabs((double)x+.5-px)-.5,0);
-		g = max(fabs((double)y+.5-py)-.5,0);
+		f = MAX(fabs((double)x+.5-px)-.5,0);
+		g = MAX(fabs((double)y+.5-py)-.5,0);
 		f = f*f + g*g;
 		if (f < maxcr)
 		{
@@ -5828,7 +5828,7 @@ double findmaxcr (double px, double py, double pz, double cr)
 				maxcr = f;
 			else
 			{
-				g = min(pz-(double)z0,(double)z1-pz);
+				g = MIN(pz-(double)z0,(double)z1-pz);
 				f += g*g; if (f < maxcr) maxcr = f;
 			}
 		}
@@ -5879,8 +5879,8 @@ long sphtraceo (double px, double py, double pz,    //start pt
 	(*ny) = py + vy;
 	(*nz) = pz + vz;
 
-	z0 = max((long)(min(pz,*nz)-cr)-2,-1);
-	z1 = min((long)(max(pz,*nz)+cr)+2,MAXZDIM);
+	z0 = MAX((long)(MIN(pz,*nz)-cr)-2,-1);
+	z1 = MIN((long)(MAX(pz,*nz)+cr)+2,MAXZDIM);
 
 	thresh2 = cr+1.7321+1; thresh2 *= thresh2;
 
@@ -6298,9 +6298,9 @@ sphtracecont:;
 	(*hity) = dbound(vy*gendt + y0,acr,VSID-acr);
 	(*hitz) = dbound(vz*gendt + z0,MAXZDIM-2048+acr,MAXZDIM-1-acr);
 #else
-	(*hitx) = min(max(vx*gendt + x0,acr),VSID-acr);
-	(*hity) = min(max(vy*gendt + y0,acr),VSID-acr);
-	(*hitz) = min(max(vz*gendt + z0,MAXZDIM-2048+acr),MAXZDIM-1-acr);
+	(*hitx) = MIN(MAX(vx*gendt + x0,acr),VSID-acr);
+	(*hity) = MIN(MAX(vy*gendt + y0,acr),VSID-acr);
+	(*hitz) = MIN(MAX(vz*gendt + z0,MAXZDIM-2048+acr),MAXZDIM-1-acr);
 #endif
 	return(gendt == 1);
 }
@@ -6429,26 +6429,26 @@ void hitscan (dpoint3d *p, dpoint3d *d, lpoint3d *h, long **ind, long *dir)
 	iyi = (((((signed long *)&d->y)[1])>>31)|1);
 	izi = (((((signed long *)&d->z)[1])>>31)|1);
 
-	minz = min(h->z,0);
+	minz = MIN(h->z,0);
 
 	f = 0x3fffffff/VSID; //Maximum delta value
 	if ((fabs(d->x) >= fabs(d->y)) && (fabs(d->x) >= fabs(d->z)))
 	{
 		kx = 1024.0;
-		if (d->y == 0) ky = f; else ky = min(fabs(d->x/d->y)*1024.0,f);
-		if (d->z == 0) kz = f; else kz = min(fabs(d->x/d->z)*1024.0,f);
+		if (d->y == 0) ky = f; else ky = MIN(fabs(d->x/d->y)*1024.0,f);
+		if (d->z == 0) kz = f; else kz = MIN(fabs(d->x/d->z)*1024.0,f);
 	}
 	else if (fabs(d->y) >= fabs(d->z))
 	{
 		ky = 1024.0;
-		if (d->x == 0) kx = f; else kx = min(fabs(d->y/d->x)*1024.0,f);
-		if (d->z == 0) kz = f; else kz = min(fabs(d->y/d->z)*1024.0,f);
+		if (d->x == 0) kx = f; else kx = MIN(fabs(d->y/d->x)*1024.0,f);
+		if (d->z == 0) kz = f; else kz = MIN(fabs(d->y/d->z)*1024.0,f);
 	}
 	else
 	{
 		kz = 1024.0;
-		if (d->x == 0) kx = f; else kx = min(fabs(d->z/d->x)*1024.0,f);
-		if (d->y == 0) ky = f; else ky = min(fabs(d->z/d->y)*1024.0,f);
+		if (d->x == 0) kx = f; else kx = MIN(fabs(d->z/d->x)*1024.0,f);
+		if (d->y == 0) ky = f; else ky = MIN(fabs(d->z/d->y)*1024.0,f);
 	}
 	ftol(kx,&dxi); ftol((p->x-(float)h->x)*kx,&dx); if (ixi >= 0) dx = dxi-dx;
 	ftol(ky,&dyi); ftol((p->y-(float)h->y)*ky,&dy); if (iyi >= 0) dy = dyi-dy;
@@ -6557,8 +6557,8 @@ void sprhitscan (dpoint3d *p0, dpoint3d *v0, vx5sprite *spr, lpoint3d *h, kv6vox
 	u.z /= (spr->f.x*spr->f.x + spr->f.y*spr->f.y + spr->f.z*spr->f.z);
 	u.x += kv->xpiv; u.y += kv->ypiv; u.z += kv->zpiv;
 
-	ix0 = max(vx5.xplanemin,0);
-	ix1 = min(vx5.xplanemax,kv->xsiz);
+	ix0 = MAX(vx5.xplanemin,0);
+	ix1 = MIN(vx5.xplanemax,kv->xsiz);
 
 		//Increment ray until it hits bounding box
 		// (ix0,0,0,ix1-1ulp,kv->ysiz-1ulp,kv->zsiz-1ulp)
@@ -7519,8 +7519,8 @@ void scumline ()
 	long i, j, k, x, y, x0, x1, *mptr, *uptr;
 	char *v;
 
-	x0 = min(scox0-1,min(scx0,scoox0)); scoox0 = scox0; scox0 = scx0;
-	x1 = max(scox1+1,max(scx1,scoox1)); scoox1 = scox1; scox1 = scx1;
+	x0 = MIN(scox0-1,MIN(scx0,scoox0)); scoox0 = scox0; scox0 = scx0;
+	x1 = MAX(scox1+1,MAX(scx1,scoox1)); scoox1 = scox1; scox1 = scx1;
 
 	uptr = &scoym3[SCPITCH]; if (uptr == &radar[SCPITCH*9]) uptr = &radar[SCPITCH*6];
 	mptr = &uptr[SCPITCH];   if (mptr == &radar[SCPITCH*9]) mptr = &radar[SCPITCH*6];
@@ -7549,8 +7549,8 @@ void scumline ()
 		for(x=x0-1;x<scex0;x++) expandstack(x,scoy-1,&mptr[x*SCPITCH*3]);
 		for(x=x1+1;x>scex1;x--) expandstack(x,scoy-1,&mptr[x*SCPITCH*3]);
 	}
-	sceox0 = min(x0-1,scex0);
-	sceox1 = max(x1+1,scex1);
+	sceox0 = MIN(x0-1,scex0);
+	sceox1 = MAX(x1+1,scex1);
 
 	if ((x1 < scx0) || (x0 > scx1))
 	{
@@ -7663,8 +7663,8 @@ void scum2line ()
 	long i, j, k, x, y, x0, x1, *mptr, *uptr;
 	char *v;
 
-	x0 = min(scox0-1,min(scx0,scoox0)); scoox0 = scox0; scox0 = scx0;
-	x1 = max(scox1+1,max(scx1,scoox1)); scoox1 = scox1; scox1 = scx1;
+	x0 = MIN(scox0-1,MIN(scx0,scoox0)); scoox0 = scox0; scox0 = scx0;
+	x1 = MAX(scox1+1,MAX(scx1,scoox1)); scoox1 = scox1; scox1 = scx1;
 
 	uptr = &scoym3[SCPITCH]; if (uptr == &radar[SCPITCH*9]) uptr = &radar[SCPITCH*6];
 	mptr = &uptr[SCPITCH];   if (mptr == &radar[SCPITCH*9]) mptr = &radar[SCPITCH*6];
@@ -7693,8 +7693,8 @@ void scum2line ()
 		for(x=x0-1;x<scex0;x++) expandrle(x,scoy-1,&mptr[x*SCPITCH*3]);
 		for(x=x1+1;x>scex1;x--) expandrle(x,scoy-1,&mptr[x*SCPITCH*3]);
 	}
-	sceox0 = min(x0-1,scex0);
-	sceox1 = max(x1+1,scex1);
+	sceox0 = MIN(x0-1,scex0);
+	sceox1 = MAX(x1+1,scex1);
 
 	if ((x1 < scx0) || (x0 > scx1))
 	{
@@ -7847,8 +7847,8 @@ void voxbackup (long x0, long y0, long x1, long y1, long tag)
 
 	voxdontrestore();
 
-	x0 = max(x0-2,0); y0 = max(y0-2,0);
-	x1 = min(x1+2,VSID); y1 = min(y1+2,VSID);
+	x0 = MAX(x0-2,0); y0 = MAX(y0-2,0);
+	x1 = MIN(x1+2,VSID); y1 = MIN(y1+2,VSID);
 	if ((x1-x0)*(y1-y0) > 262144) return;
 
 	bacx0 = x0; bacy0 = y0; bacx1 = x1; bacy1 = y1; backtag = tag;
@@ -8010,7 +8010,7 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 				{
 					oz = z;
 
-						//z,besti = min,argmin(curz[0],curz[1],curz[2],curz[3])
+						//z,besti = min,argMIN(curz[0],curz[1],curz[2],curz[3])
 					besti = (((unsigned long)(curz[1]-curz[    0]))>>31);
 						 i = (((unsigned long)(curz[3]-curz[    2]))>>31)+2;
 					besti +=(((( signed long)(curz[i]-curz[besti]))>>31)&(i-besti));
@@ -8250,9 +8250,9 @@ void setsphere (lpoint3d *hit, long hitrad, long dacol)
 	long i, x, y, xs, ys, zs, xe, ye, ze, sq;
 	float f, ff;
 
-	xs = max(hit->x-hitrad,0); xe = min(hit->x+hitrad,VSID-1);
-	ys = max(hit->y-hitrad,0); ye = min(hit->y+hitrad,VSID-1);
-	zs = max(hit->z-hitrad,0); ze = min(hit->z+hitrad,MAXZDIM-1);
+	xs = MAX(hit->x-hitrad,0); xe = MIN(hit->x+hitrad,VSID-1);
+	ys = MAX(hit->y-hitrad,0); ye = MIN(hit->y+hitrad,VSID-1);
+	zs = MAX(hit->z-hitrad,0); ze = MIN(hit->z+hitrad,MAXZDIM-1);
 	vx5.minx = xs; vx5.maxx = xe+1;
 	vx5.miny = ys; vx5.maxy = ye+1;
 	vx5.minz = zs; vx5.maxz = ze+1;
@@ -8291,7 +8291,7 @@ void setsphere (lpoint3d *hit, long hitrad, long dacol)
 			f = ff-tempfloatbuf[labs(x-hit->x)]; if (*(long *)&f <= 0) continue;
 			while (*(long *)&tempfloatbuf[sq] <  *(long *)&f) sq++;
 			while (*(long *)&tempfloatbuf[sq] >= *(long *)&f) sq--;
-			modslab(scum2(x,y),max(hit->z-sq,zs),min(hit->z+sq+1,ze));
+			modslab(scum2(x,y),MAX(hit->z-sq,zs),MIN(hit->z+sq+1,ze));
 		}
 	}
 	scum2finish();
@@ -8304,12 +8304,12 @@ void setellipsoid (lpoint3d *hit, lpoint3d *hit2, long hitrad, long dacol, long 
 	long x, y, xs, ys, zs, xe, ye, ze;
 	float a, b, c, d, e, f, g, h, r, t, u, Za, Zb, fx0, fy0, fz0, fx1, fy1, fz1;
 
-	xs = min(hit->x,hit2->x)-hitrad; xs = max(xs,0);
-	ys = min(hit->y,hit2->y)-hitrad; ys = max(ys,0);
-	zs = min(hit->z,hit2->z)-hitrad; zs = max(zs,0);
-	xe = max(hit->x,hit2->x)+hitrad; xe = min(xe,VSID-1);
-	ye = max(hit->y,hit2->y)+hitrad; ye = min(ye,VSID-1);
-	ze = max(hit->z,hit2->z)+hitrad; ze = min(ze,MAXZDIM-1);
+	xs = MIN(hit->x,hit2->x)-hitrad; xs = MAX(xs,0);
+	ys = MIN(hit->y,hit2->y)-hitrad; ys = MAX(ys,0);
+	zs = MIN(hit->z,hit2->z)-hitrad; zs = MAX(zs,0);
+	xe = MAX(hit->x,hit2->x)+hitrad; xe = MIN(xe,VSID-1);
+	ye = MAX(hit->y,hit2->y)+hitrad; ye = MIN(ye,VSID-1);
+	ze = MAX(hit->z,hit2->z)+hitrad; ze = MIN(ze,MAXZDIM-1);
 	vx5.minx = xs; vx5.maxx = xe+1;
 	vx5.miny = ys; vx5.maxy = ye+1;
 	vx5.minz = zs; vx5.maxz = ze+1;
@@ -8392,9 +8392,9 @@ void setcylinder (lpoint3d *p0, lpoint3d *p1, long cr, long dacol, long bakit)
 
 	if (xxyy == 0)
 	{
-		iz0 = max(z0,0); iz1 = min(z1,MAXZDIM);
-		minx = max(x0-cr,0); maxx = min(x0+cr,VSID-1);
-		miny = max(y0-cr,0); maxy = min(y0+cr,VSID-1);
+		iz0 = MAX(z0,0); iz1 = MIN(z1,MAXZDIM);
+		minx = MAX(x0-cr,0); maxx = MIN(x0+cr,VSID-1);
+		miny = MAX(y0-cr,0); maxy = MIN(y0+cr,VSID-1);
 
 		vx5.minx = minx; vx5.maxx = maxx+1;
 		vx5.miny = miny; vx5.maxy = maxy+1;
@@ -8465,8 +8465,8 @@ void setcylinder (lpoint3d *p0, lpoint3d *p1, long cr, long dacol, long bakit)
 			{
 				Zb = vx0*az + vy0*bz; Zc = vx0*vx0 + vy0*vy0 - 1;
 				t = Zb*Zb - Za*Zc; if (*(long *)&t <= 0) continue; t = sqrt(t);
-				ftol(max((-Zb-t)*rZa,vz0    ),&iz0); if (iz0 < 0) iz0 = 0;
-				ftol(min((-Zb+t)*rZa,vz0+rcz),&iz1); if (iz1 > MAXZDIM) iz1 = MAXZDIM;
+				ftol(MAX((-Zb-t)*rZa,vz0    ),&iz0); if (iz0 < 0) iz0 = 0;
+				ftol(MIN((-Zb+t)*rZa,vz0+rcz),&iz1); if (iz1 > MAXZDIM) iz1 = MAXZDIM;
 				modslab(scum2(ix,iy),iz0,iz1);
 			}
 		}
@@ -8493,9 +8493,9 @@ void setrect (lpoint3d *hit, lpoint3d *hit2, long dacol)
 	long x, y, xs, ys, zs, xe, ye, ze;
 
 		//WARNING: do NOT use lbound because 'c' not guaranteed to be >= 'b'
-	xs = max(min(hit->x,hit2->x),0); xe = min(max(hit->x,hit2->x),VSID-1);
-	ys = max(min(hit->y,hit2->y),0); ye = min(max(hit->y,hit2->y),VSID-1);
-	zs = max(min(hit->z,hit2->z),0); ze = min(max(hit->z,hit2->z),MAXZDIM-1);
+	xs = MAX(MIN(hit->x,hit2->x),0); xe = MIN(MAX(hit->x,hit2->x),VSID-1);
+	ys = MAX(MIN(hit->y,hit2->y),0); ye = MIN(MAX(hit->y,hit2->y),VSID-1);
+	zs = MAX(MIN(hit->z,hit2->z),0); ze = MIN(MAX(hit->z,hit2->z),MAXZDIM-1);
 	vx5.minx = xs; vx5.maxx = xe+1;
 	vx5.miny = ys; vx5.maxy = ye+1;
 	vx5.minz = zs; vx5.maxz = ze+1;
@@ -9013,9 +9013,9 @@ void sethull3d (point3d *pt, long nump, long dacol, long bakit)
 	fminx = fminy = VSID; fminz = MAXZDIM; fmaxx = fmaxy = fmaxz = 0;
 	for(i=0;i<nump;i++)
 	{
-		pt[i].x = min(max(pt[i].x,0),VSID-1);
-		pt[i].y = min(max(pt[i].y,0),VSID-1);
-		pt[i].z = min(max(pt[i].z,0),MAXZDIM-1);
+		pt[i].x = MIN(MAX(pt[i].x,0),VSID-1);
+		pt[i].y = MIN(MAX(pt[i].y,0),VSID-1);
+		pt[i].z = MIN(MAX(pt[i].z,0),MAXZDIM-1);
 
 		if (pt[i].x < fminx) fminx = pt[i].x;
 		if (pt[i].y < fminy) fminy = pt[i].y;
@@ -9093,9 +9093,9 @@ static void setsectorb (point3d *p, long *point2, long n, float thick, long daco
 		if (p[i].y > ye) ye = p[i].y;
 		if (p[i].z > ze) ze = p[i].z;
 	}
-	xs = max(xs-thick-bumpmap,0); xe = min(xe+thick+bumpmap,VSID-1);
-	ys = max(ys-thick-bumpmap,0); ye = min(ye+thick+bumpmap,VSID-1);
-	zs = max(zs-thick-bumpmap,0); ze = min(ze+thick+bumpmap,MAXZDIM-1);
+	xs = MAX(xs-thick-bumpmap,0); xe = MIN(xe+thick+bumpmap,VSID-1);
+	ys = MAX(ys-thick-bumpmap,0); ye = MIN(ye+thick+bumpmap,VSID-1);
+	zs = MAX(zs-thick-bumpmap,0); ze = MIN(ze+thick+bumpmap,MAXZDIM-1);
 	vx5.minx = xs; vx5.maxx = xe+1;
 	vx5.miny = ys; vx5.maxy = ye+1;
 	vx5.minz = zs; vx5.maxz = ze+1;
@@ -9290,7 +9290,7 @@ void ordfillpolygon (float *px, float *py, long *point2, long n, long day, long 
 		for(;sy<nsy;sy++)
 			for(i=0;i<numrst;i+=2)
 			{
-				modslab(scum2(sy,day),max(rst[i].p>>16,0),min(rst[i+1].p>>16,MAXZDIM));
+				modslab(scum2(sy,day),MAX(rst[i].p>>16,0),MIN(rst[i+1].p>>16,MAXZDIM));
 				rst[i].p += rst[i].i; rst[i+1].p += rst[i+1].i;
 			}
 	}
@@ -9334,7 +9334,7 @@ void setsector (point3d *p, long *point2, long n, float thick, long dacol, long 
 		}
 		if ((j^k)&0xff000000) //If high bytes are !=, then use bumpmapping
 		{
-			setsectorb(p,point2,n,thick,dacol,bakit,max(labs(j>>24),labs(k>>24)));
+			setsectorb(p,point2,n,thick,dacol,bakit,MAX(labs(j>>24),labs(k>>24)));
 			return;
 		}
 	}
@@ -9351,9 +9351,9 @@ void setsector (point3d *p, long *point2, long n, float thick, long dacol, long 
 		if (p[i].y > ye) ye = p[i].y;
 		if (p[i].z > ze) ze = p[i].z;
 	}
-	xs = max(xs-thick,0); xe = min(xe+thick,VSID-1);
-	ys = max(ys-thick,0); ye = min(ye+thick,VSID-1);
-	zs = max(zs-thick,0); ze = min(ze+thick,MAXZDIM-1);
+	xs = MAX(xs-thick,0); xe = MIN(xe+thick,VSID-1);
+	ys = MAX(ys-thick,0); ye = MIN(ye+thick,VSID-1);
+	zs = MAX(zs-thick,0); ze = MIN(ze+thick,MAXZDIM-1);
 	vx5.minx = xs; vx5.maxx = xe+1;
 	vx5.miny = ys; vx5.maxy = ye+1;
 	vx5.minz = zs; vx5.maxz = ze+1;
@@ -9463,9 +9463,9 @@ void setlathe (point3d *p, long numcurs, long dacol, long bakit)
 	tp0.x = ax0.x*y0 + p[0].x; tp1.x = ax0.x*y1 + p[0].x;
 	tp0.y = ax0.y*y0 + p[0].y; tp1.y = ax0.y*y1 + p[0].y;
 	tp0.z = ax0.z*y0 + p[0].z; tp1.z = ax0.z*y1 + p[0].z;
-	xs = max(min(tp0.x,tp1.x)-x0,0); xe = min(max(tp0.x,tp1.x)+x0,VSID-1);
-	ys = max(min(tp0.y,tp1.y)-x0,0); ye = min(max(tp0.y,tp1.y)+x0,VSID-1);
-	zs = max(min(tp0.z,tp1.z)-x0,0); ze = min(max(tp0.z,tp1.z)+x0,MAXZDIM-1);
+	xs = MAX(MIN(tp0.x,tp1.x)-x0,0); xe = MIN(MAX(tp0.x,tp1.x)+x0,VSID-1);
+	ys = MAX(MIN(tp0.y,tp1.y)-x0,0); ye = MIN(MAX(tp0.y,tp1.y)+x0,VSID-1);
+	zs = MAX(MIN(tp0.z,tp1.z)-x0,0); ze = MIN(MAX(tp0.z,tp1.z)+x0,MAXZDIM-1);
 	vx5.minx = xs; vx5.maxx = xe+1;
 	vx5.miny = ys; vx5.maxy = ye+1;
 	vx5.minz = zs; vx5.maxz = ze+1;
@@ -9548,9 +9548,9 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 	if (numcurs <= 0) return;
 
 		//Boundaries are quick hacks - rewrite this code!!!
-	xs = max(p[0].x-64,0); xe = min(p[0].x+64,VSID-1);
-	ys = max(p[0].y-64,0); ye = min(p[0].y+64,VSID-1);
-	zs = max(p[0].z-64,0); ze = min(p[0].z+64,MAXZDIM-1);
+	xs = MAX(p[0].x-64,0); xe = MIN(p[0].x+64,VSID-1);
+	ys = MAX(p[0].y-64,0); ye = MIN(p[0].y+64,VSID-1);
+	zs = MAX(p[0].z-64,0); ze = MIN(p[0].z+64,MAXZDIM-1);
 	vx5.minx = xs; vx5.maxx = xe+1;
 	vx5.miny = ys; vx5.maxy = ye+1;
 	vx5.minz = zs; vx5.maxz = ze+1;
@@ -9920,7 +9920,7 @@ static void initpathash ()
 	patbuf = (lpoint2d *)radar;
 	pathashead = (long *)(((long)patbuf)+(1<<LPATBUFSIZ)*sizeof(lpoint2d));
 	pathashdat = (lpoint3d *)(((long)pathashead)+((1<<LPATHASHSIZ)*4));
-	pathashmax = ((max((MAXXDIM*MAXYDIM*27)>>1,(VSID+4)*3*256*4)-((1<<LPATBUFSIZ)*sizeof(lpoint2d))-(1<<LPATHASHSIZ)*4)/12);
+	pathashmax = ((MAX((MAXXDIM*MAXYDIM*27)>>1,(VSID+4)*3*256*4)-((1<<LPATBUFSIZ)*sizeof(lpoint2d))-(1<<LPATHASHSIZ)*4)/12);
 	memset(pathashead,-1,(1<<LPATHASHSIZ)*4);
 	pathashcnt = 0;
 }
@@ -10096,9 +10096,9 @@ void setkvx (const char *filename, long ox, long oy, long oz, long rot, long bak
 	y0 = y1 = (d[k[3]]^k[4])+k[5];
 	z0 = z1 = (d[k[6]]^k[7])+k[8];
 	d[0] = xsiz; d[1] = ysiz; d[2] = zsiz;
-	x0 = min(x0,(d[k[0]]^k[1])+k[2]); x1 = max(x1,(d[k[0]]^k[1])+k[2]);
-	y0 = min(y0,(d[k[3]]^k[4])+k[5]); y1 = max(y1,(d[k[3]]^k[4])+k[5]);
-	z0 = min(z0,(d[k[6]]^k[7])+k[8]); z1 = max(z1,(d[k[6]]^k[7])+k[8]);
+	x0 = MIN(x0,(d[k[0]]^k[1])+k[2]); x1 = MAX(x1,(d[k[0]]^k[1])+k[2]);
+	y0 = MIN(y0,(d[k[3]]^k[4])+k[5]); y1 = MAX(y1,(d[k[3]]^k[4])+k[5]);
+	z0 = MIN(z0,(d[k[6]]^k[7])+k[8]); z1 = MAX(z1,(d[k[6]]^k[7])+k[8]);
 	if (x0 < 1) { i = 1-x0; x0 += i; x1 += i; k[2] += i; }
 	if (y0 < 1) { i = 1-y0; y0 += i; y1 += i; k[5] += i; }
 	if (z0 < 0) { i = 0-z0; z0 += i; z1 += i; k[8] += i; }
@@ -10254,8 +10254,8 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 	if (!tf) return;
 	sx0 = sx - mulshr16(tcx,xz); sx1 = sx0 + xz*tx;
 	sy0 = sy - mulshr16(tcy,yz); sy1 = sy0 + yz*ty;
-	x0 = max((sx0+65535)>>16,0); x1 = min((sx1+65535)>>16,xres);
-	y0 = max((sy0+65535)>>16,0); y1 = min((sy1+65535)>>16,yres);
+	x0 = MAX((sx0+65535)>>16,0); x1 = MIN((sx1+65535)>>16,xres);
+	y0 = MAX((sy0+65535)>>16,0); y1 = MIN((sy1+65535)>>16,yres);
 	ui = shldiv16(65536,xz); u = mulshr16(-sx0,ui);
 	vi = shldiv16(65536,yz); v = mulshr16(-sy0,vi);
 	if (!((black^white)&0xff000000)) //Ignore alpha
@@ -10764,7 +10764,7 @@ void drawspherefill (float ox, float oy, float oz, float bakrad, long col)
 			t = sqrt(isq); //fsqrtasm(&isq,&t);
 			ftol(nb-t,&sx1); if (sx1 < 0) sx1 = 0;
 			ftol(nb+t,&sx2);
-			sx2 = min(sx2,xres)-sx1;
+			sx2 = MIN(sx2,xres)-sx1;
 			if (sx2 > 0) clearbuf((void *)((sx1<<2)+p),sx2,col);
 			p += bytesperline; if (p >= sy2) return;
 			isq += isqi; isqi += isqii; nb += nbi;
@@ -14108,9 +14108,9 @@ long meltsphere (vx5sprite *spr, lpoint3d *hit, long hitrad)
 	unsigned long *xlenptr;
 	unsigned short *ylenptr;
 
-	xs = max(hit->x-hitrad,0); xe = min(hit->x+hitrad,VSID-1);
-	ys = max(hit->y-hitrad,0); ye = min(hit->y+hitrad,VSID-1);
-	zs = max(hit->z-hitrad,0); ze = min(hit->z+hitrad,MAXZDIM-1);
+	xs = MAX(hit->x-hitrad,0); xe = MIN(hit->x+hitrad,VSID-1);
+	ys = MAX(hit->y-hitrad,0); ye = MIN(hit->y+hitrad,VSID-1);
+	zs = MAX(hit->z-hitrad,0); ze = MIN(hit->z+hitrad,MAXZDIM-1);
 	if ((xs > xe) || (ys > ye) || (zs > ze)) return(0);
 
 	if (hitrad >= SETSPHMAXRAD-1) hitrad = SETSPHMAXRAD-2;
@@ -14144,7 +14144,7 @@ long meltsphere (vx5sprite *spr, lpoint3d *hit, long hitrad)
 			{
 				while (*(long *)&tempfloatbuf[sq] <  *(long *)&f) sq++;
 				while (*(long *)&tempfloatbuf[sq] >= *(long *)&f) sq--;
-				z0 = max(hit->z-sq,zs); z1 = min(hit->z+sq+1,ze);
+				z0 = MAX(hit->z-sq,zs); z1 = MIN(hit->z+sq+1,ze);
 				for(z=z0;z<z1;z++)
 				{
 					i = getcube(x,y,z); //0:air, 1:unexposed solid, 2:vbuf col ptr
@@ -14203,7 +14203,7 @@ long meltsphere (vx5sprite *spr, lpoint3d *hit, long hitrad)
 			{
 				while (*(long *)&tempfloatbuf[sq] <  *(long *)&f) sq++;
 				while (*(long *)&tempfloatbuf[sq] >= *(long *)&f) sq--;
-				z0 = max(hit->z-sq,zs); z1 = min(hit->z+sq+1,ze);
+				z0 = MAX(hit->z-sq,zs); z1 = MIN(hit->z+sq+1,ze);
 				for(z=z0;z<z1;z++)
 				{
 					i = getcube(x,y,z); //0:air, 1:unexposed solid, 2:vbuf col ptr
@@ -14345,9 +14345,9 @@ static void setlighting (long x0, long y0, long z0, long x1, long y1, long z1, l
 	long i, x, y;
 	char *v;
 
-	x0 = max(x0,0); x1 = min(x1,VSID);
-	y0 = max(y0,0); y1 = min(y1,VSID);
-	z0 = max(z0,0); z1 = min(z1,MAXZDIM);
+	x0 = MAX(x0,0); x1 = MIN(x1,VSID);
+	y0 = MAX(y0,0); y1 = MIN(y1,VSID);
+	z0 = MAX(z0,0); z1 = MIN(z1,MAXZDIM);
 
 	lval <<= 24;
 
@@ -14424,18 +14424,18 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 	if (!vx5.lightmode) return;
 	xbsox = -17;
 
-	x0 = max(x0-ESTNORMRAD,0); x1 = min(x1+ESTNORMRAD,VSID);
-	y0 = max(y0-ESTNORMRAD,0); y1 = min(y1+ESTNORMRAD,VSID);
-	z0 = max(z0-ESTNORMRAD,0); z1 = min(z1+ESTNORMRAD,MAXZDIM);
+	x0 = MAX(x0-ESTNORMRAD,0); x1 = MIN(x1+ESTNORMRAD,VSID);
+	y0 = MAX(y0-ESTNORMRAD,0); y1 = MIN(y1+ESTNORMRAD,VSID);
+	z0 = MAX(z0-ESTNORMRAD,0); z1 = MIN(z1+ESTNORMRAD,MAXZDIM);
 
 	x2 = x0; y2 = y0;
 	x3 = x1; y3 = y1;
 	for(y0=y2;y0<y3;y0=y1)
 	{
-		y1 = min(y0+64,y3);  //"justfly -" (256 lights): +1024:41sec 512:29 256:24 128:22 64:21 32:21 16:21
+		y1 = MIN(y0+64,y3);  //"justfly -" (256 lights): +1024:41sec 512:29 256:24 128:22 64:21 32:21 16:21
 		for(x0=x2;x0<x3;x0=x1)
 		{
-			x1 = min(x0+64,x3);
+			x1 = MIN(x0+64,x3);
 
 
 			if (vx5.lightmode == 2)
@@ -14591,9 +14591,9 @@ void checkfloatinbox (long x0, long y0, long z0, long x1, long y1, long z1)
 	if (flchkcnt >= FLCHKSIZ) return;
 
 		//Make all off-by-1 hacks in other code unnecessary
-	x0 = max(x0-1,0); x1 = min(x1+1,VSID);
-	y0 = max(y0-1,0); y1 = min(y1+1,VSID);
-	z0 = max(z0-1,0); z1 = min(z1+1,MAXZDIM);
+	x0 = MAX(x0-1,0); x1 = MIN(x1+1,VSID);
+	y0 = MAX(y0-1,0); y1 = MIN(y1+1,VSID);
+	z0 = MAX(z0-1,0); z1 = MIN(z1+1,MAXZDIM);
 
 		//Add local box's slabs to flchk list - checked in next dofalls()
 	for(y=y0;y<y1;y++)
@@ -14809,8 +14809,8 @@ void dofall (long i)
 	if (vx5.vxlmipuse > 1)
 	{
 		long x0, y0, x1, y1;
-		x0 = max(vx5.flstcnt[i].x0,0); x1 = min(vx5.flstcnt[i].x1+1,VSID);
-		y0 = max(vx5.flstcnt[i].y0,0); y1 = min(vx5.flstcnt[i].y1+1,VSID);
+		x0 = MAX(vx5.flstcnt[i].x0,0); x1 = MIN(vx5.flstcnt[i].x1+1,VSID);
+		y0 = MAX(vx5.flstcnt[i].y0,0); y1 = MIN(vx5.flstcnt[i].y1+1,VSID);
 		//FIX ME!!!
 		//if ((x1 > x0) && (y1 > y0)) genmipvxl(x0,y0,x1,y1); //Don't replace with bbox!
 	}
@@ -14830,9 +14830,9 @@ long meltfall (vx5sprite *spr, long fi, long delvxl)
 
 	if (vx5.flstcnt[fi].i1 < 0) return(0);
 
-	xs = max(vx5.flstcnt[fi].x0,0); xe = min(vx5.flstcnt[fi].x1,VSID-1);
-	ys = max(vx5.flstcnt[fi].y0,0); ye = min(vx5.flstcnt[fi].y1,VSID-1);
-	zs = max(vx5.flstcnt[fi].z0,0); ze = min(vx5.flstcnt[fi].z1,MAXZDIM-1);
+	xs = MAX(vx5.flstcnt[fi].x0,0); xe = MIN(vx5.flstcnt[fi].x1,VSID-1);
+	ys = MAX(vx5.flstcnt[fi].y0,0); ye = MIN(vx5.flstcnt[fi].y1,VSID-1);
+	zs = MAX(vx5.flstcnt[fi].z0,0); ze = MIN(vx5.flstcnt[fi].z1,MAXZDIM-1);
 	if ((xs > xe) || (ys > ye) || (zs > ze)) return(0);
 
 		//Need to know how many voxels to allocate... SLOW :(
@@ -15076,7 +15076,7 @@ void voxsetframebuffer (long p, long b, long x, long y)
 		{
 			ofogdist = vx5.maxscandist;
 
-			//foglut[?>>20] = min(?*32767/vx5.maxscandist,32767)
+			//foglut[?>>20] = MIN(?*32767/vx5.maxscandist,32767)
 #if 0
 			long j, k, l;
 			j = 0; l = 0x7fffffff/vx5.maxscandist;
@@ -15407,7 +15407,7 @@ long initvoxlap ()
 	//if (cputype&(1<<25)) fixsse(); //SSE
 
 	  //WARNING: xres&yres are local to VOXLAP5.C so don't rely on them here!
-	if (!(radarmem = (long *)malloc(max((((MAXXDIM*MAXYDIM*27)>>1)+7)&~7,(VSID+4)*3*SCPITCH*4+8))))
+	if (!(radarmem = (long *)malloc(MAX((((MAXXDIM*MAXYDIM*27)>>1)+7)&~7,(VSID+4)*3*SCPITCH*4+8))))
 		return(-1);
 	radar = (long *)((((long)radarmem)+7)&~7);
 
@@ -15470,8 +15470,8 @@ long initvoxlap ()
 		{
 			if (zz <= 0) i = (long)(((float)zz-.5f)*f); else i = (long)(((float)zz-.5f)*ff);
 			if (zz >= 0) j = (long)(((float)zz+.5f)*f); else j = (long)(((float)zz+.5f)*ff);
-			ffxptr[zz].x = (unsigned short)max(i+(GSIZ>>1),0);
-			ffxptr[zz].y = (unsigned short)min(j+(GSIZ>>1),GSIZ);
+			ffxptr[zz].x = (unsigned short)MAX(i+(GSIZ>>1),0);
+			ffxptr[zz].y = (unsigned short)MIN(j+(GSIZ>>1),GSIZ);
 		}
 	}
 	for(i=0;i<=25*5;i+=5) xbsbuf[i] = 0x00000000ffffffff;
@@ -15552,7 +15552,7 @@ long initvoxlap ()
 	printf("Memory statistics upon exit: (all numbers in bytes)");
 	printf("\n");
 	if (screen) printf("   screen: %8ld\n",imageSize);
-	printf("    radar: %8ld\n",max((((MAXXDIM*MAXYDIM*27)>>1)+7)&~7,(VSID+4)*3*SCPITCH*4+8));
+	printf("    radar: %8ld\n",MAX((((MAXXDIM*MAXYDIM*27)>>1)+7)&~7,(VSID+4)*3*SCPITCH*4+8));
 	printf("  bacsptr: %8ld\n",sizeof(bacsptr));
 	printf("     sptr: %8ld\n",(VSID*VSID)<<2);
 	printf("     vbuf: %8ld(%8ld)\n",(j+VSID*VSID+l)<<2,VOXSIZ);

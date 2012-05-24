@@ -1,4 +1,4 @@
-/***************************************************************************************************
+﻿/***************************************************************************************************
 WINMAIN.CPP & SYSMAIN.H
 
 Windows layer code written by Ken Silverman (http://advsys.net/ken) (1997-2009)
@@ -13,6 +13,7 @@ You may use this code for non-commercial purposes as long as credit is maintaine
 
 	//System specific:
 #ifdef _WIN32
+	#define NOMAXMIN
 	#define WIN32_LEAN_AND_MEAN
 	#include <windows.h>
 	extern HWND ghwnd;

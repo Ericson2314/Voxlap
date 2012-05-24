@@ -16,33 +16,6 @@ static inline void clearMMX () // inserts opcode emms, used to avoid many compil
 	#endif
 }
 
-/*
-#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
-	#define STARTASMB() {__asm__ \
-	( \
-	.intel_syntax \
-	}
-
-	#define STARTASML "\t
-	#define ENDASML \n"
-
-	#define ENDASMB() {.at&t_syntax
-	);
-	}
-#endif
-
-#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-	#define STARTASMB() {_asm \
-	\{ \
-	}
-	
-	#define STARTASML
-	#define ENDASML
-	
-	#define ENDASMB() {\}}
-#endif
-*/
-
 /**
  * Compiler Directive Hacks
  **/
@@ -84,32 +57,6 @@ static int memcasecmp (const void *voidptr1, const void *voidptr2, size_t n)
 	return 0;
 }
 
-#define min(a, b)  (((a) < (b)) ? (a) : (b))
-#define max(a, b)  (((a) > (b)) ? (a) : (b))
-
-//-----------------------------------
-// windows.h min() & max()
-
-// END windows.h min() & max()
-//-----------------------------------
-	//Same as: stricmp(st0,st1) except: '/' == '\'
-static int filnamcmp (const char *st0, const char *st1)
-{
-	int i;
-	char ch0, ch1;
-
-	for(i=0;st0[i];i++)
-	{
-		ch0 = st0[i]; if ((ch0 >= 'a') && (ch0 <= 'z')) ch0 -= 32;
-		ch1 = st1[i]; if ((ch1 >= 'a') && (ch1 <= 'z')) ch1 -= 32;
-		if (ch0 == '/') ch0 = '\\';
-		if (ch1 == '/') ch1 = '\\';
-		if (ch0 != ch1) return(-1);
-	}
-	if (!st1[i]) return(0);
-	return(-1);
-}
-
 #endif
 
 #ifdef _MSC_VER
@@ -137,26 +84,18 @@ typedef unsigned __int64 uint64_t;
 
 
 /**
- * Pastebin for assembly rewritting
+ * Usefully macros
  **/
 
-/*
+#define COSSIN(degree, cos_, sin_) \
+    do \
+    { \
+        sin_ = sin(degree); \
+        cos_ = cos(degree); \
+    } while(0)
 
-	#if defined(__NOASM__)
-	#endif
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
-	__asm__ __volatile__
-	(
+#define MIN(a, b)  (((a) < (b)) ? (a) : (b))
 
-	);
-	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
-	_asm
-	{
+#define MAX(a, b)  (((a) > (b)) ? (a) : (b))
 
-	}
-	#endif
-
-*/
-
-
+#define BOUND(value, min, max)  ((value)>(max)?(max):((value)<(min)?(min):(value)))

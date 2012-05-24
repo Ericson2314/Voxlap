@@ -92,11 +92,15 @@ static __inline int filelength (int h)
 #ifndef O_BINARY
 #define O_BINARY 0
 #endif
-#if !defined(max)
-#define max(a,b) (((a) > (b)) ? (a) : (b))
+
+	//min & max failsafe
+#undef max
+#undef min
+#if !defined(MAX)
+#define MAX(a,b) (((a) > (b)) ? (a) : (b))
 #endif
-#if !defined(min)
-#define min(a,b) (((a) < (b)) ? (a) : (b))
+#if !defined(MIN)
+#define MIN(a,b) (((a) < (b)) ? (a) : (b))
 #endif
 
 #if defined(__GNUC__)
@@ -432,7 +436,7 @@ static void suckbitsnextblock ()
 	{
 			//NOTE: should only read bytes inside compsize, not 64K!!! :/
 		*(int *)&olinbuf[0] = *(int *)&olinbuf[sizeof(olinbuf)-4];
-		n = min((unsigned)(kzfs.compleng-kzfs.comptell),sizeof(olinbuf)-4);
+		n = MIN((unsigned)(kzfs.compleng-kzfs.comptell),sizeof(olinbuf)-4);
 		fread(&olinbuf[4],n,1,kzfs.fil);
 		kzfs.comptell += n;
 		bitpos -= ((sizeof(olinbuf)-4)<<3);
@@ -561,8 +565,8 @@ static int initpass () //Interlaced images have 7 "passes", non-interlaced have 
 
 		//Precalculate x-clipping to screen borders (speeds up putbuf)
 		//Equation: (0 <= xr <= ixsiz) && (0 <= xr*ixstp+globxoffs+ixoff <= xres)
-	xr0 = max((-globxoffs-ixoff+(1<<j)-1)>>j,0);
-	xr1 = min((xres-globxoffs-ixoff+(1<<j)-1)>>j,ixsiz);
+	xr0 = MAX((-globxoffs-ixoff+(1<<j)-1)>>j,0);
+	xr1 = MIN((xres-globxoffs-ixoff+(1<<j)-1)>>j,ixsiz);
 	xr0 = ixsiz-xr0;
 	xr1 = ixsiz-xr1;
 
@@ -1082,7 +1086,7 @@ static int kpngrend (const char *kfilebuf, int kfilength,
 					//else {} //WARNING: PNG docs say: MUST compare all 48 bits :(
 					break;
 				case 3:
-					for(i=min(leng,kplib_paleng)-1;i>=0;i--)
+					for(i=MIN(leng,kplib_paleng)-1;i>=0;i--)
 						kplib_palcol[i] &= LSWAPIB((((int)filptr[i])<<24)|0xffffff);
 					break;
 				default:;
@@ -1457,8 +1461,8 @@ static void yrbrend (int x, int y, int *ldct)
 			p = pp+(xx<<2);
 			dc = odc;
 			if (lnumcomponents > 1) dc2 = &ldct[(lcomphvsamp0<<6)+((yy>>lcompvsampshift0)<<3)+(xx>>lcomphsampshift0)];
-			xxxend = min(clipxdim-ox,8);
-			yyyend = min(clipydim-oy,8);
+			xxxend = MIN(clipxdim-ox,8);
+			yyyend = MIN(clipydim-oy,8);
 			if ((lcomphsamp[0] == 1) && (xxxend == 8))
 			{
 				for(yyy=0;yyy<yyyend;yyy++)
@@ -1710,15 +1714,15 @@ static int kpegrend (const char *kfilebuf, int kfilength,
 							if (gcomphsampshift[zz] < glhstep) glhstep = gcomphsampshift[zz];
 							if (gcompvsampshift[zz] < glvstep) glvstep = gcompvsampshift[zz];
 						}
-				glhstep = (ghsampmax>>glhstep); lcomphsamp[0] = min(lcomphsamp[0],glhstep); glhstep <<= 3;
-				glvstep = (gvsampmax>>glvstep); lcompvsamp[0] = min(lcompvsamp[0],glvstep); glvstep <<= 3;
+				glhstep = (ghsampmax>>glhstep); lcomphsamp[0] = MIN(lcomphsamp[0],glhstep); glhstep <<= 3;
+				glvstep = (gvsampmax>>glvstep); lcompvsamp[0] = MIN(lcompvsamp[0],glvstep); glvstep <<= 3;
 				lcomphvsamp0 = lcomphsamp[0]*lcompvsamp[0];
 
-				clipxdim = min(xdim+globxoffs,xres);
-				clipydim = min(ydim+globyoffs,yres);
+				clipxdim = MIN(xdim+globxoffs,xres);
+				clipydim = MIN(ydim+globyoffs,yres);
 
-				if ((max(globxoffs,0) >= xres) || (min(globxoffs+xdim,xres) <= 0) ||
-					 (max(globyoffs,0) >= yres) || (min(globyoffs+ydim,yres) <= 0))
+				if ((MAX(globxoffs,0) >= xres) || (MIN(globxoffs+xdim,xres) <= 0) ||
+					 (MAX(globyoffs,0) >= yres) || (MIN(globyoffs+ydim,yres) <= 0))
 					{ if (dctbuf) free(dctbuf); return(0); }
 
 				Alut[0] = (1<<Al); Alut[1] = -Alut[0];
@@ -1778,7 +1782,7 @@ static int kpegrend (const char *kfilebuf, int kfilength,
 
 										//Get AC
 									if (!dctbuf) memset((void *)&dc[1],0,63*4);
-									z = max(Ss,1); dcflag = 1;
+									z = MAX(Ss,1); dcflag = 1;
 									if (eobrun <= 0)
 									{
 										for(;z<=Se;z++)
@@ -1987,10 +1991,10 @@ static int kgifrend (const char *kfilebuf, int kfilelength,
 		if (kfilebuf[10]&128) backcol = kplib_palcol[(unsigned char)kfilebuf[11]]; else backcol = 0;
 
 			//Fill border to backcol
-		xx[0] = max(daglobxoffs           ,     0); yy[0] = max(daglobyoffs           ,     0);
-		xx[1] = min(daglobxoffs+xoff      ,daxres); yy[1] = min(daglobyoffs+yoff      ,dayres);
-		xx[2] = max(daglobxoffs+xoff+xspan,     0); yy[2] = min(daglobyoffs+yoff+yspan,dayres);
-		xx[3] = min(daglobxoffs+xsiz      ,daxres); yy[3] = min(daglobyoffs+ysiz      ,dayres);
+		xx[0] = MAX(daglobxoffs           ,     0); yy[0] = MAX(daglobyoffs           ,     0);
+		xx[1] = MIN(daglobxoffs+xoff      ,daxres); yy[1] = MIN(daglobyoffs+yoff      ,dayres);
+		xx[2] = MAX(daglobxoffs+xoff+xspan,     0); yy[2] = MIN(daglobyoffs+yoff+yspan,dayres);
+		xx[3] = MIN(daglobxoffs+xsiz      ,daxres); yy[3] = MIN(daglobyoffs+ysiz      ,dayres);
 
 		lptr = (int *)(yy[0]*dabytesperline+daframeplace);
 		for(y=yy[0];y<yy[1];y++,lptr=(int *)(((INT_PTR)lptr)+dabytesperline))
@@ -2353,8 +2357,8 @@ static int kpcxrend (const char *buf, int fleng,
 		kplib_coltype = 2;
 
 			//Make sure background is opaque (since 24-bit PCX renderer doesn't do it)
-		x0 = max(daglobxoffs,0); x1 = min(xsiz+daglobxoffs,daxres);
-		y0 = max(daglobyoffs,0); y1 = min(ysiz+daglobyoffs,dayres);
+		x0 = MAX(daglobxoffs,0); x1 = MIN(xsiz+daglobxoffs,daxres);
+		y0 = MAX(daglobyoffs,0); y1 = MIN(ysiz+daglobyoffs,dayres);
 		p = y0*dabytesperline + daframeplace+3;
 		for(y=y0;y<y1;y++,p+=dabytesperline)
 			for(x=x0;x<x1;x++) *(char *)((x<<2)+p) = 255;
@@ -2365,7 +2369,7 @@ static int kpcxrend (const char *buf, int fleng,
 	cptr = (unsigned char *)&buf[128];
 	p = y*dabytesperline+daframeplace;
 
-	if (bpl > xsiz) { daxres = min(daxres,x1); x1 += bpl-xsiz; }
+	if (bpl > xsiz) { daxres = MIN(daxres,x1); x1 += bpl-xsiz; }
 
 	j = nplanes-1; daxres <<= 2; x0 <<= 2; x1 <<= 2; x <<= 2; x += j;
 	if (nplanes == 1) //8-bit PCX
@@ -2424,7 +2428,7 @@ static int kddsrend (const char *buf, int leng,
 
 		p = yoff*bpl + (xoff<<2) + frameptr; xx = (xsiz<<2);
 		if (xoff < 0) { p -= (xoff<<2); buf -= (xoff<<2); xsiz += xoff; }
-		xsiz = (min(xsiz,xdim-xoff)<<2); ysiz = min(ysiz,ydim);
+		xsiz = (MIN(xsiz,xdim-xoff)<<2); ysiz = MIN(ysiz,ydim);
 		for(y=0;y<ysiz;y++,p+=bpl,buf+=xx)
 		{
 			if ((unsigned int)(y+yoff) >= (unsigned int)ydim) continue;
@@ -2506,9 +2510,9 @@ static int kddsrend (const char *buf, int leng,
 					rr = r[j]; gg = g[j]; bb = b[j];
 					if (!(dxt&1))
 					{
-						bb = min((bb*lut[z])>>16,255);
-						gg = min((gg*lut[z])>>16,255);
-						rr = min((rr*lut[z])>>16,255);
+						bb = MIN((bb*lut[z])>>16,255);
+						gg = MIN((gg*lut[z])>>16,255);
+						rr = MIN((rr*lut[z])>>16,255);
 					}
 					wptr[(xx<<2)+0] = (unsigned char)bb;
 					wptr[(xx<<2)+1] = (unsigned char)gg;
@@ -3203,8 +3207,8 @@ static void putbuf4zip (const unsigned char *buf, int uncomp0, int uncomp1)
 	int i0, i1;
 		//              uncomp0 ... uncomp1
 		//  &gzbufptr[kzfs.pos] ... &gzbufptr[kzfs.endpos];
-	i0 = max(uncomp0,kzfs.pos);
-	i1 = min(uncomp1,kzfs.endpos);
+	i0 = MAX(uncomp0,kzfs.pos);
+	i1 = MIN(uncomp1,kzfs.endpos);
 	if (i0 < i1) memcpy(&gzbufptr[i0],&buf[i0-uncomp0],i1-i0);
 }
 
@@ -3219,7 +3223,7 @@ int kzread (void *buffer, int leng)
 	{
 		if (kzfs.pos != kzfs.i) //Seek only when position changes
 			fseek(kzfs.fil,kzfs.seek0+kzfs.pos,SEEK_SET);
-		i = min(kzfs.leng-kzfs.pos,leng);
+		i = MIN(kzfs.leng-kzfs.pos,leng);
 		fread(buffer,i,1,kzfs.fil);
 		kzfs.i += i; //kzfs.i is a local copy of ftell(kzfs.fil);
 	}
@@ -3229,7 +3233,7 @@ int kzread (void *buffer, int leng)
 
 			//Initialize for putbuf4zip
 		gzbufptr = (char *)buffer; gzbufptr = &gzbufptr[-kzfs.pos];
-		kzfs.endpos = min(kzfs.pos+leng,kzfs.leng);
+		kzfs.endpos = MIN(kzfs.pos+leng,kzfs.leng);
 		if (kzfs.endpos == kzfs.pos) return(0); //Guard against reading 0 length
 
 		if (kzfs.pos < gslidew-32768) // Must go back to start :(
@@ -3240,7 +3244,7 @@ int kzread (void *buffer, int leng)
 			kzfs.jmpplc = 0;
 
 				//Initialize for suckbits/peekbits/getbits
-			kzfs.comptell = min((unsigned)kzfs.compleng,sizeof(olinbuf));
+			kzfs.comptell = MIN((unsigned)kzfs.compleng,sizeof(olinbuf));
 			fread(&olinbuf[0],kzfs.comptell,1,kzfs.fil);
 				//Make it re-load when there are < 32 bits left in FIFO
 			bitpos = -(((int)sizeof(olinbuf)-4)<<3);
@@ -3249,7 +3253,7 @@ int kzread (void *buffer, int leng)
 		}
 		else
 		{
-			i = max(gslidew-32768,0); j = gslider-16384;
+			i = MAX(gslidew-32768,0); j = gslider-16384;
 
 				//HACK: Don't unzip anything until you have to...
 				//   (keeps file pointer as low as possible)
