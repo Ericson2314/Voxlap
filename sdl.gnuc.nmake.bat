@@ -26,6 +26,8 @@ set LIB=/mingw/lib;%LIB%
 set GFXOBJ=-l opengl32.lib -l glu32.lib -l mingw32.lib -l sdl.lib -l sdlmain.lib
 set GFXCFLAGS=-D_GNU_SOURCE=1 -Dmain=SDL_main
 
+
+
 @rem compile game
 nmake -y -f nmake.mak
 pause
