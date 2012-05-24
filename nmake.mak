@@ -1,4 +1,4 @@
-# sub-directory macros
+﻿# sub-directory macros
 locSRC                 =$(MAKEDIR)/source
 locINC                 =$(MAKEDIR)/include
 locLIB                 =$(MAKEDIR)/libraries
@@ -14,7 +14,7 @@ LIB                    =$(locLIB);$(LIB)
 # -----------------------------------
 # Importing Environment Variables
 !IFNDEF USEV5ASM
-USEV5ASM               =0
+USEV5ASM               =1
 !ENDIF
 
 GFXdep                 =win
@@ -23,6 +23,13 @@ GFXdep                 =$(_GFXDEP)
 AsmName                =masm
 AsmName                =$(_ASMNAME)
 
+!IFDEF BUILD_MODE
+CXX_MODE               =CXX_$(BUILD_MODE)
+LNK_MODE               =LNK_$(BUILD_MODE)
+!ELSE
+CXX_MODE               =$(CXX_Debug)
+LNK_MODE               =$(LNK_Debug)
+!ENDIF
 
 # END Importing Environment Variables
 # -----------------------------------
@@ -34,11 +41,17 @@ CXX                    =gcc  #for GNU C++ Compiler
 LNK                    =ld   #for GNU linker
 
 # Flags
-CXXFLAGS               =-o $(@) -c -funsigned-char -mwindows $(GFXCFLAGS) $(Random_Macros) #for GNU C++ Compiler (gcc)
+CXXFLAGS               =-o $(@) -c -funsigned-char -mwindows $(CXX_MODE) $(GFXCFLAGS) $(Random_Macros) # for GNU C++ Compiler (gcc)
 CMacroPre              =-D # #for GNU C++ Compiler (gcc)
 
-LNKFLAGS                =-o $(@) #for GNU linker (ld)
-LNKlibPre              =-l # #for GNU linker (ld)
+CXX_Debug              =
+CXX_Release            =
+
+LNKFLAGS               =-o $(@) $(LNK_MODE) # for GNU linker (ld)
+LNKlibPre              =-l # for GNU linker (ld)
+
+LNK_Debug              =
+LNK_Release            =
 
 !ENDIF
 # END GNU Compiler Collection Macros
@@ -51,11 +64,17 @@ CXX                    =cl   #for Micrsoft Compiler
 LNK                    =link #for Microsfoft Linker
 
 # Flags
-CXXFLAGS               =/Fo$(@R) /c /J $(GFXCFLAGS) $(Random_Macros) # for Micrsoft Compiler(cl)
+CXXFLAGS               =/Fo$(@R) /c /J $(CXX_MODE) $(GFXCFLAGS) $(Random_Macros) # for Micrsoft Compiler(cl)
 CMacroPre              =/D # for Micrsoft Compiler(cl)
 
-LNKFLAGS               =/out:$(@) # for Microsfoft Linker (link)
+CXX_Debug              =/MLd /ZI /GZ /RTCsuc /Od
+CXX_Release            =/Ox
+
+LNKFLAGS               =/out:$(@) $(LNK_MODE) # for Microsfoft Linker (link)
 LNKlibSuf              =.lib
+
+LNK_Debug              =/DEBUG
+LNK_Release            =
 
 !ENDIF
 # END Micrososft Visual C Macros
