@@ -23,9 +23,14 @@ GFXdep                 =$(_GFXDEP)
 AsmName                =masm
 AsmName                =$(_ASMNAME)
 
-!IFDEF BUILD_MODE
-CXX_MODE               =CXX_$(BUILD_MODE)
-LNK_MODE               =LNK_$(BUILD_MODE)
+!IFDEF BUILD
+!IF "$(BUILD)"=="Release"
+CXX_MODE               =$(CXX_Release)
+LNK_MODE               =$(LNK_Release)
+!ELSE IF "$(BUILD)"=="Debug"
+CXX_MODE               =$(CXX_Debug)
+LNK_MODE               =$(LNK_Debug)
+!ENDIF
 !ELSE
 CXX_MODE               =$(CXX_Debug)
 LNK_MODE               =$(LNK_Debug)

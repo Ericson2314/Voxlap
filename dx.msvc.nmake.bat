@@ -27,6 +27,7 @@ set GFXOBJ=ddraw.lib dinput.lib dxguid.lib
 
 
 set USEV5ASM=1
+set BUILD=Debug
 
 @rem compile game
 nmake -y -f nmake.mak
