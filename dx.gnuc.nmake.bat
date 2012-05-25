@@ -27,6 +27,7 @@ set GFXOBJ=-l mingw32 -l ddraw -l dinput -l dxguid
 
 
 set USEV5ASM=1
+set build=Debug
 
 @rem compile game
 nmake -y -f nmake.mak

@@ -14,6 +14,9 @@ endif
 # -----------------------------------
 # Choices
 
+# "Debug" for debug build, "Release" for release build
+build                  =Debug
+
 # "gcc" for GNU C Compiler, "cl" for Micrsoft Compiler
 CXX                    =gcc
 
@@ -48,18 +51,29 @@ nasm_FLAGS             =-o $(@)           # Netwide Assembler (nasm)
 masm_FLAGS             =/Fo$(@R) /c /coff # Micrsoft Macro Assembler (masm)
 
 cl_FLAGS               =/Fo$(@R) /c /J    # for Micrsoft Compiler(cl)
+cl_Debug               =/MLd /ZI /GZ /RTCsuc /Od
+cl_Release             =/Ox
 cl_MacroPre            =/D                # for Micrsoft Compiler(cl)
 
 gcc_FLAGS              =-o $(@) -c -funsigned-char    # for GNU C++ Compiler (gcc)
+gcc_Debug              =
+gcc_Release            =
 gcc_MacroPre           =-D #                          # for GNU C++ Compiler (gcc)
 
 ld_FLAGS               =-o $(@)                       # for GNU linker (ld)
+ld_Debug               =
+ld_Release             =
 ld_libPre              =-l #                          # for GNU linker (ld)
 ld_libSuf              =
 
 link_FLAGS             =/out:$(@)                     # for Microsfoft Linker (link)
+link_Debug             =/DEBUG
+link_Release           =
 link_libPre            =
 link_libSuf            =.lib                          # for Microsfoft Linker (link)
+
+
+
 
 # END Build Flags
 # -----------------------------------
@@ -125,10 +139,10 @@ AS                     =$(AsmName)
 endif
 AFLAGS                 =$($(AsmName)_FLAGS) $($(PLATdep)_$(AsmName)_FLAGS)
 
-CXXFLAGS               =$($(CXX)_FLAGS)     $($(GFXdep)_$(CXX)_FLAGS)      $($(PLATdep)_$(CXX)_FLAGS) $(Random_Macros)
+CXXFLAGS               =$($(CXX)_FLAGS) $($(CXX)_$(build)) $($(GFXdep)_$(CXX)_FLAGS) $($(PLATdep)_$(CXX)_FLAGS) $(Random_Macros)
 CMacroPre              =$($(CXX)_MacroPre)
 
-LNKFLAGS               =$($(LNK)_FLAGS)     $($(GFXdep)_$(LNK)_FLAGS)      $($(PLATdep)_$(LNK)_FLAGS) $(if_USEV5ASM)
+LNKFLAGS               =$($(LNK)_FLAGS) $($(LNK)_$(build)) $($(GFXdep)_$(LNK)_FLAGS) $($(PLATdep)_$(LNK)_FLAGS) $(if_USEV5ASM)
 LNKlibPre              =$($(LNK)_libPre)
 LNKlibSuf              =$($(LNK)_libSuf)
 
