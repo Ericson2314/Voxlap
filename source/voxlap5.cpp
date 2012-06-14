@@ -2447,8 +2447,6 @@ static float optistrx, optistry, optiheix, optiheiy, optiaddx, optiaddy;
 static int64_t foglut[2048], fogcol;
 static long ofogdist = -1;
 
-#ifndef _DOS
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -12626,8 +12624,6 @@ static void kv6draw (vx5sprite *spr)
 	}
 	clearMMX();
 }
-
-#endif //huge #ifndef _DOS
 
 //-------------------------- KFA sprite code begins --------------------------
 
