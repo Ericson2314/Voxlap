@@ -1,8 +1,8 @@
 ﻿# sub-directory macros
-locSRC                 =./source
-locINC                 =./include
-locLIB                 =./libraries
-locBIN                 =./binaries
+locSRC                 =$(realpath $(lastword $(MAKEFILE_LIST)))/source
+locINC                 =$(realpath $(lastword $(MAKEFILE_LIST)))/include
+locLIB                 =$(realpath $(lastword $(MAKEFILE_LIST)))/libraries
+locBIN                 =$(realpath $(lastword $(MAKEFILE_LIST)))/binaries
 
 # adding inbin directory to paths
 ifdef __MSVC__
