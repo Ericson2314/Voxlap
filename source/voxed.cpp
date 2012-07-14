@@ -208,105 +208,36 @@ void emms ();
 	value
 
 #endif
-#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
-//#pragma warning(disable:4799) //I know how to use EMMS
+
+#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#pragma warning(disable:4799) //I know how to use EMMS
+#endif
 
 static inline void ftol (float f, long *a)
 {
+	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	_asm
 	{
-		"mov eax, a\n\t"
-		"fld f\n\t"
-		"fistpl (%eax)\n\t"
-	}
+		"mov eax, a\n"
+		"fld f\n"
+		"fistpl (%eax)\n"
 }
-
-static inline void dcossin (double a, double *c, double *s)
-{
-	_asm
-	{
-		fld a
-		fsincos
-		mov eax, c
-		fstp qword ptr [eax]
-		mov eax, s
-		fstp qword ptr [eax]
-	}
-}
-
-static inline void clearbuf (void *d, long c, long a)
-{
-	_asm
-	{
-		mov edi, d
-		mov ecx, c
-		mov eax, a
-		rep stosd
-	}
-}
-
-static inline void mmxcoloradd (long *a)
-{
-	_asm
-	{
-		mov eax, a
-		movd mm0, [eax]
-		paddusb mm0, flashbrival
-		movd [eax], mm0
-	}
-}
-
-static inline void mmxcolorsub (long *a)
-{
-	_asm
-	{
-		mov eax, a
-		movd mm0, [eax]
-		psubusb mm0, flashbrival
-		movd [eax], mm0
-	}
-}
-
-static inline long mulshr24 (long a, long d)
-{
-	_asm
-	{
-		mov eax, a
-		mov edx, d
-		imul edx
-		shrd eax, edx, 24
-	}
-}
-
-static inline long umulshr32 (long a, long d)
-{
-	_asm
-	{
-		mov eax, a
-		mov edx, d
-		mul edx
-		mov eax, edx
-	}
-}
-
-static inline void emms () { _asm emms }
-
 #endif
 #ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-#pragma warning(disable:4799) //I know how to use EMMS
-
-static inline void ftol (float f, long *a)
-{
 	_asm
 	{
 		mov eax, a
 		fld f
 		fistp dword ptr [eax]
 	}
+	#endif
 }
 
 static inline void dcossin (double a, double *c, double *s)
 {
+	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#endif
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		fld a
@@ -316,10 +247,14 @@ static inline void dcossin (double a, double *c, double *s)
 		mov eax, s
 		fstp qword ptr [eax]
 	}
+	#endif
 }
 
 static inline void clearbuf (void *d, long c, long a)
 {
+	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#endif
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		mov edi, d
@@ -327,10 +262,14 @@ static inline void clearbuf (void *d, long c, long a)
 		mov eax, a
 		rep stosd
 	}
+	#endif
 }
 
 static inline void mmxcoloradd (long *a)
 {
+	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#endif
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		mov eax, a
@@ -338,10 +277,14 @@ static inline void mmxcoloradd (long *a)
 		paddusb mm0, flashbrival
 		movd [eax], mm0
 	}
+	#endif
 }
 
 static inline void mmxcolorsub (long *a)
 {
+	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#endif
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		mov eax, a
@@ -349,10 +292,14 @@ static inline void mmxcolorsub (long *a)
 		psubusb mm0, flashbrival
 		movd [eax], mm0
 	}
+	#endif
 }
 
 static inline long mulshr24 (long a, long d)
 {
+	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#endif
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		mov eax, a
@@ -360,10 +307,14 @@ static inline long mulshr24 (long a, long d)
 		imul edx
 		shrd eax, edx, 24
 	}
+	#endif
 }
 
 static inline long umulshr32 (long a, long d)
 {
+	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#endif
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		mov eax, a
@@ -371,11 +322,18 @@ static inline long umulshr32 (long a, long d)
 		mul edx
 		mov eax, edx
 	}
+	#endif
 }
 
-static inline void emms () { _asm emms }
-
+static inline void emms () // inserts opcode emms, used to avoid many compiler checks
+{
+	#ifdef __GNUC__
+	__asm__ __volatile__ ("emms" : : : "cc");
+	#endif
+	#ifdef _MSC_VER
+	_asm { emms }
 #endif
+}
 
 	//RGB color selection variables
 #define CGRAD 64
@@ -420,61 +378,22 @@ void rgbcolselrend (long, long, long, long, long);
 	value
 
 #endif
-#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 
 static inline void rgbcolselinitinc (long a, long b, long c)
 {
+	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__
 	(
-		"mov a, %eax\n\t"
-		"mov b, %edx\n\t"
-		"mov c, %ecx\n\t"
-		"movd %ecx, %mm4\n\t"
-		"movd %edx, %mm0\n\t"
-		"punpckldq %mm0, %mm4\n\t"
-		"movd %eax, %mm5\n\t"
+		"mov a, %eax\n"
+		"mov b, %edx\n"
+		"mov c, %ecx\n"
+		"movd %ecx, %mm4\n"
+		"movd %edx, %mm0\n"
+		"punpckldq %mm0, %mm4\n"
+		"movd %eax, %mm5\n"
 	);
-}
-
-static inline void rgbcolselrend (long a, long b, long c, long t, long s)
-{
-	__asm__
-	(
-		"push %ebx\n\t"
-		"push %esi\n\t"
-		"push %edi\n\t"
-		"mov a, %eax\n\t"
-		"mov b, %ebx\n\t"
-		"mov c, %ecx\n\t"
-		"mov t, %edi\n\t"
-		"mov s, %esi\n\t"
-		"movd %ecx, %mm2\n\t"
-		"movd %ebx, %mm0\n\t"
-		"punpckldq %mm0, %mm2\n\t"
-		"movd %eax, %mm3\n\t"
-		"sub %esi, %edi\n"
-	"beg:\n\t"
-		"movq %mm2, %mm0\n\t"
-		"packuswb %mm3, %mm0\n\t"
-		"paddd %mm4, %mm2\n\t"
-		"psrlw $8, %mm0\n\t"
-		"paddd %mm5, %mm3\n\t"
-		"packuswb %mm0, %mm0\n\t"
-		"movd %mm0, (%edi,%esi)\n\t"
-		"add $4, %edi\n\t"
-		"js short beg\n\t"
-
-		"pop %edi\n\t"
-		"pop %esi\n\t"
-		"pop %ebx\n\t"
-	);
-}
-
 #endif
 #ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-
-static inline void rgbcolselinitinc (long a, long b, long c)
-{
 	_asm
 	{
 		mov eax, a
@@ -485,10 +404,44 @@ static inline void rgbcolselinitinc (long a, long b, long c)
 		punpckldq mm4, mm0
 		movd mm5, eax
 	}
+	#endif
 }
 
 static inline void rgbcolselrend (long a, long b, long c, long t, long s)
 {
+	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	__asm__
+	(
+		"push %ebx\n"
+		"push %esi\n"
+		"push %edi\n"
+		"mov a, %eax\n"
+		"mov b, %ebx\n"
+		"mov c, %ecx\n"
+		"mov t, %edi\n"
+		"mov s, %esi\n"
+		"movd %ecx, %mm2\n"
+		"movd %ebx, %mm0\n"
+		"punpckldq %mm0, %mm2\n"
+		"movd %eax, %mm3\n"
+		"sub %esi, %edi\n"
+	"beg:\n"
+		"movq %mm2, %mm0\n"
+		"packuswb %mm3, %mm0\n"
+		"paddd %mm4, %mm2\n"
+		"psrlw $8, %mm0\n"
+		"paddd %mm5, %mm3\n"
+		"packuswb %mm0, %mm0\n"
+		"movd %mm0, (%edi,%esi)\n"
+		"add $4, %edi\n"
+		"js short beg\n"
+
+		"pop %edi\n"
+		"pop %esi\n"
+		"pop %ebx\n"
+	);
+	#endif
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		push ebx
@@ -519,9 +472,8 @@ beg:
 		pop esi
 		pop ebx
 	}
-}
-
 #endif
+}
 
 void initrgbcolselect ()
 {
@@ -3116,9 +3068,9 @@ void doframe ()
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__
 	{
-		"mov $0x378, %dx\n\t"
-		"movb i, %al\n\t"
-		"out %al, %dx\n\t"
+		"mov $0x378, %dx\n"
+		"movb i, %al\n"
+		"out %al, %dx\n"
 	}
 	#endif
 	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
