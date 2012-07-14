@@ -930,11 +930,11 @@ boundcubenextline:
 	mov ecx, edx
 begstosb:
 %ifdef USEZBUFFER
-	ucomiss xmm0, dword [eax+ecx*4]
+	ucomiss xmm0, [eax+ecx*4]
 	jnc short skipdrawpix
-	movss dword [eax+ecx*4], xmm0
+	movss [eax+ecx*4], xmm0
 %endif
-	movd dword [edi+ecx*4], mm5
+	movd [edi+ecx*4], mm5
 skipdrawpix:
 	inc ecx
 	jnz begstosb
