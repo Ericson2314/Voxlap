@@ -2,7 +2,7 @@
 ;CPU 686
 CPU P3
 
-USEZBUFFER EQU 1          ;To disable, put ; in front of line
+%DEFINE USEZBUFFER 1      ;To disable, put ; in front of line
 LVSID EQU 10              ;log2(VSID) - used for mip-mapping index adjustment
 %DEFINE	VSID (1 << LVSID) ;should match VSID in VOXLAP5.H (adjust LVSID, not this)
 %DEFINE	LOGPREC	(8+12)
