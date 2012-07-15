@@ -821,10 +821,10 @@ _drawboundcubesse:
 	and ecx, edi
 	jz retboundcube
 
-	movaps xmm7, _ztabasm[MAXZSIZ*16]
+	movaps xmm7, XMMWORD PTR _ztabasm[MAXZSIZ*16]
 	movzx edi, word ptr [eax+4]
 	shl edi, 4
-	addps xmm7, _ztabasm[edi]
+	addps xmm7, XMMWORD PTR _ztabasm[edi]
 	movhlps xmm0, xmm7
 	ucomiss xmm0, _scisdist
 	jc retboundcube
@@ -833,9 +833,9 @@ _drawboundcubesse:
 
 	movzx ebx, byte ptr [ecx+1] ;                           Ý
 	movzx edi, byte ptr [ecx+2] ;                           Ý
-	movaps xmm0, _caddasm[ebx]  ;xmm0: [ z0, z0, y0, x0]    Û
+	movaps xmm0, XMMWORD PTR _caddasm[ebx]  ;xmm0: [ z0, z0, y0, x0]    Û
 	addps xmm0, xmm7            ;                           ÛÛ±
-	movaps xmm1, _caddasm[edi]  ;xmm1: [ z1, z1, y1, x1]    Û
+	movaps xmm1, XMMWORD PTR _caddasm[edi]  ;xmm1: [ z1, z1, y1, x1]    Û
 	addps xmm1, xmm7            ;                           ÛÛ±
 	movaps xmm6, xmm0           ;xmm6: [ z0, z0, y0, x0]    Û
 	movhlps xmm0, xmm1          ;xmm0: [ z0, z0, z1, z1]    Û
@@ -845,9 +845,9 @@ _drawboundcubesse:
 
 	movzx ebx, byte ptr [ecx+3] ;                           Ý
 	movzx edi, byte ptr [ecx+4] ;                           Ý
-	movaps xmm2, _caddasm[ebx]  ;xmm2: [ z2, z2, y2, x2]    Û
+	movaps xmm2, XMMWORD PTR _caddasm[ebx]  ;xmm2: [ z2, z2, y2, x2]    Û
 	addps xmm2, xmm7            ;                           ÛÛ±
-	movaps xmm3, _caddasm[edi]  ;xmm3: [ z3, z3, y3, x3]    Û
+	movaps xmm3, XMMWORD PTR _caddasm[edi]  ;xmm3: [ z3, z3, y3, x3]    Û
 	addps xmm3, xmm7            ;                           ÛÛ±
 	movaps xmm6, xmm2           ;xmm6: [ z2, z2, y2, x2]    Û
 	movhlps xmm2, xmm3          ;xmm2: [ z2, z2, z3, z3]    Û
@@ -872,9 +872,9 @@ _drawboundcubesse:
 
 	movzx ebx, byte ptr [ecx+5] ;                           Ý
 	movzx edi, byte ptr [ecx+6] ;                           Ý
-	movaps xmm4, _caddasm[ebx]  ;xmm4: [ z4, z4, y4, x4]    Û
+	movaps xmm4, XMMWORD PTR _caddasm[ebx]  ;xmm4: [ z4, z4, y4, x4]    Û
 	addps xmm4, xmm7            ;                           ÛÛ±
-	movaps xmm5, _caddasm[edi]  ;xmm5: [ z5, z5, y5, x5]    Û
+	movaps xmm5, XMMWORD PTR _caddasm[edi]  ;xmm5: [ z5, z5, y5, x5]    Û
 	addps xmm5, xmm7            ;                           ÛÛ±
 	movaps xmm6, xmm4           ;xmm6: [ z4, z4, y4, x4]    Û
 	movhlps xmm4, xmm5          ;xmm4: [ z4, z4, z5, z5]    Û
@@ -1000,7 +1000,7 @@ _drawboundcube3dn:
 	pfadd mm0, mm6              ;mm0: [   y0    x0]
 	pfadd mm1, mm6              ;mm1: [   y1    x1]
 	movd mm5, _caddasm[ebx+8]
-	punpckldq mm5, _caddasm[edi+8]
+	punpckldq mm5, qword ptr _caddasm[edi+8]
 	pfadd mm5, mm7              ;mm5: [   z1    z0]
 	pfrcp mm4, mm5              ;mm4: [ 1/z0  1/z0]
 	punpckhdq mm5, mm5          ;mm5: [   z1    z1]
@@ -1018,7 +1018,7 @@ _drawboundcube3dn:
 	pfadd mm2, mm6              ;mm2: [   y2    x2]
 	pfadd mm3, mm6              ;mm3: [   y3    x3]
 	movd mm5, _caddasm[ebx+8]
-	punpckldq mm5, _caddasm[edi+8]
+	punpckldq mm5, qword ptr _caddasm[edi+8]
 	pfadd mm5, mm7              ;mm5: [   z3    z2]
 	pfrcp mm4, mm5              ;mm4: [ 1/z2  1/z2]
 	punpckhdq mm5, mm5          ;mm5: [   z3    z3]
@@ -1043,7 +1043,7 @@ _drawboundcube3dn:
 	pfadd mm2, mm6              ;mm2: [   y4    x4]
 	pfadd mm3, mm6              ;mm3: [   y5    x5]
 	movd mm5, _caddasm[ebx+8]
-	punpckldq mm5, _caddasm[edi+8]
+	punpckldq mm5, qword ptr _caddasm[edi+8]
 	pfadd mm5, mm7              ;mm5: [   z5    z4]
 	pfrcp mm4, mm5              ;mm4: [ 1/z4  1/z4]
 	punpckhdq mm5, mm5          ;mm5: [   z5    z5]
