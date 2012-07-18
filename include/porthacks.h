@@ -3,20 +3,6 @@
  **************************************************************************************************/
 
 /**
- * Inline Assembly Syntax Hacks
- **/
-
-static inline void clearMMX () // inserts opcode emms, used to avoid many compiler checks
-{
-	#ifdef _MSC_VER
-	_asm { emms }
-	#endif
-	#ifdef __GNUC__
-	__asm__ __volatile__ ("emms" : : : "cc");
-	#endif
-}
-
-/**
  * Compiler Directive Hacks
  **/
 
@@ -30,7 +16,24 @@ static inline void clearMMX () // inserts opcode emms, used to avoid many compil
 #ifdef _MSC_VER
 	// Aligns symbol
 	#define __ALIGN(num) __declspec(align(num))
+	#ifndef __cplusplus
+		#define inline __inline
+	#endif
 #endif
+
+/**
+ * Inline Assembly Syntax Hacks
+ **/
+
+static inline void clearMMX () // inserts opcode emms, used to avoid many compiler checks
+{
+	#ifdef _MSC_VER
+	_asm { emms }
+	#endif
+	#ifdef __GNUC__
+	__asm__ __volatile__ ("emms" : : : "cc");
+	#endif
+}
 
 /**
  * Standard Library Hacks

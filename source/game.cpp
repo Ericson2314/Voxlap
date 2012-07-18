@@ -631,6 +631,7 @@ long initmap ()
 long initapp (long argc, char **argv)
 {
 	long i, j, k, z, argfilindex, cpuoption = -1;
+	extern long cputype;
 
 	prognam = "\"Ken-VOXLAP\" test game";
 	xres = 640; yres = 480; colbits = 32; fullscreen = 0; argfilindex = -1;
@@ -669,7 +670,6 @@ long initapp (long argc, char **argv)
 	setsideshades(0,4,1,3,2,2);
 
 		//AthlonXP 2000+: SSE:26.76ms, 3DN:27.34ms, SSE2:28.93ms
-	extern long cputype;
 	switch(cpuoption)
 	{
 		case 0: cputype &= ~((1<<25)|(1<<26)); cputype |= ((1<<30)|(1<<31)); break;
@@ -1397,7 +1397,12 @@ skipalldraw:;
 							curvykv6 = getkv6(tempbuf);
 							if (curvykv6)
 							{
-								for(kv6data *tempkv6=curvykv6;tempkv6=genmipkv6(tempkv6);); //Generate all lower mip-maps here:
+								do {
+									kv6data *tempkv6;
+									for(tempkv6=curvykv6;
+										tempkv6=genmipkv6(tempkv6);
+										); //Generate all lower mip-maps here:
+								} while (0);
 								curvyspr.p.x = ipos.x + ifor.x*32;
 								curvyspr.p.y = ipos.y + ifor.y*32;
 								curvyspr.p.z = ipos.z + ifor.z*32;
@@ -2222,8 +2227,8 @@ skipalldraw:;
 
 	if (keystatus[0x9c]) //KP Enter
 	{
-		keystatus[0x9c] = 0;
 		static long macq = 1;
+		keystatus[0x9c] = 0;
 		macq ^= 1; setacquire(macq,1);
 	}
 
