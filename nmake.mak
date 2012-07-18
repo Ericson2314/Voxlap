@@ -98,6 +98,12 @@ AFLAGS                 =-Fo$(@R) -c -coff -8
 AS                     =nasm
 AFLAGS                 =-o $(@) -f win32
 !ENDIF
+
+# Micrsoft Macro Assembler (masm)
+!IF "$(AsmName)"=="masm"
+AS                     =ml
+AFLAGS                 =/Fo$(@R) /c /coff
+!ENDIF
 # END Assembler Macros
 # -----------------------------------
 

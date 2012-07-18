@@ -1,8 +1,8 @@
-﻿# sub-directory macros
-locSRC                 =$(realpath $(lastword $(MAKEFILE_LIST)))/source
-locINC                 =$(realpath $(lastword $(MAKEFILE_LIST)))/include
-locLIB                 =$(realpath $(lastword $(MAKEFILE_LIST)))/libraries
-locBIN                 =$(realpath $(lastword $(MAKEFILE_LIST)))/binaries
+# sub-directory macros
+locSRC                 =./source
+locINC                 =./include
+locLIB                 =./libraries
+locBIN                 =./binaries
 
 # adding inbin directory to paths
 ifdef __MSVC__
@@ -21,7 +21,7 @@ build                  =Debug
 CXX                    =gcc
 
 # "nasm" for Netwide Assembler, masm" for Micrsoft Macro Assembler
-AsmName                =nasm
+AsmName                =jwasm
 
 # "ld" for GNU linker, "link" for Microsfoft Linker
 LNK                    =ld
@@ -33,7 +33,7 @@ GFXdep                 =sdl
 PLATdep                =posix
 
 # "1" to use v5.$(AsmName), "0" to not use
-USEV5ASM               =0
+USEV5ASM               =1
 
 # END Choices 
 # -----------------------------------
@@ -46,16 +46,16 @@ endif
 ifdef __MSVC__
 endif
 
-nasm_FLAGS             =-o $(@)              # Netwide Assembler (nasm)
+nasm_FLAGS             =-o $(@)           # Netwide Assembler (nasm)
 
-jwasm_FLAGS            =-Fo$(@R) -c -coff -8 # Micrsoft Macro Assembler (masm)
+jwasm_FLAGS            =-Fo $(@) -c -8    # Micrsoft Macro Assembler (masm)
 
-masm_FLAGS             =/Fo$(@R) /c /coff    # Micrsoft Macro Assembler (masm)
+masm_FLAGS             =/Fo$(@R) /c /coff # Micrsoft Macro Assembler (masm)
 
-cl_FLAGS               =/Fo$(@R) /c /J       # for Micrsoft Compiler(cl)
+cl_FLAGS               =/Fo$(@R) /c /J    # for Micrsoft Compiler(cl)
 cl_Debug               =/MLd /ZI /GZ /RTCsuc /Od
 cl_Release             =/Ox
-cl_MacroPre            =/D                   # for Micrsoft Compiler(cl)
+cl_MacroPre            =/D                # for Micrsoft Compiler(cl)
 
 gcc_FLAGS              =-o $(@) -c -funsigned-char    # for GNU C++ Compiler (gcc)
 gcc_Debug              =
@@ -103,14 +103,16 @@ posix_OBJSuf           =elf.o
 posix_EXESuf           =
 
 posix_nasm_FLAGS       =-f elf32
+posix_jwasm_FLAGS      =-elf
 posix_ld_LIBs          =
 
-Win32_LIBs             =
+posix_LIBs             =
 
 win32_OBJSuf           =obj
 win32_EXESuf           =exe
 
 win32_nasm_FLAGS       =-f win32
+win32_jwasm_FLAGS      =-coff
 win32_ld_LIBs          =$(LNKlibPre)mingw32$(LNKlibSuf)
 
 win32_gameLIBs	       =$(LNKlibPre)ole32$(LNKlibSuf)
@@ -118,7 +120,7 @@ win32_simpleLIBs       =$(LNKlibPre)ole32$(LNKlibSuf)
 win32_voxedLIBs	       =                              $(LNKlibPre)comdlg32$(LNKlibSuf)
 win32_kwalkLIBs	       =$(LNKlibPre)ole32$(LNKlibSuf) $(LNKlibPre)comdlg32$(LNKlibSuf)
 
-win32_LIBs             =$(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf)
+win32_LIBs             =$(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf) $(LNKlibPre)m $(LNKlibPre)c$(LNKlibSuf)
 
 # END Platform
 # -----------------------------------
