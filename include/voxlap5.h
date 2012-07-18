@@ -23,7 +23,7 @@ typedef struct kv6data
 	float xpiv, ypiv, zpiv;
 	unsigned long numvoxs;
 	long namoff;
-	kv6data *lowermip;
+	struct kv6data *lowermip;
 	kv6voxtype *vox;      //numvoxs*sizeof(kv6voxtype)
 	unsigned long *xlen;  //xsiz*sizeof(long)
 	unsigned short *ylen; //xsiz*ysiz*sizeof(short)

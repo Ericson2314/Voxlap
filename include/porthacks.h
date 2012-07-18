@@ -3,6 +3,23 @@
  **************************************************************************************************/
 
 /**
+ * Compiler Directive Hacks
+ **/
+
+#ifdef __GNUC__
+	// Maps __assume() to __builtin_unreachable()
+	#define __assume(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
+#endif
+
+#ifdef _MSC_VER
+	// Aligns symbol
+	#define __ALIGN(num) __declspec(align(num))
+	#ifndef __cplusplus
+		#define inline __inline
+	#endif
+#endif
+
+/**
  * Inline Assembly Syntax Hacks
  **/
 
@@ -15,18 +32,6 @@ static inline void clearMMX () // inserts opcode emms, used to avoid many compil
 	__asm__ __volatile__ ("emms" : : : "cc");
 	#endif
 }
-
-/**
- * Compiler Directive Hacks
- **/
-
-#ifdef __GNUC__
-	// Maps __assume() to __builtin_unreachable()
-	#define __assume(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
-#endif
-
-#ifdef _MSC_VER
-#endif
 
 /**
  * Standard Library Hacks
