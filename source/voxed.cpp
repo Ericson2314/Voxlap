@@ -78,13 +78,21 @@ enum { DONTBACKUP=0,
 
 static long frameplace, bytesperline;
 
+#ifdef __cplusplus
 extern "C" char *sptr[VSID*VSID];
+#else
+extern char *sptr[VSID*VSID];
+#endif
 extern long *radar;
 extern long templongbuf[MAXZDIM];
 extern long backtag, backedup, bacx0, bacy0, bacx1, bacy1;
 extern long gxsizcache, gysizcache;
 extern long cputype;
+#ifdef __cplusplus
 extern "C" long gmipnum;
+#else
+extern long gmipnum;
+#endif
 extern int64_t flashbrival;
 
 	//Sprite data for hanging lights:
@@ -650,25 +658,29 @@ static char *loadfileselect (char *mess, char *spec, char *defext)
 {
 	long i;
 	for(i=0;fileselectnam[i];i++) if (fileselectnam[i] == '/') fileselectnam[i] = '\\';
-	OPENFILENAME ofn =
-	{
-		sizeof(OPENFILENAME),ghwnd,0,spec,0,0,1,fileselectnam,MAX_PATH,0,0,(char *)(((long)relpathbase)&fileselect1stcall),mess,
-		/*OFN_PATHMUSTEXIST|OFN_FILEMUSTEXIST|*/ OFN_HIDEREADONLY,0,0,defext,0,0,0
-	};
-	fileselect1stcall = 0; //Let windows remember directory after 1st call
-	if (!GetOpenFileName(&ofn)) return(0); else return(fileselectnam);
+	do {
+		OPENFILENAME ofn =
+		{
+			sizeof(OPENFILENAME),ghwnd,0,spec,0,0,1,fileselectnam,MAX_PATH,0,0,(char *)(((long)relpathbase)&fileselect1stcall),mess,
+			/*OFN_PATHMUSTEXIST|OFN_FILEMUSTEXIST|*/ OFN_HIDEREADONLY,0,0,defext,0,0,0
+		};
+		fileselect1stcall = 0; //Let windows remember directory after 1st call
+		if (!GetOpenFileName(&ofn)) return(0); else return(fileselectnam);
+	} while (0);
 }
 static char *savefileselect (char *mess, char *spec, char *defext)
 {
 	long i;
 	for(i=0;fileselectnam[i];i++) if (fileselectnam[i] == '/') fileselectnam[i] = '\\';
-	OPENFILENAME ofn =
-	{
-		sizeof(OPENFILENAME),ghwnd,0,spec,0,0,1,fileselectnam,MAX_PATH,0,0,(char *)(((long)relpathbase)&fileselect1stcall),mess,
-		OFN_PATHMUSTEXIST|OFN_FILEMUSTEXIST|OFN_HIDEREADONLY|OFN_OVERWRITEPROMPT,0,0,defext,0,0,0
-	};
-	fileselect1stcall = 0; //Let windows remember directory after 1st call
-	if (!GetSaveFileName(&ofn)) return(0); else return(fileselectnam);
+	do {
+		OPENFILENAME ofn =
+		{
+			sizeof(OPENFILENAME),ghwnd,0,spec,0,0,1,fileselectnam,MAX_PATH,0,0,(char *)(((long)relpathbase)&fileselect1stcall),mess,
+			OFN_PATHMUSTEXIST|OFN_FILEMUSTEXIST|OFN_HIDEREADONLY|OFN_OVERWRITEPROMPT,0,0,defext,0,0,0
+		};
+		fileselect1stcall = 0; //Let windows remember directory after 1st call
+		if (!GetSaveFileName(&ofn)) return(0); else return(fileselectnam);
+	} while (0);
 }
 #endif
 
