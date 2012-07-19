@@ -109,13 +109,8 @@ typedef struct { float x, y; } point2d;
 #pragma pack(pop)
 
 #if (defined(USEV5ASM) && (USEV5ASM != 0)) //if true
-	#ifndef __cplusplus
-		extern void *cfasm;
-		extern castdat skycast;
-	#else
-		extern "C" void *cfasm;
-		extern "C" castdat skycast;
-	#endif
+	EXTERN_C void *cfasm;
+	EXTERN_C castdat skycast;
 	#define cf ((cftype *)&cfasm)
 #else
 	cftype cf[256];
@@ -2447,14 +2442,8 @@ static float optistrx, optistry, optiheix, optiheiy, optiaddx, optiaddy;
 static int64_t foglut[2048], fogcol;
 static long ofogdist = -1;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-extern void *opti4asm;
+EXTERN_C void *opti4asm;
 #define opti4 ((point4d *)&opti4asm)
-#ifdef __cplusplus
-}
-#endif
 
 void (*hrend)(long,long,long,long,long,long);
 void (*vrend)(long,long,long,long,long);
@@ -11367,18 +11356,19 @@ kv6data *getkv6 (const char *filnam)
 	return(kv6ptr);
 }
 
+
+EXTERN_C void *caddasm;
+#define cadd4 ((point4d *)&caddasm)
+EXTERN_C void *ztabasm;
+#define ztab4 ((point4d *)&ztabasm)
+EXTERN_C short qsum0[4], qsum1[4], qbplbpp[4];
+EXTERN_C long kv6frameplace, kv6bytesperline;
+EXTERN_C float scisdist;
+EXTERN_C int64_t kv6colmul[256], kv6coladd[256];
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-extern void *caddasm;
-#define cadd4 ((point4d *)&caddasm)
-extern void *ztabasm;
-#define ztab4 ((point4d *)&ztabasm)
-extern short qsum0[4], qsum1[4], qbplbpp[4];
-extern long kv6frameplace, kv6bytesperline;
-extern float scisdist;
-extern int64_t kv6colmul[256], kv6coladd[256];
 
 char ptfaces16[43][8] =
 {
