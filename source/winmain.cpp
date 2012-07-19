@@ -6,6 +6,8 @@ Additional modifications by Tom Dobrowolski (http://ged.ax.pl/~tomkh)
 You may use this code for non-commercial purposes as long as credit is maintained.
 ***************************************************************************************************/
 
+//#include "../include/porthacks.h"
+
 //#define USED3D4FULL
 //#define USE3DVISION
 
@@ -1530,7 +1532,7 @@ HRESULT WINAPI lpEnumModesCallback (LPDDSURFACEDESC dsd, LPVOID lpc)
 long getvalidmodelist (validmodetype **davalidmodelist)
 {
 	if (!lpdd) return(0);
-	if (!validmodecnt) lpdd->EnumDisplayModes(0,0,0,lpEnumModesCallback);
+	if (!validmodecnt) IDirectDraw_EnumDisplayModes(lpdd,0,0,0,lpEnumModesCallback);
 	(*davalidmodelist) = validmodelist;
 	return(validmodecnt);
 }
@@ -1541,16 +1543,16 @@ void uninitdirectdraw ()
 	if (fullscreen) { d3duninit(); return; }
 #endif
 
-	if (ddpal) { ddpal->Release(); ddpal = 0; }
+	if (ddpal) { IDirectDrawPalette_Release(ddpal); ddpal = 0; }
 	if (lpdd)
 	{
 #ifndef NO_CLIPPER
 		if (ddcliprd) { free(ddcliprd); ddcliprd = 0; ddcliprdbytes = 0; }
-		if (ddclip) { ddclip->Release(); ddclip = 0; }
+		if (ddclip) { IDirectDrawClipper_Release(ddclip); ddclip = 0; }
 #endif
-		if (ddsurf[0]) { ddsurf[0]->Release(); ddsurf[0] = 0; }
+		if (ddsurf[0]) { IDirectDrawSurface_Release(ddsurf[0]); ddsurf[0] = 0; }
 		if (ddrawemulbuf) { free(ddrawemulbuf); ddrawemulbuf = 0; }
-		lpdd->Release(); lpdd = 0;
+		IDirectDraw_Release(lpdd); lpdd = 0;
 	}
 }
 
@@ -1577,8 +1579,8 @@ void updatepalette (long start, long danum)
 		}
 	}
 	if (!ddpal) return;
-	if (ddpal->SetEntries(0,start,danum,&pal[start]) == DDERR_SURFACELOST)
-		{ ddsurf[0]->Restore(); ddpal->SetEntries(0,start,danum,&pal[start]); }
+	if (IDirectDrawPalette_SetEntries(ddpal,0,start,danum,&pal[start]) == DDERR_SURFACELOST)
+		{ IDirectDrawSurface_Restore(ddsurf[0]); IDirectDrawPalette_SetEntries(ddpal,0,start,danum,&pal[start]); }
 }
 
 	 //((z/(16-1))^.8)*255, ((z/(32-1))^.8)*255, ((z/((13 fullscreen/12 windowed)-1))^.8)*255
@@ -1715,7 +1717,7 @@ long initdirectdraw (long daxres, long dayres, long dacolbits)
 #endif
 		if (fullscreen)
 		{
-			if ((hr = lpdd->SetCooperativeLevel(ghwnd,DDSCL_EXCLUSIVE|DDSCL_FULLSCREEN)) >= 0)
+			if ((hr = IDirectDraw_SetCooperativeLevel(lpdd,ghwnd,DDSCL_EXCLUSIVE|DDSCL_FULLSCREEN)) >= 0)
 			{
 				ddrawdebugmode = -1;
 				ncolbits = dacolbits; ddrawuseemulation = 0;
@@ -1724,9 +1726,9 @@ long initdirectdraw (long daxres, long dayres, long dacolbits)
 				do
 				{
 #ifndef REFRESHACK
-					if ((hr = lpdd->SetDisplayMode(daxres,dayres,ncolbits)) >= 0)
+					if ((hr = IDirectDraw_SetDisplayMode(lpdd,daxres,dayres,ncolbits)) >= 0)
 #else
-					if ((hr = lpdd->SetDisplayMode(daxres,dayres,ncolbits,refreshz,0)) >= 0)
+					if ((hr = IDirectDraw_SetDisplayMode(lpdd,daxres,dayres,ncolbits,refreshz,0)) >= 0)
 #endif
 					{
 						if (ncolbits != dacolbits)
@@ -1741,15 +1743,15 @@ long initdirectdraw (long daxres, long dayres, long dacolbits)
 						ddsd.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE|DDSCAPS_COMPLEX|DDSCAPS_FLIP;
 						if (maxpages > 2) ddsd.dwBackBufferCount = 2;
 										 else ddsd.dwBackBufferCount = 1;
-						if ((hr = lpdd->CreateSurface(&ddsd,&ddsurf[0],0)) >= 0)
+						if ((hr = IDirectDraw_CreateSurface(lpdd,&ddsd,&ddsurf[0],0)) >= 0)
 						{
 							DDPIXELFORMAT ddpf;
 							ddpf.dwSize = sizeof(DDPIXELFORMAT);
-							if (!ddsurf[0]->GetPixelFormat(&ddpf))
+							if (!IDirectDrawSurface_GetPixelFormat(ddsurf[0],&ddpf))
 								grabmodeinfo(daxres,dayres,&ddpf,&curvidmodeinfo);
 
 							ddscaps.dwCaps = DDSCAPS_BACKBUFFER;
-							if ((hr = ddsurf[0]->GetAttachedSurface(&ddscaps,&ddsurf[1])) >= 0)
+							if ((hr = IDirectDrawSurface_GetAttachedSurface(ddsurf[0],&ddscaps,&ddsurf[1])) >= 0)
 							{
 #if (OFFSCREENHACK)
 								DDSURFACEDESC nddsd;
@@ -1760,12 +1762,12 @@ long initdirectdraw (long daxres, long dayres, long dacolbits)
 								nddsd.dwWidth = (daxres|1); //This hack (|1) ensures pitch isn't near multiple of 4096 (slow on P4)!
 								nddsd.dwHeight = dayres;
 								nddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN|DDSCAPS_SYSTEMMEMORY;
-								if ((hr = lpdd->CreateSurface(&nddsd,&ddsurf[1],0)) < 0) return(-1);
+								if ((hr = IDirectDraw_CreateSurface(lpdd,&nddsd,&ddsurf[1],0)) < 0) return(-1);
 #endif
 								if (ncolbits != 8) return(1);
-								if (lpdd->CreatePalette(DDPCAPS_8BIT,pal,&ddpal,0) >= 0)
+								if (IDirectDraw_CreatePalette(lpdd,DDPCAPS_8BIT,pal,&ddpal,0) >= 0)
 								{
-									ddsurf[0]->SetPalette(ddpal);
+									IDirectDrawSurface_SetPalette(ddsurf[0],ddpal);
 									if (ddrawuseemulation)
 										{ emul8setpal(); updatepalette(0,256); }
 									return(1);
@@ -1826,19 +1828,19 @@ long initdirectdraw (long daxres, long dayres, long dacolbits)
 		}
 		else
 		{
-			if ((hr = lpdd->SetCooperativeLevel(ghwnd,DDSCL_NORMAL)) >= 0)
+			if ((hr = IDirectDraw_SetCooperativeLevel(lpdd,ghwnd,DDSCL_NORMAL)) >= 0)
 			{
 				ddsd.dwSize = sizeof(ddsd);
 				ddsd.dwFlags = DDSD_CAPS;
 				ddsd.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE;
-				if ((hr = lpdd->CreateSurface(&ddsd,&ddsurf[0],0)) >= 0)
+				if ((hr = IDirectDraw_CreateSurface(lpdd,&ddsd,&ddsurf[0],0)) >= 0)
 				{
 #ifndef NO_CLIPPER
 						//Create clipper object for windowed mode
-					if ((hr = lpdd->CreateClipper(0,&ddclip,0)) == DD_OK)
+					if ((hr = IDirectDraw_CreateClipper(lpdd,0,&ddclip,0)) == DD_OK)
 					{
-						ddclip->SetHWnd(0,ghwnd); //Associate clipper with window
-						hr = ddsurf[0]->SetClipper(ddclip);
+						IDirectDrawClipper_SetHWnd(ddclip,0,ghwnd); //Associate clipper with window
+						hr = IDirectDrawSurface_SetClipper(ddsurf[0],ddclip);
 						if (hr == DD_OK)
 						{
 #endif
@@ -1851,7 +1853,7 @@ long initdirectdraw (long daxres, long dayres, long dacolbits)
 #endif
 							ddsd.dwWidth = xres;
 							ddsd.dwHeight = yres;
-							if ((hr = lpdd->CreateSurface(&ddsd,&ddsurf[1],0)) >= 0)
+							if ((hr = IDirectDraw_CreateSurface(lpdd,&ddsd,&ddsurf[1],0)) >= 0)
 							{
 								DDCAPS ddcaps;
 								HDC hDC = GetDC(0);
@@ -1859,7 +1861,7 @@ long initdirectdraw (long daxres, long dayres, long dacolbits)
 								ReleaseDC(0,hDC);
 
 								ddcaps.dwSize = sizeof(ddcaps);
-								if (lpdd->GetCaps(&ddcaps,0) == DD_OK) //Better to catch DDERR_CANTLOCKSURFACE here than in startdirectdraw()
+								if (IDirectDraw_GetCaps(lpdd,&ddcaps,0) == DD_OK) //Better to catch DDERR_CANTLOCKSURFACE here than in startdirectdraw()
 									if (ddcaps.dwCaps&DDCAPS_NOHARDWARE) cantlockprimary = 1; //For LCD screens mainly
 								if (osvi.dwMajorVersion >= 6) cantlockprimary = 1; //Longhorn/Vista
 
@@ -1893,7 +1895,7 @@ long initdirectdraw (long daxres, long dayres, long dacolbits)
 
 								DDPIXELFORMAT ddpf;
 								ddpf.dwSize = sizeof(DDPIXELFORMAT);
-								if (!ddsurf[0]->GetPixelFormat(&ddpf)) //colbits = ddpf.dwRGBBitCount;
+								if (!IDirectDrawSurface_GetPixelFormat(ddsurf[0],&ddpf)) //colbits = ddpf.dwRGBBitCount;
 								{
 									grabmodeinfo(daxres,dayres,&ddpf,&curvidmodeinfo);
 
@@ -1906,8 +1908,8 @@ long initdirectdraw (long daxres, long dayres, long dacolbits)
 								}
 
 								if (ncolbits == 8)
-									if (lpdd->CreatePalette(DDPCAPS_8BIT,pal,&ddpal,0) >= 0)
-										ddsurf[0]->SetPalette(ddpal);
+									if (IDirectDraw_CreatePalette(lpdd,DDPCAPS_8BIT,pal,&ddpal,0) >= 0)
+										IDirectDrawSurface_SetPalette(ddsurf[0],ddpal);
 
 								return(1);
 							}
@@ -1942,7 +1944,7 @@ void stopdirectdraw ()
 			return;
 		}
 #endif
-		ddsurf[1]->Unlock(ddsd.lpSurface);
+		IDirectDrawSurface_Unlock(ddsurf[1],ddsd.lpSurface);
 	}
 }
 
@@ -1980,18 +1982,18 @@ long startdirectdraw (long *vidplc, long *dabpl, long *daxres, long *dayres)
 
 	while (1)
 	{
-		if ((hr = ddsurf[1]->Lock(0,&ddsd,DDLOCK_SURFACEMEMORYPTR|DDLOCK_WAIT,0)) == DD_OK) break;
+		if ((hr = IDirectDrawSurface_Lock(ddsurf[1],0,&ddsd,DDLOCK_SURFACEMEMORYPTR|DDLOCK_WAIT,0)) == DD_OK) break;
 		if (hr == DDERR_SURFACELOST)
 		{
-			if (ddsurf[0]->Restore() != DD_OK) return(0);
-			if (ddsurf[1]->Restore() != DD_OK) return(0);
+			if (IDirectDrawSurface_Restore(ddsurf[0]) != DD_OK) return(0);
+			if (IDirectDrawSurface_Restore(ddsurf[1]) != DD_OK) return(0);
 		}
 		if (hr == DDERR_CANTLOCKSURFACE) return(-1); //if true, set cantlockprimary = 1;
 		if (hr != DDERR_WASSTILLDRAWING) return(0);
 	}
 
 		//DDLOCK_WAIT MANDATORY! (to prevent sudden exit back to windows)!
-	//if (hr = ddsurf[1]->Lock(0,&ddsd,DDLOCK_SURFACEMEMORYPTR|DDLOCK_WAIT,0) != DD_OK)
+	//if (hr = IDirectDrawSurface_Lock(ddsurf[1],0,&ddsd,DDLOCK_SURFACEMEMORYPTR|DDLOCK_WAIT,0) != DD_OK)
 	//   return(0);
 
 	*vidplc = (long)ddsd.lpSurface; *dabpl = ddsd.lPitch;
@@ -2005,7 +2007,7 @@ HDC startdc ()
 #ifdef USED3D4FULL
 	if (fullscreen) return(0); //d3ddev->GetDC(&ghdc); else
 #endif
-	ddsurf[1]->GetDC(&ghdc);
+	IDirectDrawSurface_GetDC(ddsurf[1],&ghdc);
 	return(ghdc);
 }
 
@@ -2014,7 +2016,7 @@ void stopdc ()
 #ifdef USED3D4FULL
 	if (fullscreen) return; //d3ddev->ReleaseDC(ghdc); else
 #endif
-	ddsurf[1]->ReleaseDC(ghdc);
+	IDirectDrawSurface_ReleaseDC(ddsurf[1],ghdc);
 }
 
 void nextpage ()
@@ -2067,7 +2069,7 @@ void nextpage ()
 			else if (j)
 			{
 #ifndef NO_CLIPPER
-				ddclip->GetClipList(0,0,&siz);
+				IDirectDrawClipper_GetClipList(ddclip,0,0,&siz);
 				if (siz > ddcliprdbytes)
 				{
 					ddcliprdbytes = siz;
@@ -2087,7 +2089,7 @@ void nextpage ()
 				}
 				else
 				{
-					ddclip->GetClipList(0,ddcliprd,&siz);
+					IDirectDrawClipper_GetClipList(ddclip,0,ddcliprd,&siz);
 
 					r = (RECT *)ddcliprd->Buffer;
 					for(j=0;j<(long)ddcliprd->rdh.nCount;j++)
@@ -2167,19 +2169,19 @@ void nextpage ()
 		RECT r; r.left = 0; r.top = 0; r.right = xres; r.bottom = yres; //with width hack, src rect not always: xres,yres
 		if (ddsurf[2]->GetBltStatus(DDGBS_CANBLT) == DDERR_WASSTILLDRAWING) return;
 		if (ddsurf[2]->BltFast(0,0,ddsurf[1],&r,DDBLTFAST_NOCOLORKEY) == DDERR_SURFACELOST)
-			{ ddsurf[0]->Restore(); if (ddsurf[2]->BltFast(0,0,ddsurf[1],&r,DDBLTFAST_NOCOLORKEY) != DD_OK) return; }
-		if (ddsurf[0]->GetFlipStatus(DDGFS_CANFLIP) == DDERR_WASSTILLDRAWING) return; //wait for blit to complete
-		if (ddsurf[0]->Flip(0,0) == DDERR_SURFACELOST) { ddsurf[0]->Restore(); ddsurf[0]->Flip(0,0); }
+			{ IDirectDrawSurface_Restore(ddsurf[0]); if (ddsurf[2]->BltFast(0,0,ddsurf[1],&r,DDBLTFAST_NOCOLORKEY) != DD_OK) return; }
+		if (IDirectDrawSurface_GetFlipStatus(ddsurf[0],DDGFS_CANFLIP) == DDERR_WASSTILLDRAWING) return; //wait for blit to complete
+		if (IDirectDrawSurface_Flip(ddsurf[0],0,0) == DDERR_SURFACELOST) { IDirectDrawSurface_Restore(ddsurf[0]); IDirectDrawSurface_Flip(ddsurf[0],0,0); }
 #elif 1
 			//NOTE! If not using DDFLIP_WAIT, >70fps only works
 			//      when ddsd.dwBackBufferCount > 1 (triple+ buffering)
 		while (1) //Recommended flipper from 1997 DirectDraw 3.0 MSDN CD:
 		{
-			if ((hr = ddsurf[0]->Flip(0,DDFLIP_WAIT)) == DD_OK) break;
+			if ((hr = IDirectDrawSurface_Flip(ddsurf[0],0,DDFLIP_WAIT)) == DD_OK) break;
 			if (hr == DDERR_SURFACELOST)
 			{
-				if (ddsurf[0]->Restore() != DD_OK) break;
-				if (ddsurf[1]->Restore() != DD_OK) break;
+				if (IDirectDrawSurface_Restore(ddsurf[0]) != DD_OK) break;
+				if (IDirectDrawSurface_Restore(ddsurf[1]) != DD_OK) break;
 			}
 			if (hr != DDERR_WASSTILLDRAWING) break;
 		}
@@ -2189,12 +2191,12 @@ void nextpage ()
 			// WARNING: bad things can happen if breath() receives WM_CLOSE!!!
 		while (1)
 		{
-			if ((hr = ddsurf[0]->Flip(0,0)) == DD_OK) break;
+			if ((hr = IDirectDrawSurface_Flip(ddsurf[0],0,0)) == DD_OK) break;
 			if (hr == DDERR_WASSTILLDRAWING) { breath(); continue; }
 			if (hr == DDERR_SURFACELOST)
 			{
-				if (ddsurf[0]->Restore() != DD_OK) break;
-				if (ddsurf[1]->Restore() != DD_OK) break;
+				if (IDirectDrawSurface_Restore(ddsurf[0]) != DD_OK) break;
+				if (IDirectDrawSurface_Restore(ddsurf[1]) != DD_OK) break;
 			}
 			break;
 		}
@@ -2217,17 +2219,17 @@ void nextpage ()
 		rcDst.left += topLeft.x; rcDst.right += topLeft.x;
 		rcDst.top += topLeft.y; rcDst.bottom += topLeft.y;
 #ifdef NO_CLIPPER
-		if (ddsurf[0]->BltFast(rcDst.left,rcDst.top,ddsurf[1],&rcSrc,DDBLTFAST_WAIT|DDBLTFAST_NOCOLORKEY) < 0)
+		if (IDirectDrawSurface_BltFast(ddsurf[0],rcDst.left,rcDst.top,ddsurf[1],&rcSrc,DDBLTFAST_WAIT|DDBLTFAST_NOCOLORKEY) < 0)
 #else
-		if (ddsurf[0]->Blt(&rcDst,ddsurf[1],&rcSrc,DDBLT_WAIT|DDBLT_ASYNC,0) < 0)
+		if (IDirectDrawSurface_Blt(ddsurf[0],&rcDst,ddsurf[1],&rcSrc,DDBLT_WAIT|DDBLT_ASYNC,0) < 0)
 #endif
 		{
-			if (ddsurf[0]->IsLost() == DDERR_SURFACELOST) ddsurf[0]->Restore();
-			if (ddsurf[1]->IsLost() == DDERR_SURFACELOST) ddsurf[1]->Restore();
+			if (IDirectDrawSurface_IsLost(ddsurf[0]) == DDERR_SURFACELOST) IDirectDrawSurface_Restore(ddsurf[0]);
+			if (IDirectDrawSurface_IsLost(ddsurf[1]) == DDERR_SURFACELOST) IDirectDrawSurface_Restore(ddsurf[1]);
 #ifdef NO_CLIPPER
-			ddsurf[0]->BltFast(rcDst.left,rcDst.top,ddsurf[1],&rcSrc,DDBLTFAST_WAIT|DDBLTFAST_NOCOLORKEY);
+			IDirectDrawSurface_BltFast(ddsurf[0],rcDst.left,rcDst.top,ddsurf[1],&rcSrc,DDBLTFAST_WAIT|DDBLTFAST_NOCOLORKEY);
 #else
-			ddsurf[0]->Blt(&rcDst,ddsurf[1],&rcSrc,DDBLT_WAIT|DDBLT_ASYNC,0);
+			IDirectDrawSurface_Blt(ddsurf[0],&rcDst,ddsurf[1],&rcSrc,DDBLT_WAIT|DDBLT_ASYNC,0);
 #endif
 		}
 	}
@@ -2238,7 +2240,7 @@ void ddflip2gdi ()
 #ifdef USED3D4FULL
 	if (fullscreen) return;
 #endif
-	if (lpdd) lpdd->FlipToGDISurface();
+	if (lpdd) IDirectDraw_FlipToGDISurface(lpdd);
 }
 
 long clearscreen (long fillcolor)
@@ -2410,12 +2412,12 @@ long clearscreen (long fillcolor)
 	while (1)
 	{
 			//Try |DDBLT_ASYNC
-		hr = ddsurf[1]->Blt(0,0,0,DDBLT_COLORFILL,&blt); //Try |DDBLT_WAIT
+		hr = IDirectDrawSurface_Blt(ddsurf[1],0,0,0,DDBLT_COLORFILL,&blt); //Try |DDBLT_WAIT
 		if (hr == DD_OK) return(1);
 		if (hr == DDERR_SURFACELOST)
 		{
-			if (ddsurf[0]->Restore() != DD_OK) return(0);
-			if (ddsurf[1]->Restore() != DD_OK) return(0);
+			if (IDirectDrawSurface_Restore(ddsurf[0]) != DD_OK) return(0);
+			if (IDirectDrawSurface_Restore(ddsurf[1]) != DD_OK) return(0);
 		}
 	}
 }
@@ -2451,7 +2453,7 @@ long changeres (long daxres, long dayres, long dacolbits, long dafullscreen)
 
 //   //How to use dc & draw text:
 //HDC hdc;
-//if (ddsurf[1]->GetDC(&hdc) == DD_OK)
+//if (IDirectDrawSurface_GetDC(ddsurf[1],&hdc) == DD_OK)
 //{
 //   SetBkColor(hdc,RGB(0,0,255)); //SetBkMode(hdc,TRANSPARENT);
 //   SetTextColor(hdc,RGB(255,255,0));
@@ -2461,11 +2463,11 @@ long changeres (long daxres, long dayres, long dacolbits, long dafullscreen)
 //   TextOut(hdc,x,y,message,strlen(message));
 //   //SelectObject(hdc,oldFont);
 //   //DeleteObject(fontInUse);
-//   ddsurf[1]->ReleaseDC(hdc);
+//   IDirectDrawSurface_ReleaseDC(ddsurf[1],hdc);
 //}
 
 //   //Do this to ensure GDI stuff is on the screen:
-//lpdd->FlipToGDISurface();
+//IDirectDraw_FlipToGDISurface(lpdd);
 
 //   //Use real timers, (forget SetTimer/WM_TIMER crap):
 //#include <mmsystem.h>
@@ -2478,10 +2480,10 @@ long changeres (long daxres, long dayres, long dacolbits, long dafullscreen)
 //#include <ddraw.h>
 //extern LPDIRECTDRAW lpdd;
 //   unsigned long u;
-//   lpdd->GetMonitorFrequency(&u); //u=85...
-//   lpdd->WaitForVerticalBlank(DDWAITVB_BLOCKBEGIN,0); //DDWAITVB_BLOCKBEGIN,DDWAITVB_BLOCKEND
-//   lpdd->GetScanLine(&u); //0 to yres+blanking-1 DD_OK,DDERR_VERTICALBLANKINPROGRESS
-//   lpdd->GetVerticalBlankStatus((int *)&i); //0 or 1
+//   IDirectDraw_GetMonitorFrequency(lpdd,&u); //u=85...
+//   IDirectDraw_WaitForVerticalBlank(lpdd,DDWAITVB_BLOCKBEGIN,0); //DDWAITVB_BLOCKBEGIN,DDWAITVB_BLOCKEND
+//   IDirectDraw_GetScanLine(lpdd,&u); //0 to yres+blanking-1 DD_OK,DDERR_VERTICALBLANKINPROGRESS
+//   IDirectDraw_GetVerticalBlankStatus(lpdd,(int *)&i); //0 or 1
 
 #endif
 
@@ -2516,7 +2518,7 @@ long initdirectinput (HWND hwnd)
 
 void uninitdirectinput ()
 {
-	if (gpdi) { gpdi->Release(); gpdi = 0; }
+	if (gpdi) { IDirectInput_Release(gpdi); gpdi = 0; }
 }
 
 //DirectInput (KEYBOARD) VARIABLES & CODE-------------------------------------------------------
@@ -2533,10 +2535,10 @@ void uninitkeyboard ()
 	{
 		if (dinputevent[1])
 		{
-			gpKeyboard->SetEventNotification(dinputevent[1]);
+			IDirectInputDevice_SetEventNotification(gpKeyboard,dinputevent[1]);
 			CloseHandle(dinputevent[1]); dinputevent[1] = 0;
 		}
-		gpKeyboard->Unacquire(); gpKeyboard->Release(); gpKeyboard = 0;
+		IDirectInputDevice_Unacquire(gpKeyboard); IDirectInputDevice_Release(gpKeyboard); gpKeyboard = 0;
 	}
 }
 
@@ -2546,20 +2548,20 @@ long initkeyboard (HWND hwnd)
 	DIPROPDWORD dipdw;
 	char buf[256];
 
-	if ((hr = gpdi->CreateDevice(GUID_SysKeyboard,&gpKeyboard,0)) < 0) goto initkeyboard_bad;
-	if ((hr = gpKeyboard->SetDataFormat(&c_dfDIKeyboard)) < 0) goto initkeyboard_bad;
-	if ((hr = gpKeyboard->SetCooperativeLevel(hwnd,dinputkeyboardflags)) < 0) goto initkeyboard_bad;
+	if ((hr = IDirectInput_CreateDevice(gpdi,GUID_SysKeyboard,&gpKeyboard,0)) < 0) goto initkeyboard_bad;
+	if ((hr = IDirectInputDevice_SetDataFormat(gpKeyboard,&c_dfDIKeyboard)) < 0) goto initkeyboard_bad;
+	if ((hr = IDirectInputDevice_SetCooperativeLevel(gpKeyboard,hwnd,dinputkeyboardflags)) < 0) goto initkeyboard_bad;
 
 	dinputevent[1] = CreateEvent(0,0,0,0); if (!dinputevent[1]) goto initkeyboard_bad;
-	if ((hr = gpKeyboard->SetEventNotification(dinputevent[1])) < 0) goto initkeyboard_bad;
+	if ((hr = IDirectInputDevice_SetEventNotification(gpKeyboard,dinputevent[1])) < 0) goto initkeyboard_bad;
 
 	dipdw.diph.dwSize = sizeof(DIPROPDWORD);
 	dipdw.diph.dwHeaderSize = sizeof(DIPROPHEADER);
 	dipdw.diph.dwObj = 0;
 	dipdw.diph.dwHow = DIPH_DEVICE;
 	dipdw.dwData = KBDBUFFERSIZE;
-	if ((hr = gpKeyboard->SetProperty(DIPROP_BUFFERSIZE,&dipdw.diph)) < 0) goto initkeyboard_bad;
-	if (kbd_acquire) { gpKeyboard->Acquire(); shkeystatus = 0; }
+	if ((hr = IDirectInputDevice_SetProperty(gpKeyboard,DIPROP_BUFFERSIZE,&dipdw.diph)) < 0) goto initkeyboard_bad;
+	if (kbd_acquire) { IDirectInputDevice_Acquire(gpKeyboard); shkeystatus = 0; }
 	return(1);
 
 initkeyboard_bad:;
@@ -2577,12 +2579,12 @@ long readkeyboard ()
 	DIDEVICEOBJECTDATA *lpdidod;
 
 	dwItems = KBDBUFFERSIZE;
-	hr = gpKeyboard->GetDeviceData(sizeof(DIDEVICEOBJECTDATA),KbdBuffer,&dwItems,0);
+	hr = IDirectInputDevice_GetDeviceData(gpKeyboard,sizeof(DIDEVICEOBJECTDATA),KbdBuffer,&dwItems,0);
 	//if (hr == DI_BUFFEROVERFLOW) ?;
 	if ((hr == DIERR_INPUTLOST) || (hr == DIERR_NOTACQUIRED))
 	{
-		gpKeyboard->Acquire(); shkeystatus = 0;
-		hr = gpKeyboard->GetDeviceData(sizeof(DIDEVICEOBJECTDATA),KbdBuffer,&dwItems,0);
+		IDirectInputDevice_Acquire(gpKeyboard); shkeystatus = 0;
+		hr = IDirectInputDevice_GetDeviceData(gpKeyboard,sizeof(DIDEVICEOBJECTDATA),KbdBuffer,&dwItems,0);
 	}
 	if (hr < 0) return(0);
 	for(i=0;i<(long)dwItems;i++)
@@ -2621,10 +2623,10 @@ void uninitmouse ()
 	{
 		if (dinputevent[0])
 		{
-			gpMouse->SetEventNotification(dinputevent[0]);
+			IDirectInputDevice_SetEventNotification(gpMouse,dinputevent[0]);
 			CloseHandle(dinputevent[0]); dinputevent[0] = 0;
 		}
-		gpMouse->Unacquire(); gpMouse->Release(); gpMouse = 0;
+		IDirectInputDevice_Unacquire(gpMouse); IDirectInputDevice_Release(gpMouse); gpMouse = 0;
 	}
 }
 
@@ -2634,21 +2636,21 @@ long initmouse (HWND hwnd)
 	DIPROPDWORD dipdw;
 	char buf[256];
 
-	if ((hr = gpdi->CreateDevice(GUID_SysMouse,&gpMouse,0)) < 0) goto initmouse_bad;
-	if ((hr = gpMouse->SetDataFormat(&c_dfDIMouse)) < 0) goto initmouse_bad;
-	if ((hr = gpMouse->SetCooperativeLevel(hwnd,dinputmouseflags)) < 0) goto initmouse_bad;
+	if ((hr = IDirectInput_CreateDevice(gpdi,GUID_SysMouse,&gpMouse,0)) < 0) goto initmouse_bad;
+	if ((hr = IDirectInputDevice_SetDataFormat(gpMouse,&c_dfDIMouse)) < 0) goto initmouse_bad;
+	if ((hr = IDirectInputDevice_SetCooperativeLevel(gpMouse,hwnd,dinputmouseflags)) < 0) goto initmouse_bad;
 
 	dinputevent[0] = CreateEvent(0,0,0,0); if (!dinputevent[0]) goto initmouse_bad;
-	if ((hr = gpMouse->SetEventNotification(dinputevent[0])) < 0) goto initmouse_bad;
+	if ((hr = IDirectInputDevice_SetEventNotification(gpMouse,dinputevent[0])) < 0) goto initmouse_bad;
 
 	dipdw.diph.dwSize = sizeof(DIPROPDWORD);
 	dipdw.diph.dwHeaderSize = sizeof(DIPROPHEADER);
 	dipdw.diph.dwObj = 0;
 	dipdw.diph.dwHow = DIPH_DEVICE;
 	dipdw.dwData = MOUSBUFFERSIZE;
-	if ((hr = gpMouse->SetProperty(DIPROP_BUFFERSIZE, &dipdw.diph)) < 0) goto initmouse_bad;
+	if ((hr = IDirectInputDevice_SetProperty(gpMouse,DIPROP_BUFFERSIZE, &dipdw.diph)) < 0) goto initmouse_bad;
 
-	if (mouse_acquire) { gpMouse->Acquire(); gbstatus = 0; }
+	if (mouse_acquire) { IDirectInputDevice_Acquire(gpMouse); gbstatus = 0; }
 	mousper = 1.0; mousince = mougoalx = mougoaly = mougoalz = 0.0;
 	moult[0] = -1; moultavg = moultavgcnt = 0;
 	readklock(&dmoutsc);
@@ -2674,12 +2676,12 @@ void readmouse (float *fmousx, float *fmousy, float *fmousz, long *bstatus)
 	if ((!mouse_acquire) || (!gpMouse)) { *fmousx = 0; *fmousy = 0; *fmousz = 0; *bstatus = 0; return; }
 
 	dwItems = MOUSBUFFERSIZE;
-	hr = gpMouse->GetDeviceData(sizeof(DIDEVICEOBJECTDATA),MousBuffer,&dwItems,0);
+	hr = IDirectInputDevice_GetDeviceData(gpMouse,sizeof(DIDEVICEOBJECTDATA),MousBuffer,&dwItems,0);
 	if (hr == DI_BUFFEROVERFLOW) moult[0] = -1;
 	if ((hr == DIERR_INPUTLOST) || (hr == DIERR_NOTACQUIRED))
 	{
-		gpMouse->Acquire(); gbstatus = 0;
-		hr = gpMouse->GetDeviceData(sizeof(DIDEVICEOBJECTDATA),MousBuffer,&dwItems,0);
+		IDirectInputDevice_Acquire(gpMouse); gbstatus = 0;
+		hr = IDirectInputDevice_GetDeviceData(gpMouse,sizeof(DIDEVICEOBJECTDATA),MousBuffer,&dwItems,0);
 		if ((hr == DIERR_INPUTLOST) || (hr == DIERR_NOTACQUIRED)) { *fmousx = 0; *fmousy = 0; *fmousz = 0; *bstatus = 0; return; }
 	}
 
@@ -2748,12 +2750,16 @@ void readmouse (float *fmousx, float *fmousy, float *fmousz, long *bstatus)
 	mougoalx += (float)mousx; (*fmousx) = mougoalx*f; mougoalx -= (*fmousx);
 	mougoaly += (float)mousy; (*fmousy) = mougoaly*f; mougoaly -= (*fmousy);
 	mougoalz += (float)mousz; (*fmousz) = mougoalz*f; mougoalz -= (*fmousz);
+
 }
+
+#if defined(__cplusplus)
 void readmouse (float *fmousx, float *fmousy, long *bstatus)
 {
 	float fmousz;
 	readmouse(fmousx,fmousy,&fmousz,bstatus);
 }
+#endif
 
 void smartsleep (long timeoutms)
 {
@@ -2807,16 +2813,16 @@ long umixerstart (void damixfunc (void *, long), long dasamprate, long danumspea
 	dsbdesc.dwFlags = DSBCAPS_GETCURRENTPOSITION2|DSBCAPS_LOCSOFTWARE|DSBCAPS_GLOBALFOCUS;
 	dsbdesc.dwBufferBytes = UMIXERBUFSIZ;
 	dsbdesc.lpwfxFormat = &wfx;
-	if (dsound->CreateSoundBuffer(&dsbdesc,&umixer[umixernum].streambuf,0) != DS_OK) return(-1);
+	if (IDirectSound_CreateSoundBuffer(dsound,&dsbdesc,&umixer[umixernum].streambuf,0) != DS_OK) return(-1);
 
 		//Zero out streaming buffer before beginning play
-	umixer[umixernum].streambuf->Lock(0,UMIXERBUFSIZ,&w0,&l0,&w1,&l1,0);
+	IDirectSoundBuffer_Lock(umixer[umixernum].streambuf,0,UMIXERBUFSIZ,&w0,&l0,&w1,&l1,0);
 	if (w0) memset(w0,(dabytespersamp-2)&128,l0);
 	if (w1) memset(w1,(dabytespersamp-2)&128,l1);
-	umixer[umixernum].streambuf->Unlock(w0,l0,w1,l1);
+	IDirectSoundBuffer_Unlock(umixer[umixernum].streambuf,w0,l0,w1,l1);
 
-	umixer[umixernum].streambuf->SetCurrentPosition(0);
-	umixer[umixernum].streambuf->Play(0,0,DSBPLAY_LOOPING);
+	IDirectSoundBuffer_SetCurrentPosition(umixer[umixernum].streambuf,0);
+	IDirectSoundBuffer_Play(umixer[umixernum].streambuf,0,0,DSBPLAY_LOOPING);
 
 	umixer[umixernum].oplaycurs = 0;
 	umixer[umixernum].mixfunc = damixfunc;
@@ -2829,7 +2835,7 @@ void umixerkill (long i)
 {
 	if ((unsigned long)i >= umixernum) return;
 	if (umixer[i].streambuf)
-		{ umixer[i].streambuf->Stop(); umixer[i].streambuf->Release(); umixer[i].streambuf = 0; }
+		{ IDirectSoundBuffer_Stop(umixer[i].streambuf); IDirectSoundBuffer_Release(umixer[i].streambuf); umixer[i].streambuf = 0; }
 	umixernum--; if (i != umixernum) umixer[i] = umixer[umixernum];
 }
 
@@ -2842,15 +2848,15 @@ void umixerbreathe ()
 	for(i=0;i<umixernum;i++)
 	{
 		if (!umixer[i].streambuf) continue;
-		if (umixer[i].streambuf->GetCurrentPosition(&playcurs,&writcurs) != DS_OK) continue;
+		if (IDirectSoundBuffer_GetCurrentPosition(umixer[i].streambuf,&playcurs,&writcurs) != DS_OK) continue;
 		playcurs += ((umixer[i].samplerate/8)<<(umixer[i].bytespersample+umixer[i].numspeakers-2));
 		l = (((playcurs-umixer[i].oplaycurs)&(UMIXERBUFSIZ-1))>>(umixer[i].bytespersample+umixer[i].numspeakers-2));
 		if (l <= 256) continue;
-		if (umixer[i].streambuf->Lock(umixer[i].oplaycurs&(UMIXERBUFSIZ-1),l<<(umixer[i].bytespersample+umixer[i].numspeakers-2),&w0,&l0,&w1,&l1,0) != DS_OK) continue;
+		if (IDirectSoundBuffer_Lock(umixer[i].streambuf,umixer[i].oplaycurs&(UMIXERBUFSIZ-1),l<<(umixer[i].bytespersample+umixer[i].numspeakers-2),&w0,&l0,&w1,&l1,0) != DS_OK) continue;
 		if (w0) umixer[i].mixfunc(w0,l0);
 		if (w1) umixer[i].mixfunc(w1,l1);
 		umixer[i].oplaycurs += l0+l1;
-		umixer[i].streambuf->Unlock(w0,l0,w1,l1);
+		IDirectSoundBuffer_Unlock(umixer[i].streambuf,w0,l0,w1,l1);
 	}
 }
 //--------------------------------------------------------------------------------------------------
@@ -2972,7 +2978,7 @@ static void kensoundclose ()
 	numrendersnd = 0;
 
 	ENTERMUTX;
-	if (streambuf) streambuf->Stop();
+	if (streambuf) IDirectSoundBuffer_Stop(streambuf);
 
 	if (audhashbuf)
 	{
@@ -2983,7 +2989,7 @@ static void kensoundclose ()
 	}
 	audhashpos = audhashsiz = 0;
 
-	if (streambuf) { streambuf->Release(); streambuf = 0; }
+	if (streambuf) { IDirectSoundBuffer_Release(streambuf); streambuf = 0; }
 	LEAVEMUTX;
 }
 
@@ -3053,22 +3059,22 @@ static int kensoundinit (LPDIRECTSOUND dsound, int samprate, int numchannels, in
 	bufdesc.dwBufferBytes = SNDSTREAMSIZ;
 	bufdesc.dwReserved = 0;
 	bufdesc.lpwfxFormat = &wft;
-	if (dsound->CreateSoundBuffer(&bufdesc,&streambuf,0) != DS_OK) return(-1);
+	if (IDirectSound_CreateSoundBuffer(dsound,&bufdesc,&streambuf,0) != DS_OK) return(-1);
 
-	//streambuf->SetVolume(curmusicvolume);
-	//streambuf->SetFrequency(curmusicfrequency);
-	//streambuf->SetPan(curmusicpan);
+	//IDirectSoundBuffer_SetVolume(streambuf,curmusicvolume);
+	//IDirectSoundBuffer_SetFrequency(streambuf,curmusicfrequency);
+	//IDirectSoundBuffer_SetPan(streambuf,curmusicpan);
 
 		//Zero out streaming buffer before beginning play
-	streambuf->Lock(0,SNDSTREAMSIZ,&w0,&l0,&w1,&l1,0);
+	IDirectSoundBuffer_Lock(streambuf,0,SNDSTREAMSIZ,&w0,&l0,&w1,&l1,0);
 	if (w0) memset(w0,(bytespersample-2)&128,l0);
 	if (w1) memset(w1,(bytespersample-2)&128,l1);
-	streambuf->Unlock(w0,l0,w1,l1);
+	IDirectSoundBuffer_Unlock(streambuf,w0,l0,w1,l1);
 
 	initfilters();
 
-	streambuf->SetCurrentPosition(0);
-	streambuf->Play(0,0,DSBPLAY_LOOPING);
+	IDirectSoundBuffer_SetCurrentPosition(streambuf,0);
+	IDirectSoundBuffer_Play(streambuf,0,0,DSBPLAY_LOOPING);
 
 	return(0);
 }
@@ -3310,6 +3316,7 @@ void setears3d (float iposx, float iposy, float iposz,
 					 float iheix, float iheiy, float iheiz)
 {
 	ENTERMUTX;
+	do {
 	float f = 1.f/sqrt(iheix*iheix+iheiy*iheiy+iheiz*iheiz); //Make audiostr same magnitude as audiofor
 	audiopos.x = iposx; audiopos.y = iposy; audiopos.z = iposz;
 	audiofor.x = iforx; audiofor.y = ifory; audiofor.z = iforz;
@@ -3318,6 +3325,7 @@ void setears3d (float iposx, float iposy, float iposz,
 	audiostr.y = (iheiz*iforx - iheix*iforz)*f;
 	audiostr.z = (iheix*ifory - iheiy*iforx)*f;
 	LEAVEMUTX;
+	} while (0);
 }
 
 	//Because of 3D position calculations, it is better to render sound in sync with the movement
@@ -3330,8 +3338,8 @@ static void kensoundbreath (long minleng)
 	long i, j, k, m, n, *lptr[2], nsinc0, nsinc1, volsci0, volsci1;
 
 	if (!streambuf) return;
-	streambuf->GetStatus(&u); if (!(u&DSBSTATUS_LOOPING)) return;
-	if (streambuf->GetCurrentPosition(&playcurs,&writcurs) != DS_OK) return;
+	IDirectSoundBuffer_GetStatus(streambuf,&u); if (!(u&DSBSTATUS_LOOPING)) return;
+	if (IDirectSoundBuffer_GetCurrentPosition(streambuf,&playcurs,&writcurs) != DS_OK) return;
 	leng = ((playcurs-oplaycurs)&(SNDSTREAMSIZ-1)); if (leng < minleng) return;
 	i = (oplaycurs&(SNDSTREAMSIZ-1));
 	if (i < ((playcurs-1)&(SNDSTREAMSIZ-1)))
@@ -3344,14 +3352,14 @@ static void kensoundbreath (long minleng)
 
 	if (!numrendersnd)
 	{
-		streambuf->Lock(i,leng,&w[0],&l[0],&w[1],&l[1],0);
+		IDirectSoundBuffer_Lock(streambuf,i,leng,&w[0],&l[0],&w[1],&l[1],0);
 		if (w[0]) memset(w[0],(bytespersample-2)&128,l[0]);
 		if (w[1]) memset(w[1],(bytespersample-2)&128,l[1]);
-		streambuf->Unlock(w[0],l[0],w[1],l[1]);
+		IDirectSoundBuffer_Unlock(streambuf,w[0],l[0],w[1],l[1]);
 	}
 	else
 	{
-		streambuf->Lock(i,leng,&w[0],&l[0],&w[1],&l[1],0);
+		IDirectSoundBuffer_Lock(streambuf,i,leng,&w[0],&l[0],&w[1],&l[1],0);
 
 		lptr[0] = &lsnd[i>>1]; lptr[1] = lsnd;
 		for(j=numrendersnd-1;j>=0;j--)
@@ -3359,9 +3367,10 @@ static void kensoundbreath (long minleng)
 			if (rendersnd[j].flags&KSND_MOVE) rendersnd[j].p = *rendersnd[j].ptr; //Get new 3D position
 			if (rendersnd[j].flags&KSND_3D)
 			{
+				float f, g, h;
+				
 				n = (signed long)(leng>>gshiftval);
 
-				float f, g, h;
 				f = (rendersnd[j].p.x-audiopos.x)*(rendersnd[j].p.x-audiopos.x)+(rendersnd[j].p.y-audiopos.y)*(rendersnd[j].p.y-audiopos.y)+(rendersnd[j].p.z-audiopos.z)*(rendersnd[j].p.z-audiopos.z);
 				g = (rendersnd[j].p.x-audiopos.x)*audiostr.x+(rendersnd[j].p.y-audiopos.y)*audiostr.y+(rendersnd[j].p.z-audiopos.z)*audiostr.z;
 				if (f <= SNDMINDIST*SNDMINDIST) { f = SNDMINDIST; h = (float)rendersnd[j].ivolsc; } else { f = sqrt(f); h = ((float)rendersnd[j].ivolsc)*SNDMINDIST/f; }
@@ -3447,7 +3456,7 @@ static void kensoundbreath (long minleng)
 		}
 		for(m=0;m<2;m++) if (w[m]) audclipcopy(lptr[m],(short *)w[m],l[m]>>gshiftval);
 		if (cputype&(1<<23)) _asm emms //MMX
-		streambuf->Unlock(w[0],l[0],w[1],l[1]);
+		IDirectSoundBuffer_Unlock(streambuf,w[0],l[0],w[1],l[1]);
 	}
 
 	oplaycurs = playcurs;
@@ -3630,7 +3639,7 @@ void playsound (const char *filnam, long volperc, float frqmul, void *pos, long 
 	if (!dsound) return;
 	ENTERMUTX;
 	if (!streambuf) { LEAVEMUTX; return; }
-	streambuf->GetStatus(&u); if (!(u&DSBSTATUS_LOOPING)) { LEAVEMUTX; return; }
+	IDirectSoundBuffer_GetStatus(streambuf,&u); if (!(u&DSBSTATUS_LOOPING)) { LEAVEMUTX; return; }
 
 	if (flags&KSND_MEM)
 	{
@@ -3673,11 +3682,11 @@ void playsound (const char *filnam, long volperc, float frqmul, void *pos, long 
 	else { ispos0 = ispos1 = 0; ivolsc0 = ivolsc1 = ivolsc; }
 
 	kensoundbreath(SNDSTREAMSIZ>>1); //Not necessary, but for good luck
-	if (streambuf->GetCurrentPosition(&playcurs,&writcurs) != DS_OK) { LEAVEMUTX; return; }
+	if (IDirectSoundBuffer_GetCurrentPosition(streambuf,&playcurs,&writcurs) != DS_OK) { LEAVEMUTX; return; }
 		//If you use playcurs instead of writcurs, beginning of sound gets cut off :/
 		//on WinXP: ((writcurs-playcurs)&(SNDSTREAMSIZ-1)) ranges from 6880 to 8820 (step 4)
 	i = (writcurs&(SNDSTREAMSIZ-1));
-	if (streambuf->Lock(i,(oplaycurs-i)&(SNDSTREAMSIZ-1),&w[0],&l[0],&w[1],&l[1],0) != DS_OK) { LEAVEMUTX; return; }
+	if (IDirectSoundBuffer_Lock(streambuf,i,(oplaycurs-i)&(SNDSTREAMSIZ-1),&w[0],&l[0],&w[1],&l[1],0) != DS_OK) { LEAVEMUTX; return; }
 	lptr[0] = &lsnd[i>>1]; lptr[1] = lsnd;
 	for(m=0;m<2;m++)
 		if (w[m])
@@ -3708,7 +3717,7 @@ void playsound (const char *filnam, long volperc, float frqmul, void *pos, long 
 		}
 	for(m=0;m<2;m++) if (w[m]) audclipcopy(lptr[m],(short *)w[m],l[m]>>gshiftval);
 	if (cputype&(1<<23)) _asm emms //MMX
-	streambuf->Unlock(w[0],l[0],w[1],l[1]);
+	IDirectSoundBuffer_Unlock(streambuf,w[0],l[0],w[1],l[1]);
 
 		//Save params to continue playing later (when both L&R channels haven't played through)
 	numsamps = *(long *)(newsnd-8);
@@ -3803,7 +3812,7 @@ void setvolume (long percentmax)
 {
 	if (!dsprim) return;
 	globvolume = min(max(percentmax,0),100);
-	dsprim->SetVolume(volperc2db100[globvolume]);
+	IDirectSoundBuffer_SetVolume(dsprim,volperc2db100[globvolume]);
 }
 
 void uninitdirectsound ()
@@ -3822,7 +3831,7 @@ void uninitdirectsound ()
 	for(i=MAXSOUNDS-1;i>=0;i--)
 		if (dsbuf[i]) { dsbuf[i]->Release(); dsbuf[i] = 0; }
 #endif
-	dsound->Release(); dsound = 0;
+	IDirectSound_Release(dsound); dsound = 0;
 }
 
 void initdirectsound ()
@@ -3842,7 +3851,7 @@ void initdirectsound ()
 		HRESULT dsrval = CoCreateInstance(CLSID_DirectSound,NULL,CLSCTX_INPROC_SERVER,
 													 IID_IDirectSound,(void **)&dsound);
 		if (dsrval == S_OK) {
-			dsrval = (dsound)->Initialize(NULL);
+			dsrval = IDirectSound_Initialize(dsound,NULL);
 			//dsrval = IDirectSound_Initialize(dsound,NULL);
 			//(dsound)->Release(lpds);
 			if (dsrval != S_OK) { dsound = NULL; return; }
@@ -3851,7 +3860,7 @@ void initdirectsound ()
 #else
 	if (DirectSoundCreate(0,&dsound,0) != DS_OK) { MessageBox(ghwnd,"DirectSoundCreate","ERROR",MB_OK); exit(0); }
 #endif
-	if (dsound->SetCooperativeLevel(ghwnd,DSSCL_PRIORITY) != DS_OK) { MessageBox(ghwnd,"SetCooperativeLevel","ERROR",MB_OK); exit(0); }
+	if (IDirectSound_SetCooperativeLevel(dsound,ghwnd,DSSCL_PRIORITY) != DS_OK) { MessageBox(ghwnd,"SetCooperativeLevel","ERROR",MB_OK); exit(0); }
 
 		//Create primary buffer
 	dsbdesc.dwSize = sizeof(DSBUFFERDESC);
@@ -3862,10 +3871,10 @@ void initdirectsound ()
 	dsbdesc.dwBufferBytes = 0;  //0 for primary
 	dsbdesc.dwReserved = 0;
 	dsbdesc.lpwfxFormat = 0;    //0 for primary
-	if (dsound->CreateSoundBuffer(&dsbdesc,&dsprim,0) < 0)
-		{ dsound->Release(); MessageBox(ghwnd,"CreateSoundBuffer (primary) failed","ERROR",MB_OK); exit(0); }
+	if (IDirectSound_CreateSoundBuffer(dsound,&dsbdesc,&dsprim,0) < 0)
+		{ IDirectSound_Release(dsound); MessageBox(ghwnd,"CreateSoundBuffer (primary) failed","ERROR",MB_OK); exit(0); }
 
-	dsprim->Play(0,0,DSBPLAY_LOOPING);  //Force mixer to always be on
+	IDirectSoundBuffer_Play(dsprim,0,0,DSBPLAY_LOOPING);  //Force mixer to always be on
 
 #if (USEKENSOUND == 2)
 		//Default listener orientation:
@@ -3874,7 +3883,7 @@ void initdirectsound ()
 		//   <0,0,1>: front
 		//Initialize 3D sound
 	if (dsprim->QueryInterface(IID_IDirectSound3DListener,(void **)&ds3dlis) != S_OK)
-		{ dsound->Release(); MessageBox(ghwnd,"Query...Listener failed","ERROR",MB_OK); exit(0); }
+		{ IDirectSound_Release(dsound); MessageBox(ghwnd,"Query...Listener failed","ERROR",MB_OK); exit(0); }
 	ds3dlis->SetDistanceFactor(.03,DS3D_DEFERRED);      //1 (meters/unit)
 	ds3dlis->SetRolloffFactor(.03,DS3D_DEFERRED);       //1
 	ds3dlis->SetDopplerFactor(1,DS3D_DEFERRED);         //1
@@ -3884,7 +3893,7 @@ void initdirectsound ()
 	ds3dlis->CommitDeferredSettings();
 #endif
 
-	if (globvolume != 100) dsprim->SetVolume(globvolume);
+	if (globvolume != 100) IDirectSoundBuffer_SetVolume(dsprim,globvolume);
 
 #if (USEKENSOUND == 1)
 	kensoundinit(dsound,44100,2,2); //last line
@@ -3959,7 +3968,7 @@ long loadwav (LPDIRECTSOUNDBUFFER *dabuf, const char *fnam, float freqmul, unsig
 	bufdesc.lpwfxFormat = &wft;
 	//bufdesc.guid3DAlgorithm = GUID_NULL;
 #ifndef USEKZ
-	if (dsound->CreateSoundBuffer(&bufdesc,dabuf,0) != DS_OK)
+	if (IDirectSound_CreateSoundBuffer(dsound,&bufdesc,dabuf,0) != DS_OK)
 		{ fclose(fil); return(0); }
 		//write wave data to directsound buffer you just created
 	if (((*dabuf)->Lock(0,leng,&w0,&l0,&w1,&l1,0)) == DSERR_BUFFERLOST) { fclose(fil); return(0); }
@@ -3968,7 +3977,7 @@ long loadwav (LPDIRECTSOUNDBUFFER *dabuf, const char *fnam, float freqmul, unsig
 	(*dabuf)->Unlock(w0,l0,w1,l1);
 	fclose(fil);
 #else
-	if (dsound->CreateSoundBuffer(&bufdesc,dabuf,0) != DS_OK)
+	if (IDirectSound_CreateSoundBuffer(dsound,&bufdesc,dabuf,0) != DS_OK)
 		{ kzclose(); return(0); }
 		//write wave data to directsound buffer you just created
 	(*dabuf)->Lock(0,leng,&w0,&l0,&w1,&l1,0);
@@ -4133,12 +4142,12 @@ void setacquire (long mouse, long kbd)
 {
 	if (mouse_acquire != mouse)
 	{
-		if (ActiveApp && gpMouse) { if (mouse) { gpMouse->Acquire(); gbstatus = 0; } else gpMouse->Unacquire(); }
+		if (ActiveApp && gpMouse) { if (mouse) { IDirectInputDevice_Acquire(gpMouse); gbstatus = 0; } else IDirectInputDevice_Unacquire(gpMouse); }
 		mouse_acquire = mouse;
 	}
 	if (kbd_acquire != kbd)
 	{
-		if (ActiveApp && gpKeyboard) { if (kbd) { gpKeyboard->Acquire(); shkeystatus = 0; } else gpKeyboard->Unacquire(); }
+		if (ActiveApp && gpKeyboard) { if (kbd) { IDirectInputDevice_Acquire(gpKeyboard); shkeystatus = 0; } else IDirectInputDevice_Unacquire(gpKeyboard); }
 		kbd_acquire = kbd;
 	}
 }
@@ -4162,7 +4171,7 @@ long ismouseout (long x, long y)
 #ifndef NO_CLIPPER
 	//unsigned long siz;
 
-	//ddclip->GetClipList(0,0,&siz);
+	//IDirectDrawClipper_GetClipList(ddclip,0,0,&siz);
 	//if (siz > ddcliprdbytes)
 	//{
 	//   ddcliprdbytes = siz;
@@ -4174,7 +4183,7 @@ long ismouseout (long x, long y)
 		POINT abspos;
 		RECT *r;
 		long j;
-		//ddclip->GetClipList(0,ddcliprd,&siz);
+		//IDirectDrawClipper_GetClipList(ddclip,0,ddcliprd,&siz);
 
 		abspos.x = x; abspos.y = y;
 		ClientToScreen(ghwnd,&abspos);
@@ -4219,14 +4228,14 @@ long CALLBACK WindowProc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		case WM_ACTIVATE:
 			//ActiveApp = LOWORD(wParam); //((wParam&65535) != WA_INACTIVE);
 #ifndef NOINPUT
-			if (gpMouse) { if (ActiveApp && mouse_acquire) { gpMouse->Acquire(); gbstatus = 0; } else gpMouse->Unacquire(); }
-			if (gpKeyboard) { if (ActiveApp && kbd_acquire) { gpKeyboard->Acquire(); shkeystatus = 0; } else gpKeyboard->Unacquire(); }
+			if (gpMouse) { if (ActiveApp && mouse_acquire) { IDirectInputDevice_Acquire(gpMouse); gbstatus = 0; } else IDirectInputDevice_Unacquire(gpMouse); }
+			if (gpKeyboard) { if (ActiveApp && kbd_acquire) { IDirectInputDevice_Acquire(gpKeyboard); shkeystatus = 0; } else IDirectInputDevice_Unacquire(gpKeyboard); }
 #endif
 #ifndef NODRAW
 			if ((!fullscreen) && (ActiveApp) && (ddpal) && (ddsurf[0]))
 			{
-				if (ddsurf[0]->IsLost() == DDERR_SURFACELOST) ddsurf[0]->Restore();
-				ddsurf[0]->SetPalette(ddpal);
+				if (IDirectDrawSurface_IsLost(ddsurf[0]) == DDERR_SURFACELOST) IDirectDrawSurface_Restore(ddsurf[0]);
+				IDirectDrawSurface_SetPalette(ddsurf[0],ddpal);
 				updatepalette(0,256);
 			}
 			InvalidateRect(hwnd,0,1);
@@ -4253,14 +4262,14 @@ long CALLBACK WindowProc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					long oxres = xres, oyres = yres;
 					xres = LOWORD(lParam); yres = HIWORD(lParam);
 
-					if (ddsurf[1]) { ddsurf[1]->Release(); ddsurf[1] = 0; }
+					if (ddsurf[1]) { IDirectDrawSurface_Release(ddsurf[1]); ddsurf[1] = 0; }
 
 					ddsd.dwSize = sizeof(ddsd);
 					ddsd.dwFlags = DDSD_WIDTH | DDSD_HEIGHT | DDSD_CAPS;
 					ddsd.ddsCaps.dwCaps = DDSCAPS_OFFSCREENPLAIN;
 					ddsd.dwWidth = xres;
 					ddsd.dwHeight = yres;
-					lpdd->CreateSurface(&ddsd,&ddsurf[1],0);
+					IDirectDraw_CreateSurface(lpdd,&ddsd,&ddsurf[1],0);
 
 					if (ddrawemulbuf)
 					{
@@ -4305,8 +4314,8 @@ long CALLBACK WindowProc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 #endif
 			}
 #ifndef NOINPUT
-			if (gpMouse) { if (ActiveApp && mouse_acquire) { gpMouse->Acquire(); gbstatus = 0; } else gpMouse->Unacquire(); }
-			if (gpKeyboard) { if (ActiveApp && kbd_acquire) { gpKeyboard->Acquire(); shkeystatus = 0; } else gpKeyboard->Unacquire(); }
+			if (gpMouse) { if (ActiveApp && mouse_acquire) { IDirectInputDevice_Acquire(gpMouse); gbstatus = 0; } else IDirectInputDevice_Unacquire(gpMouse); }
+			if (gpKeyboard) { if (ActiveApp && kbd_acquire) { IDirectInputDevice_Acquire(gpKeyboard); shkeystatus = 0; } else IDirectInputDevice_Unacquire(gpKeyboard); }
 #endif
 			break;
 		case WM_KEYDOWN:
@@ -4363,7 +4372,7 @@ long CALLBACK WindowProc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			my = HIWORD(lParam);
 			if (gpMouse && ActiveApp && setmousein) {
 				mouse_acquire = 1;
-				gpMouse->Acquire(); gbstatus = 0;
+				IDirectInputDevice_Acquire(gpMouse); gbstatus = 0;
 				setmousein(mx, my);
 				setmousein = NULL;
 			}
