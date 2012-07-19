@@ -89,11 +89,7 @@ seqtyp seq[MAXSEQS]; //32K
 
 //---------------------------------------------------------------------------
 
-#ifdef __cplusplus
-extern "C" long zbufoff;
-#else
-extern long zbufoff;
-#endif
+EXTERN_C long zbufoff;
 
 static inline void ftol (float f, long *a)
 {

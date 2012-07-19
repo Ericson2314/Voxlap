@@ -78,21 +78,13 @@ enum { DONTBACKUP=0,
 
 static long frameplace, bytesperline;
 
-#ifdef __cplusplus
-extern "C" char *sptr[VSID*VSID];
-#else
-extern char *sptr[VSID*VSID];
-#endif
+EXTERN_C char *sptr[VSID*VSID];
 extern long *radar;
 extern long templongbuf[MAXZDIM];
 extern long backtag, backedup, bacx0, bacy0, bacx1, bacy1;
 extern long gxsizcache, gysizcache;
 extern long cputype;
-#ifdef __cplusplus
-extern "C" long gmipnum;
-#else
-extern long gmipnum;
-#endif
+EXTERN_C long gmipnum;
 extern int64_t flashbrival;
 
 	//Sprite data for hanging lights:
