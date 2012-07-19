@@ -1,62 +1,182 @@
-------------------------------------------------------------------------------
-Porting notes by Ericson2314
-------------------------------------------------------------------------------
-Making Ken Silverman's Voxlap voxel graphics engine MinGW compatible, then
-*NIX compatible.
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+Porting Notes by Ericson2314
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-
-------------------------------------------------------------------------------
-Porting Progress:
-
-* -- Done | $ -- In Progress | # -- not started
-
-1. Compile with MS Visual Studio 2010 utilities, and June 2010 DirectX sdk (*)
-    * Makefile mead from *.c headers
-    * Old DirectX SDK *.LIBs included
-    * v5.asm modified as per
-        http://natural-satellite.com/2011/06/19/visual-studio-and-voxlap/
-2. Compile with MinGW ($)
-    $ make v5.asm compile in NASM. Thanks, http://www.drpaulcarter.com/pcasm/
-      and http://www.devoresoftware.com/nomyso/
-        * Compiles & Links
-        $ Fix Bugs
-            $ ?Word to Dword
-            $ Incorrect bracketing
-            # Other
-    # Inline asm: convert to at&t syntax or make seperate and nasm
-    * Update makefile for MinGW
-        * Move all program names, directories, and flags to macros
-        * Add Corosponing MinGW macro defs.
-    # Fix Bugs
-3. Compile without Direct X (#)
-    # Swap winmain.cpp for sdlmain.cpp
-    # Winelib?
-4. Compile on *NIX (Linux in my case) (#)
-Misc
-    * Heirarchy implemented. (Makefile ready; code needs to be adjusted so bin
-      and data don't need to be in same folder.)
-    * .c to .cpp, accuracy is great.
-    # PreMake? CMake? autobuild?
+Making Ken Silverman's "Voxlap" voxel graphics engine run on any platform
+with SDL and C++.
 
 ------------------------------------------------------------------------------
 Build Prerequisites:
 
 Build Tools:
-    Option 1
-         MSVS utilities (nmake, ml, cl)
-        Windows SDK (libs)
-    Option 2
-        MinGW/GCC
-        Nasm in %MinGW%/bin
+	Option 1
+		MSVS utilities (nmake, ml, cl)
+		Windows SDK (libs)
+	Option 2
+		MinGW/GCC
+		Nasm in %MinGW%/bin
 Graphics
-    Option 1
-        DirectX SDK (libs)
-    Option 2
-        SDL DEV-MinGW/GCC and RUNTIME (libs)
+	Option 1
+		DirectX SDK (libs)
+	Option 2
+		SDL DEV-MinGW/GCC and RUNTIME (libs)
 
 ------------------------------------------------------------------------------
-[Original] Voxlap engine notes by Ken Silverman (http://advsys.net/ken)
+Quick Porting Progress Overview :
+
+* -- Done | $ -- In Progress | # -- not started
+
+1. Compile with MS Visual Studio 2010 utilities, and June 2010 DirectX sdk (*)
+	* Makefile mead from *.c headers
+	* Old DirectX SDK *.LIBs included
+	* v5.asm modified as per
+	  http://natural-satellite.com/2011/06/19/visual-studio-and-voxlap/
+2. Use cross-platform assembler: (*)
+	$ make v5.asm compile in NASM. [I give up on this]
+	  Thanks, http://www.drpaulcarter.com/pcasm/
+	  and http://www.devoresoftware.com/nomyso/
+	* make v5.asm compile in JWASM. [I did this instead.]
+	  JWASM uses MASM syntax, making this trivially easy.
+	  Thanks person on ##ASM on freenode for giving me the idea.
+		* Links with MSVC too
+	# make macro to support both cdecl and stdcall naming conventions.
+3. Compile with GCC/MinGW: ($)
+	* Update makefile for MinGW
+		* Move all program names, directories, and flags to macros
+		* Add Corosponing MinGW macro defs.
+		* Makefile is now very modular
+	* Convert all C++ to compile as both C and C++
+	  This allows me to compare mscv and gcc versions more dodeirectly, as I the
+	  ABI for C is more consistant between the two toolchains.
+		# Bug: game in C does not allow weapons to be fired, but that shouldn't
+		  be a voxlap issue.
+	* Convert inline assembly to work with gcc
+	  GCC now supports ".intel_syntax noprefix" making this much easier
+		# make local variables work
+		  for now, with intel syntax GCC treats all lables as global
+	* Compiles
+	# Link with ld
+		# Fix Bugs
+4. Compile on *NIX (Linux in my case) ($)
+	* Compiles (including sdlmain
+	# link
+Alternative step 2:
+2. Compiler on MSVC with minimal asm ($)
+	$ Compile game without v5.asm (the only external assembly)
+	$ Remove inline asm to simplify toolchain ineroptability.
+Misc
+	* Heirarchy implemented. (Makefile ready; code needs to be adjusted so bin
+	  and data don't need to be in same folder.)
+	* .c to .cpp (until it all works as true C), accuracy is great.
+	# PreMake? CMake? autobuild?
+
+
+
 ------------------------------------------------------------------------------
+Introduction:
+
+So, the basic idea is to get Ken Silverman's Voxlap voxel graphics engine to
+run on just about any platform that supports C++ and SDL (DirectX is
+still kept operational for windows). This all boils down to 2 fundamental
+things: getting the code to compile in GCC, and making sure that now windows
+libraries are in use.
+
+
+Compiler issues:
+
+The compiler part is pretty easy, except for one thing: the assembly code.
+Voxlap uses both a single file of routines in assembly, and copious
+amounts of inline assembly within it's C++ files. Now, most of this assembly
+should be perfectly portable, but every compiler collection has a different
+format for both external and internal assembly.
+
+I say format, because converting from one to another is a fairly trivial task,
+but not quite trivial enough where I can confidently do it with my limited
+assembly knowledge in an error-free manor. I have tried various scripts to
+convert assembly (inline and external), but the bottom line is that I don't
+really trust them. Most significantly, v5.asm's nasm port won't work with MSVC
+(though it should), so why should I trust it with GCC? Dealing with the inline
+assembly is even simpler, but the conversion tools are correspondingly more
+primitive, and I can't test them anyways until v5.asm works.
+
+Therefore I have opted to dispense with assembly code altogether. Voxlap5 (the
+main Voxlap code) is littered with commented out replacement C for various
+assembly routines. Not all of it works as well as the assembly -- I think Ken
+mainly used it as a guide for writing the assembly and didn’t debug as the
+program evolved -- it’s certainly better than nothing. As to the external
+assembly, there is a macro that’s supposed to let the program run without it,
+but it leaves in a few missing linkages -- it was probably also ignored as the
+program evolved. On the other hand, taking out the inline assembly often means
+one less case rouge use of external assembly, so removing the inline and
+external assembly together is often made easier.
+
+Library issues :
+
+I can't really dive into this until the former step is complete, but it seems
+that again a good bit of the work is already done. Voxlap itself is a
+surprisingly self-contained beast, primary because it’s a software render so
+it only uses DirectX to copy frame buffers and other trivial stuff. The
+backend it currently uses Winmain, is not Voxlap-Specific, but rather used by
+a couple of Ken’s things (maybe even the build engine).
+
+On the flip side, the example game, and probably other games based around
+Voxlap don’t just use voxlap’s header, but also directly use Sysmain.h,
+Winmain’s interface. So to have a genuinely useful Voxlap port, seemingly
+unused features of Sysmain.h must also be ported.
+
+Thankfully, available on Ken’s site is SDLmain, a non-Voxlap-Specific port of
+Winmain. I’m not sure how complete it is, but I’d hope it has the most basic
+stuff that Voxlap itself requires available. As to the example game and other
+programs that use Voxlap, I’m not so hopeful. Some of Sysmain.h’s routines are
+very DirectX specific (like “startdirectdraw”) and even if they are “ported”,
+probably don’t cause some idiosyncrasy that the games are expecting. We’ll see
+once the assembly is dealt with.
+
+Lastly, SDLmain is GCC only, and Winmain is MSVC only.
+
+------------------------------------------------------------------------------
+What Next:
+
+A true port should change as little of the old program as possible in order to
+maintain maximal compatibility. At the same time, porting is a perfect time to
+introduce deep architectural changes into a program. I believe a few obvious
+improvements that would not effect existing programs ability to interface with
+Voxlap to much extent.
+
+Voxlap is a library, nothing more, nothing less. As such it should be able to
+be both statically and dynamically linked with another program. Currently, only
+static linking is tested to work, but with a couple trivial changes, dynamic
+linking should be too.
+
+Voxlap is C++, but in name only. In practice it contains little-to-none
+Object-Oriented components, and only a few C++ idiosyncrasies prevent it from
+being compiled as C. In fact, it even contains a couple of preprocessor
+conditionals to test for C or C++ completion. Ideally it should fully support
+being compiled as C or C++ in order to work in many situations.
+
+------------------------------------------------------------------------------
+License:
+
+Based on my concept of a “true port” I should keep the license the same as the
+original: basically attribution + non-commercial only without Ken Silverman’s
+explicit permission. But my inner Free Software evangelist tells me not to. So
+here is the revised license for those wishing to use my modifications to Ken’s
+work:
+
+Option 1: LGPL 2 or later, non-commercial only.
+
+Option 1: LGPL 2 or later, commercial with Ken’s permission.
+
+Option 3: Any other scenario allowed under Ken’s license, with my explicit
+          permission.
+
+I tried to write this to be compatible with Ken’s license, but of course I
+cannot modify his license, so if a conflict arises, ask me for details.
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+[Original] Voxlap engine notes by Ken Silverman (http://advsys.net/ken)
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 Introduction:
 
 The Voxlap engine includes all the tools you need to create your own game
