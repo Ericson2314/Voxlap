@@ -89,7 +89,11 @@ seqtyp seq[MAXSEQS]; //32K
 
 //---------------------------------------------------------------------------
 
+#ifdef __cplusplus
 extern "C" long zbufoff;
+#else
+extern long zbufoff;
+#endif
 
 static inline void ftol (float f, long *a)
 {
@@ -198,6 +202,7 @@ static char *loadfileselect (char *mess, char *spec, char *defext)
 {
 	long i;
 	for(i=0;fileselectnam[i];i++) if (fileselectnam[i] == '/') fileselectnam[i] = '\\';
+	do {
 	OPENFILENAME ofn =
 	{
 		sizeof(OPENFILENAME),ghwnd,0,spec,0,0,1,fileselectnam,MAX_PATH,0,0,(char *)(((long)relpathbase)&fileselect1stcall),mess,
@@ -205,11 +210,13 @@ static char *loadfileselect (char *mess, char *spec, char *defext)
 	};
 	fileselect1stcall = 0; //Let windows remember directory after 1st call
 	if (!GetOpenFileName(&ofn)) return(0); else return(fileselectnam);
+	} while (0);
 }
 static char *savefileselect (char *mess, char *spec, char *defext)
 {
 	long i;
 	for(i=0;fileselectnam[i];i++) if (fileselectnam[i] == '/') fileselectnam[i] = '\\';
+	do {
 	OPENFILENAME ofn =
 	{
 		sizeof(OPENFILENAME),ghwnd,0,spec,0,0,1,fileselectnam,MAX_PATH,0,0,(char *)(((long)relpathbase)&fileselect1stcall),mess,
@@ -217,6 +224,7 @@ static char *savefileselect (char *mess, char *spec, char *defext)
 	};
 	fileselect1stcall = 0; //Let windows remember directory after 1st call
 	if (!GetSaveFileName(&ofn)) return(0); else return(fileselectnam);
+		} while (0);
 }
 #endif
 
@@ -588,7 +596,7 @@ static long kfatime2seq (long tim)
 	return(a);
 }
 
-static long animsprite (long t, long ti)
+static long animsprite_kwalk (long t, long ti)
 {
 	long i, z, zz;
 
@@ -1142,7 +1150,7 @@ skipalldraw:;
 	if ((seqnum > 0) && ((unsigned long)kfatim < seq[seqnum-1].tim))
 	{     //Animation mode
 		ftol(fsynctics*1000.0,&i);
-		kfatim = animsprite(kfatim,i);
+		kfatim = animsprite_kwalk(kfatim,i);
 	}
 
 	if (keystatus[0x33]|keystatus[0x34]) //,.

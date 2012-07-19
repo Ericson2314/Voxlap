@@ -78,14 +78,22 @@ enum { DONTBACKUP=0,
 
 static long frameplace, bytesperline;
 
+#ifdef __cplusplus
 extern "C" char *sptr[VSID*VSID];
+#else
+extern char *sptr[VSID*VSID];
+#endif
 extern long *radar;
 extern long templongbuf[MAXZDIM];
 extern long backtag, backedup, bacx0, bacy0, bacx1, bacy1;
 extern long gxsizcache, gysizcache;
 extern long cputype;
+#ifdef __cplusplus
 extern "C" long gmipnum;
-extern __int64 flashbrival;
+#else
+extern long gmipnum;
+#endif
+extern int64_t flashbrival;
 
 	//Sprite data for hanging lights:
 static kv6data *klight;
@@ -650,6 +658,7 @@ static char *loadfileselect (char *mess, char *spec, char *defext)
 {
 	long i;
 	for(i=0;fileselectnam[i];i++) if (fileselectnam[i] == '/') fileselectnam[i] = '\\';
+	do {
 	OPENFILENAME ofn =
 	{
 		sizeof(OPENFILENAME),ghwnd,0,spec,0,0,1,fileselectnam,MAX_PATH,0,0,(char *)(((long)relpathbase)&fileselect1stcall),mess,
@@ -657,11 +666,13 @@ static char *loadfileselect (char *mess, char *spec, char *defext)
 	};
 	fileselect1stcall = 0; //Let windows remember directory after 1st call
 	if (!GetOpenFileName(&ofn)) return(0); else return(fileselectnam);
+	} while (0);
 }
 static char *savefileselect (char *mess, char *spec, char *defext)
 {
 	long i;
 	for(i=0;fileselectnam[i];i++) if (fileselectnam[i] == '/') fileselectnam[i] = '\\';
+	do {
 	OPENFILENAME ofn =
 	{
 		sizeof(OPENFILENAME),ghwnd,0,spec,0,0,1,fileselectnam,MAX_PATH,0,0,(char *)(((long)relpathbase)&fileselect1stcall),mess,
@@ -669,6 +680,7 @@ static char *savefileselect (char *mess, char *spec, char *defext)
 	};
 	fileselect1stcall = 0; //Let windows remember directory after 1st call
 	if (!GetSaveFileName(&ofn)) return(0); else return(fileselectnam);
+	} while (0);
 }
 #endif
 
