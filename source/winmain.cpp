@@ -6,7 +6,11 @@ Additional modifications by Tom Dobrowolski (http://ged.ax.pl/~tomkh)
 You may use this code for non-commercial purposes as long as credit is maintained.
 ***************************************************************************************************/
 
-//#include "../include/porthacks.h"
+#ifdef __cplusplus
+	#define USE_GUID(GUID_NAME)  GUID_NAME
+#else
+	#define USE_GUID(GUID_NAME)  & ## GUID_NAME
+#endif
 
 //#define USED3D4FULL
 //#define USE3DVISION
@@ -1893,20 +1897,21 @@ long initdirectdraw (long daxres, long dayres, long dacolbits)
 
 								if ((ncolbits == 8) || (colbits == 8)) updatepalette(0,256);
 
-								DDPIXELFORMAT ddpf;
-								ddpf.dwSize = sizeof(DDPIXELFORMAT);
-								if (!IDirectDrawSurface_GetPixelFormat(ddsurf[0],&ddpf)) //colbits = ddpf.dwRGBBitCount;
-								{
-									grabmodeinfo(daxres,dayres,&ddpf,&curvidmodeinfo);
-
-										//If mode is 555 color (and not 565), use 15-bit emulation code...
-									if ((colbits != 16) && (ncolbits == 16)
-																&& (curvidmodeinfo.r0 == 10) && (curvidmodeinfo.rn == 5)
-																&& (curvidmodeinfo.g0 ==  5) && (curvidmodeinfo.gn == 5)
-																&& (curvidmodeinfo.b0 ==  0) && (curvidmodeinfo.bn == 5))
-										ddrawuseemulation = 15;
-								}
-
+								do {
+									DDPIXELFORMAT ddpf;
+									ddpf.dwSize = sizeof(DDPIXELFORMAT);
+									if (!IDirectDrawSurface_GetPixelFormat(ddsurf[0],&ddpf)) //colbits = ddpf.dwRGBBitCount;
+									{
+										grabmodeinfo(daxres,dayres,&ddpf,&curvidmodeinfo);
+	
+											//If mode is 555 color (and not 565), use 15-bit emulation code...
+										if ((colbits != 16) && (ncolbits == 16)
+																	&& (curvidmodeinfo.r0 == 10) && (curvidmodeinfo.rn == 5)
+																	&& (curvidmodeinfo.g0 ==  5) && (curvidmodeinfo.gn == 5)
+																	&& (curvidmodeinfo.b0 ==  0) && (curvidmodeinfo.bn == 5))
+											ddrawuseemulation = 15;
+									}
+								} while (0);
 								if (ncolbits == 8)
 									if (IDirectDraw_CreatePalette(lpdd,DDPCAPS_8BIT,pal,&ddpal,0) >= 0)
 										IDirectDrawSurface_SetPalette(ddsurf[0],ddpal);
@@ -2548,7 +2553,7 @@ long initkeyboard (HWND hwnd)
 	DIPROPDWORD dipdw;
 	char buf[256];
 
-	if ((hr = IDirectInput_CreateDevice(gpdi,GUID_SysKeyboard,&gpKeyboard,0)) < 0) goto initkeyboard_bad;
+	if ((hr = IDirectInput_CreateDevice(gpdi, USE_GUID(GUID_SysKeyboard),&gpKeyboard,0)) < 0) goto initkeyboard_bad;
 	if ((hr = IDirectInputDevice_SetDataFormat(gpKeyboard,&c_dfDIKeyboard)) < 0) goto initkeyboard_bad;
 	if ((hr = IDirectInputDevice_SetCooperativeLevel(gpKeyboard,hwnd,dinputkeyboardflags)) < 0) goto initkeyboard_bad;
 
@@ -2636,7 +2641,7 @@ long initmouse (HWND hwnd)
 	DIPROPDWORD dipdw;
 	char buf[256];
 
-	if ((hr = IDirectInput_CreateDevice(gpdi,GUID_SysMouse,&gpMouse,0)) < 0) goto initmouse_bad;
+	if ((hr = IDirectInput_CreateDevice(gpdi,USE_GUID(GUID_SysMouse),&gpMouse,0)) < 0) goto initmouse_bad;
 	if ((hr = IDirectInputDevice_SetDataFormat(gpMouse,&c_dfDIMouse)) < 0) goto initmouse_bad;
 	if ((hr = IDirectInputDevice_SetCooperativeLevel(gpMouse,hwnd,dinputmouseflags)) < 0) goto initmouse_bad;
 
@@ -3848,8 +3853,8 @@ void initdirectsound ()
 #ifdef DSOUNDINITCOM
 	if (coinit == S_OK)
 	{
-		HRESULT dsrval = CoCreateInstance(CLSID_DirectSound,NULL,CLSCTX_INPROC_SERVER,
-													 IID_IDirectSound,(void **)&dsound);
+		HRESULT dsrval = CoCreateInstance(USE_GUID(CLSID_DirectSound),NULL,CLSCTX_INPROC_SERVER,
+										  USE_GUID(IID_IDirectSound),(void **)&dsound);
 		if (dsrval == S_OK) {
 			dsrval = IDirectSound_Initialize(dsound,NULL);
 			//dsrval = IDirectSound_Initialize(dsound,NULL);
@@ -3966,7 +3971,7 @@ long loadwav (LPDIRECTSOUNDBUFFER *dabuf, const char *fnam, float freqmul, unsig
 	bufdesc.dwBufferBytes = max(leng,MINSNDLENG);
 	bufdesc.dwReserved = 0;
 	bufdesc.lpwfxFormat = &wft;
-	//bufdesc.guid3DAlgorithm = GUID_NULL;
+	//bufdesc.guid3DAlgorithm = &GUID_NULL;
 #ifndef USEKZ
 	if (IDirectSound_CreateSoundBuffer(dsound,&bufdesc,dabuf,0) != DS_OK)
 		{ fclose(fil); return(0); }
@@ -4157,10 +4162,12 @@ void setmouseout (void (*in)(long,long), long x, long y)
 	setmousein = in;
 	setacquire(0, kbd_acquire);
 
-	POINT topLeft;
-	topLeft.x = 0; topLeft.y = 0;
-	ClientToScreen(ghwnd, &topLeft);
-	SetCursorPos(topLeft.x + x, topLeft.y + y);
+	do {
+		POINT topLeft;
+		topLeft.x = 0; topLeft.y = 0;
+		ClientToScreen(ghwnd, &topLeft);
+		SetCursorPos(topLeft.x + x, topLeft.y + y);
+	} while (0);
 }
 
 	//Use fancy clipper to determine if mouse cursor (x,y) is outside the window
