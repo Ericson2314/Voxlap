@@ -91,6 +91,11 @@ typedef unsigned __int64 uint64_t;
 /**
  * Usefully macros
  **/
+#if __cplusplus
+	#define EXTERN_C extern "C"
+#else
+	#define EXTERN_C extern
+#endif
 
 #define COSSIN(degree, cos_, sin_) \
     do \
