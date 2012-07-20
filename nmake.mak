@@ -87,10 +87,10 @@ LNK_Release            =
 
 # -----------------------------------
 # Assembler Macros
-# Micrsoft Macro Assembler (masm)
-!IF "$(AsmName)"=="masm"
-AS                     =ml
-AFLAGS                 =/Fo$(@R) /c /coff
+# Japheth (Open) Watcomm Assembler (jwasm)
+!IF "$(AsmName)"=="jwasm"
+AS                     =jwasm
+AFLAGS                 =-Fo$(@R) -c -coff -8
 !ENDIF
 
 # Netwide Assembler (nasm)

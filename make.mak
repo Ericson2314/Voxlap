@@ -46,14 +46,16 @@ endif
 ifdef __MSVC__
 endif
 
-nasm_FLAGS             =-o $(@)           # Netwide Assembler (nasm)
+nasm_FLAGS             =-o $(@)              # Netwide Assembler (nasm)
 
-masm_FLAGS             =/Fo$(@R) /c /coff # Micrsoft Macro Assembler (masm)
+jwasm_FLAGS            =-Fo$(@R) -c -coff -8 # Micrsoft Macro Assembler (masm)
 
-cl_FLAGS               =/Fo$(@R) /c /J    # for Micrsoft Compiler(cl)
+masm_FLAGS             =/Fo$(@R) /c /coff    # Micrsoft Macro Assembler (masm)
+
+cl_FLAGS               =/Fo$(@R) /c /J       # for Micrsoft Compiler(cl)
 cl_Debug               =/MLd /ZI /GZ /RTCsuc /Od
 cl_Release             =/Ox
-cl_MacroPre            =/D                # for Micrsoft Compiler(cl)
+cl_MacroPre            =/D                   # for Micrsoft Compiler(cl)
 
 gcc_FLAGS              =-o $(@) -c -funsigned-char    # for GNU C++ Compiler (gcc)
 gcc_Debug              =
