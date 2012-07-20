@@ -99,16 +99,36 @@ really trust them. Most significantly, v5.asm's nasm port won't work with MSVC
 assembly is even simpler, but the conversion tools are correspondingly more
 primitive, and I can't test them anyways until v5.asm works.
 
-Therefore I have opted to dispense with assembly code altogether. Voxlap5 (the
+Therefore I HAD opted to dispense with assembly code altogether. Voxlap5 (the
 main Voxlap code) is littered with commented out replacement C for various
 assembly routines. Not all of it works as well as the assembly -- I think Ken
-mainly used it as a guide for writing the assembly and didn’t debug as the
-program evolved -- it’s certainly better than nothing. As to the external
+mainly used it as a guide for writing the assembly and didn’t debug it as the
+program evolved -- but it’s certainly better than nothing. As to the external
 assembly, there is a macro that’s supposed to let the program run without it,
 but it leaves in a few missing linkages -- it was probably also ignored as the
-program evolved. On the other hand, taking out the inline assembly often means
-one less case rouge use of external assembly, so removing the inline and
-external assembly together is often made easier.
+program evolved. For better or worse, the inline assembly and external
+assembly often relies on each other.  On one hand, this means taking out one
+can help get rid of the other. On the other hand, it means it’s very difficult
+to replace the assembly incrementally and debug as you go.
+
+I learned of another assembly, JWASM, on IRC which is both cross-platform and
+Supports NASM syntax as close as possible. This gave me the opportunity to go
+back to my original plan of porting all the assembly. This of course came with
+the added benefit of leaving the original program as intact as possible, and
+utilizing the inline assembly that was admittedly still faster than the C. For
+ARM ports it will still have to go but this seems to be the easier solution
+for now.
+
+I was able to quickly fix the few syntax errors that existed, and get a
+working Game.exe with MSVC and JWASM. But JWASM in itself did nothing to
+prevent the link errors with MSVC external assembly together is often made
+easier. The cacophony of link errors, was a bit hard to decipher, and in order
+to better separate assembly-caused linking errors from other issues, I decided
+to get the whole thing to be compiled as C. C, unlike C++, has no name
+mangling, and in addition C-derived objects files made by different compilers
+have a better chance of linking correctly (especially on windows). I figured
+this would open up new doors testing.
+
 
 Library issues :
 
