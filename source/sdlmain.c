@@ -50,6 +50,7 @@ typedef struct __attribute__ ((packed)) tWAVEFORMATEX {
 
 #endif
 
+#define SYSMAIN
 #undef _WIN32
 					//We never want to define C bindings if this is compiled as C++.
 #undef SYSMAIN_C	//Putting this here just in case.

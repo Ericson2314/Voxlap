@@ -9,7 +9,7 @@
 
 #pragma pack(push,1)
 
-#if !defined(VOXLAP_C) && defined(__cplusplus)
+#if !defined(VOXLAP_C) && !defined(__cplusplus) && !defined(VOXLAP5)
 #error "Cannot link C frontend to C++ Backend"
 #endif
 

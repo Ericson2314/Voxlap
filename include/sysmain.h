@@ -11,7 +11,7 @@ You may use this code for non-commercial purposes as long as credit is maintaine
 #ifndef KEN_SYSMAIN_H
 #define KEN_SYSMAIN_H
 
-#if !defined(SYSMAIN_C) && defined(__cplusplus)
+#if !defined(SYSMAIN_C) && !defined(__cplusplus) && !defined(SYSMAIN)
 #error "Cannot link C frontend to C++ Backend"
 #endif
 
