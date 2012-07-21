@@ -9,6 +9,18 @@
 
 #pragma pack(push,1)
 
+#if !defined(VOXLAP_C) && defined(__cplusplus)
+#error "Cannot link C frontend to C++ Backend"
+#endif
+
+
+#if defined(VOXLAP_C) && defined(__cplusplus)
+	extern "C" {
+	#define EXTERN_VOXLAP extern "C"
+#else
+	#define EXTERN_VOXLAP extern
+#endif
+
 typedef struct { long x, y, z; } lpoint3d;
 typedef struct { float x, y, z; } point3d;
 typedef struct { float x, y, z, z2; } point4d;
@@ -296,5 +308,9 @@ extern void kzclose ();
 
 extern void kzfindfilestart (const char *); //pass wildcard string
 extern int kzfindfile (char *); //you alloc buf, returns 1:found,0:~found
+
+#if defined(VOXLAP_C) && defined(__cplusplus)
+}
+#endif
 
 #endif

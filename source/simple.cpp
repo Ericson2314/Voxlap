@@ -5,6 +5,7 @@
 /**
  *Function and variable declarations for winmain.cpp, dosmain.c, or sdlmain.c
  */
+//#define SYSMAIN_C //if sysmain is compiled as C
 #include "../include/sysmain.h"
 
 /**
@@ -12,6 +13,7 @@
  * include this, you will be sure that you're calling my functions with the
  * correct parameters.
  */
+//#define VOXLAP_C  //if voxlap5 is compiled as C
 #include "../include/voxlap5.h"
 
 #include "../include/porthacks.h"

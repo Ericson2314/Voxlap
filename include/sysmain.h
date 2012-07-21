@@ -11,6 +11,18 @@ You may use this code for non-commercial purposes as long as credit is maintaine
 #ifndef KEN_SYSMAIN_H
 #define KEN_SYSMAIN_H
 
+#if !defined(SYSMAIN_C) && defined(__cplusplus)
+#error "Cannot link C frontend to C++ Backend"
+#endif
+
+
+#if defined(SYSMAIN_C) && defined(__cplusplus)
+	extern "C" {
+	#define EXTERN_SYSMAIN extern "C"
+#else
+	#define EXTERN_SYSMAIN extern
+#endif
+
 	//System specific:
 #ifdef _WIN32
 	#define NOMAXMIN
@@ -84,7 +96,7 @@ extern long ext_mwheel;
 extern long mousmoth;           //1:mouse smoothing (default), 0 otherwise
 extern float mousper;           //Estimated mouse interrupt rate
 extern void readmouse (float *, float *, long *);
-#if defined(__cplusplus)
+#if !defined(SYSMAIN_C) && defined(__cplusplus)
 extern void readmouse (float *, float *, float *, long *);
 #endif
 extern long ismouseout (long, long);
@@ -92,5 +104,9 @@ extern void setmouseout (void (*)(long, long), long, long);
 
 	//Timer:
 extern void readklock (double *);
+
+#if defined(SYSMAIN_C) && defined(__cplusplus)
+}
+#endif
 
 #endif

@@ -4,7 +4,9 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+//#define SYSMAIN_C //if sysmain is compiled as C
 #include "../include/sysmain.h"
+//#define VOXLAP_C  //if voxlap5 is compiled as C
 #include "../include/voxlap5.h"
 
 #include "../include/porthacks.h"
@@ -79,24 +81,24 @@ enum { DONTBACKUP=0,
 static long frameplace, bytesperline;
 
 EXTERN_C char *sptr[VSID*VSID];
-extern long *radar;
-extern long templongbuf[MAXZDIM];
-extern long backtag, backedup, bacx0, bacy0, bacx1, bacy1;
+EXTERN_VOXLAP long *radar;
+EXTERN_VOXLAP long templongbuf[MAXZDIM];
+EXTERN_VOXLAP long backtag, backedup, bacx0, bacy0, bacx1, bacy1;
 extern long gxsizcache, gysizcache;
 extern long cputype;
 EXTERN_C long gmipnum;
-extern int64_t flashbrival;
+EXTERN_VOXLAP int64_t flashbrival;
 
 	//Sprite data for hanging lights:
 static kv6data *klight;
 
 //Low-level editing functions
-extern void scum (long, long, long, long, long *);
-extern void scumfinish ();
-extern long *scum2 (long, long);
-extern void scum2finish ();
+EXTERN_VOXLAP void scum (long, long, long, long, long *);
+EXTERN_VOXLAP void scumfinish ();
+EXTERN_VOXLAP long *scum2 (long, long);
+EXTERN_VOXLAP void scum2finish ();
 
-extern long findpath (long *, long, lpoint3d *, lpoint3d *);
+EXTERN_VOXLAP long findpath (long *, long, lpoint3d *, lpoint3d *);
 #define PATHMAXSIZ 4096
 long pathpos[PATHMAXSIZ], pathcnt = -1;
 lpoint3d pathlast;

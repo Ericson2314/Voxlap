@@ -31,6 +31,8 @@
 
 //Voxlap Preprocessor stuff
 #define VOXLAP5
+				//We never want to define C bindings if this is compiled as C++.
+#undef VOXLAP_C	//Putting this here just in case.
 #include "../include/voxlap5.h"
 
 #define USEZBUFFER 1                 //Should a Z-Buffer be Used?
