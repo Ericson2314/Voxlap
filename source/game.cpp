@@ -5,7 +5,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+//#define SYSMAIN_C //if sysmain is compiled as C
 #include "../include/sysmain.h"
+//#define VOXLAP_C  //if voxlap5 is compiled as C
 #include "../include/voxlap5.h"
 
 #include "../include/porthacks.h"
