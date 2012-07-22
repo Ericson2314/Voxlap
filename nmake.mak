@@ -90,7 +90,7 @@ LNK_Release            =
 # Japheth (Open) Watcomm Assembler (jwasm)
 !IF "$(AsmName)"=="jwasm"
 AS                     =jwasm
-AFLAGS                 =-Fo$(@R) -c -coff -8
+AFLAGS                 =-Fo$(@R) -c -coff -8 -Dwin32
 !ENDIF
 
 # Netwide Assembler (nasm)
