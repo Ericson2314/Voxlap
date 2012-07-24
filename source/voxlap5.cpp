@@ -15,6 +15,7 @@
 
 	//Basic System Specific Stuff
 #ifdef _WIN32 //Windows (hypothetically 6 64-bit too)
+	#define NOMAXMIN
 	#define WIN32_LEAN_AND_MEAN
 	#include <windows.h>
 #else
