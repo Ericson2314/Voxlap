@@ -6,6 +6,8 @@ Additional modifications by Tom Dobrowolski (http://ged.ax.pl/~tomkh)
 You may use this code for non-commercial purposes as long as credit is maintained.
 ***************************************************************************************************/
 
+// This file has been modified from Ken Silverman's original release
+
 #ifdef __cplusplus
 	#define USE_GUID(GUID_NAME)  GUID_NAME
 #else

@@ -1,3 +1,6 @@
+// VOXLAP engine by Ken Silverman (http://advsys.net/ken)
+// This file has been modified from Ken Silverman's original release
+
 #ifndef KEN_VOXLAP5_H
 #define KEN_VOXLAP5_H
 
