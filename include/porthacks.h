@@ -37,7 +37,7 @@ static inline void clearMMX () // inserts opcode emms, used to avoid many compil
  * Standard Library Hacks
  **/
 
-#if defined(__GNUC__) && !( defined(_WIN32) || defined(_WINDOWS_) )
+#if defined(__GNUC__) && !(defined(__MINGW32__) || defined(__MINGW64__))
 #include <ctype.h>
 #include <limits.h>
 
@@ -64,8 +64,7 @@ static int memcasecmp (const void *voidptr1, const void *voidptr2, size_t n)
 
 #endif
 
-#ifdef _MSC_VER
-//#if defined(_WIN32) & !defined(__GNUC__) //maybe this is better
+#if (defined(_WIN32) || defined(_WINDOWS_)) || (defined(__MINGW32__) || defined(__MINGW64__))
 
 #define strcasecmp _stricmp
 #define memcasecmp _memicmp
