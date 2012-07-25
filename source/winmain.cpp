@@ -2670,7 +2670,11 @@ initmouse_bad:;
 	return(0);
 }
 
+#if defined(__cplusplus)
 void readmouse (float *fmousx, float *fmousy, float *fmousz, long *bstatus)
+#else
+void readmouse_4 (float *fmousx, float *fmousy, float *fmousz, long *bstatus)
+#endif
 {
 	double odmoutsc;
 	float f, fmousynctics;
@@ -2760,13 +2764,17 @@ void readmouse (float *fmousx, float *fmousy, float *fmousz, long *bstatus)
 
 }
 
-#if defined(__cplusplus)
+
 void readmouse (float *fmousx, float *fmousy, long *bstatus)
 {
 	float fmousz;
+	#if defined(__cplusplus)
 	readmouse(fmousx,fmousy,&fmousz,bstatus);
-}
+	#else
+	readmouse_4 (fmousx,fmousy,&fmousz,bstatus);
 #endif
+}
+
 
 void smartsleep (long timeoutms)
 {
