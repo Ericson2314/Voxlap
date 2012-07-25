@@ -112,7 +112,7 @@ win32_OBJSuf           =obj
 win32_EXESuf           =exe
 
 win32_nasm_FLAGS       =-f win32
-win32_jwasm_FLAGS      =-coff
+win32_jwasm_FLAGS      =-coff -Dwin32
 win32_ld_LIBs          =$(LNKlibPre)mingw32$(LNKlibSuf)
 
 win32_gameLIBs	       =$(LNKlibPre)ole32$(LNKlibSuf)
