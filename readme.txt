@@ -117,7 +117,9 @@ back to my original plan of porting all the assembly. This of course came with
 the added benefit of leaving the original program as intact as possible, and
 utilizing the inline assembly that was admittedly still faster than the C. For
 ARM ports it will still have to go but this seems to be the easier solution
-for now.
+for now. Now my plan is to work along both methods. I don't know whether
+converting or removing inline assembly will get to a finished port faster, so
+i've made a git branch for each method to work on both concurrently.
 
 I was able to quickly fix the few syntax errors that existed, and get a
 working Game.exe with MSVC and JWASM. But JWASM in itself did nothing to
