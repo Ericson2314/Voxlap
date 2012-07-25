@@ -1686,14 +1686,16 @@ void breath ()
 #endif
 }
 
-	//Call like this: arg2filename(argv[1],".ksm",curfilename);
-	//Make sure curfilename length is lon(wParam&255)g enough!
+#if defined(__GNUC__) && !( defined(_WIN32) || defined(_WINDOWS_) || (defined(__MINGW32__) || defined(__MINGW64__)) ) //glibc doesn't have this
 static void strlwr(char *s)
 {
 		for ( ; *s; s++)
 				if ((*s) >= 'A' || (*s) <= 'Z')
 						*s &= ~0x20;
 }
+#endif
+	//Call like this: arg2filename(argv[1],".ksm",curfilename);
+	//Make sure curfilename length is lon(wParam&255)g enough!
 void arg2filename (const char *oarg, const char *ext, char *narg)
 {
 	long i;
