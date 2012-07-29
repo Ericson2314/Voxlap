@@ -20,11 +20,8 @@
 
 #ifndef NOSOUND
 #ifdef USEKZ
-extern long kzopen (const char *);
-extern long kzread (void *, long);
-extern void kzseek (long, long);
-extern void kzclose ();
-extern long kzeof ();
+//#define KPLIB_C  //if kplib is compiled as C
+#include "../include/kplib.h"
 #endif
 
 typedef struct __attribute__ ((packed)) tWAVEFORMATEX {

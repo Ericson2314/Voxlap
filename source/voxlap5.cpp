@@ -36,6 +36,10 @@
 #undef VOXLAP_C	//Putting this here just in case.
 #include "../include/voxlap5.h"
 
+	//KPlib Preprocessor stuff
+//#define KPLIB_C  //if kplib is compiled as C
+#include "../include/kplib.h"
+
 #define USEZBUFFER 1                 //Should a Z-Buffer be Used?
 //#define __NOASM__                  //Instructs compiler to use C(++) alternatives
 #define PREC (256*4096)

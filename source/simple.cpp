@@ -3,7 +3,7 @@
 
 
 /**
- *Function and variable declarations for winmain.cpp, dosmain.c, or sdlmain.c
+ * Function and variable declarations for winmain.cpp, dosmain.c, or sdlmain.c
  */
 //#define SYSMAIN_C //if sysmain is compiled as C
 #include "../include/sysmain.h"
@@ -15,6 +15,12 @@
  */
 //#define VOXLAP_C  //if voxlap5 is compiled as C
 #include "../include/voxlap5.h"
+
+/**
+ * Functions from kplib are now exclusively declared here for consistancy.
+ */
+//#define KPLIB_C  //if kplib is compiled as C
+#include "../include/kplib.h"
 
 #include "../include/porthacks.h"
 

@@ -16,6 +16,8 @@
 #include "../include/sysmain.h"
 //#define VOXLAP_C  //if voxlap5 is compiled as C
 #include "../include/voxlap5.h"
+//#define KPLIB_C  //if kplib is compiled as C
+#include "../include/kplib.h"
 
 #include "../include/porthacks.h"
 

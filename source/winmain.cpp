@@ -37,11 +37,8 @@ You may use this code for non-commercial purposes as long as credit is maintaine
 #ifndef USEKZ
 #include <stdio.h> //for fopen
 #else
-extern int kzopen (const char *);
-extern int kzread (void *, int);
-extern int kzseek (int, int);
-extern void kzclose ();
-extern int kzeof ();
+//#define KPLIB_C  //if kplib is compiled as C
+#include "../include/kplib.h"
 #endif
 #define DSOUNDINITCOM 1 //0=Link DSOUND.DLL, 1=Use COM interface to init DSOUND
 #ifndef USEKENSOUND
