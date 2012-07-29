@@ -14,11 +14,7 @@
 #include "../include/porthacks.h"
 
 	//Basic System Specific Stuff
-#ifdef _WIN32 //Windows (hypothetically 6 64-bit too)
-	#define NOMAXMIN
-	#define WIN32_LEAN_AND_MEAN
-	#include <windows.h>
-#else
+#ifndef _WIN32 //Windows (hypothetically 6 64-bit too)
 	#include <stdarg.h> //Moved from #if _DOS, included via windows.h for Windows
 	#include <string.h> //Moved from #if _DOS, included via windows.h for Windows
 	#ifdef _DOS //MS-DOS
@@ -29,6 +25,10 @@
 		#define MAX_PATH PATH_MAX //is a bad variable, should not be used for filename related things
 	#endif
 #endif
+
+	//SYSMAIN Preprocessor stuff
+//#define SYSMAIN_C //if sysmain is compiled as C
+#include "../include/sysmain.h"
 
 //Voxlap Preprocessor stuff
 #define VOXLAP5
@@ -50,14 +50,8 @@
 #define GOLDRAT 0.3819660112501052 //Golden Ratio: 1 - 1/((sqrt(5)+1)/2)
 #define ESTNORMRAD 2 //Specially optimized for 2: DON'T CHANGE unless testing!
 
-
-extern char keystatus[256];
-extern void readkeyboard ();
-extern void breath ();
-extern long startdirectdraw (long *, long *, long *, long *);
-extern void stopdirectdraw ();
-extern void nextpage ();
-extern void evilquit (const char *);
+EXTERN_SYSMAIN void breath ();
+EXTERN_SYSMAIN void evilquit (const char *);
 
 #define VOXSIZ VSID*VSID*128
 #ifdef __cplusplus
@@ -93,8 +87,6 @@ char tbuf[MAXCSIZ];
 long tbuf2[MAXZDIM*3];
 long templongbuf[MAXZDIM];
 
-extern long cputype; //bit25=1: SSE, bits30&31=1,1:3DNow!+
-
 static char nullst = 0; //nullst always NULL string
 
 #define SETSPHMAXRAD 256
@@ -122,9 +114,8 @@ typedef struct { float x, y; } point2d;
 #else
 	cftype cf[256];
 #endif
-
 	//Screen related variables:
-static long xres, yres, bytesperline, frameplace, xres4;
+static long xres_voxlap, yres_voxlap, bytesperline, frameplace, xres4_voxlap;
 long ylookup[MAXYDIM+1];
 
 static lpoint3d glipos;
@@ -4598,15 +4589,15 @@ void setcamera (dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo,
 	gcorn[0].x = -gihx*gistr.x - gihy*gihei.x + gihz*gifor.x;
 	gcorn[0].y = -gihx*gistr.y - gihy*gihei.y + gihz*gifor.y;
 	gcorn[0].z = -gihx*gistr.z - gihy*gihei.z + gihz*gifor.z;
-	gcorn[1].x = xres*gistr.x+gcorn[0].x;
-	gcorn[1].y = xres*gistr.y+gcorn[0].y;
-	gcorn[1].z = xres*gistr.z+gcorn[0].z;
-	gcorn[2].x = yres*gihei.x+gcorn[1].x;
-	gcorn[2].y = yres*gihei.y+gcorn[1].y;
-	gcorn[2].z = yres*gihei.z+gcorn[1].z;
-	gcorn[3].x = yres*gihei.x+gcorn[0].x;
-	gcorn[3].y = yres*gihei.y+gcorn[0].y;
-	gcorn[3].z = yres*gihei.z+gcorn[0].z;
+	gcorn[1].x = xres_voxlap*gistr.x+gcorn[0].x;
+	gcorn[1].y = xres_voxlap*gistr.y+gcorn[0].y;
+	gcorn[1].z = xres_voxlap*gistr.z+gcorn[0].z;
+	gcorn[2].x = yres_voxlap*gihei.x+gcorn[1].x;
+	gcorn[2].y = yres_voxlap*gihei.y+gcorn[1].y;
+	gcorn[2].z = yres_voxlap*gihei.z+gcorn[1].z;
+	gcorn[3].x = yres_voxlap*gihei.x+gcorn[0].x;
+	gcorn[3].y = yres_voxlap*gihei.y+gcorn[0].y;
+	gcorn[3].z = yres_voxlap*gihei.z+gcorn[0].z;
 	for(j=0,i=3;j<4;i=j++)
 	{
 		ginor[i].x = gcorn[i].y*gcorn[j].z - gcorn[i].z*gcorn[j].y;
@@ -4676,8 +4667,8 @@ void opticast ()
 	cx = gistr.z*f + gihx;
 	cy = gihei.z*f + gihy;
 
-	wx0 = (float)(-(vx5.anginc)); wx1 = (float)(xres-1+(vx5.anginc));
-	wy0 = (float)(-(vx5.anginc)); wy1 = (float)(yres-1+(vx5.anginc));
+	wx0 = (float)(-(vx5.anginc)); wx1 = (float)(xres_voxlap-1+(vx5.anginc));
+	wy0 = (float)(-(vx5.anginc)); wy1 = (float)(yres_voxlap-1+(vx5.anginc));
 	ftol(wx0,&iwx0); ftol(wx1,&iwx1);
 	ftol(wy0,&iwy0); ftol(wy1,&iwy1);
 
@@ -4730,8 +4721,8 @@ void opticast ()
 		}
 
 		j <<= 16; f = (float)j / ((x1-x0)*grd); ftol((cx-x0)*grd*f,&kadd);
-		ftol(cx-.5f,&p1); p0 = lbound0(p1+1,xres); p1 = lbound0(p1,xres);
-		ftol(cy-0.50005f,&sy); if (sy >= yres) sy = yres-1;
+		ftol(cx-.5f,&p1); p0 = lbound0(p1+1,xres_voxlap); p1 = lbound0(p1,xres_voxlap);
+		ftol(cy-0.50005f,&sy); if (sy >= yres_voxlap) sy = yres_voxlap-1;
 		ff = (fabs((float)p1-cx)+1)*f/2147483647.0 + cy; //Anti-crash hack
 		while ((ff < sy) && (sy >= 0)) sy--;
 		if (sy >= 0)
@@ -4745,7 +4736,7 @@ void opticast ()
 				u = mulshr16((p0<<16)-cx16,ui)+kadd;
 				while ((p0 > 0) && (u >= ui)) { u -= ui; p0--; }
 				u1 = (p1-p0)*ui + u;
-				while ((p1 < xres) && (u1 < j)) { u1 += ui; p1++; }
+				while ((p1 < xres_voxlap) && (u1 < j)) { u1 += ui; p1++; }
 				if (p0 < p1) hrend(p0,sy,p1,u,ui,i);
 			}
 			clearMMX();
@@ -4765,25 +4756,25 @@ void opticast ()
 		}
 
 		j <<= 16; f = (float)j / ((y2-y1)*grd); ftol((cy-y1)*grd*f,&kadd);
-		ftol(cy-.5f,&p1); p0 = lbound0(p1+1,yres); p1 = lbound0(p1,yres);
+		ftol(cy-.5f,&p1); p0 = lbound0(p1+1,yres_voxlap); p1 = lbound0(p1,yres_voxlap);
 		ftol(cx+0.50005f,&sx); if (sx < 0) sx = 0;
 		ff = (fabs((float)p1-cy)+1)*f/2147483647.0 + cx; //Anti-crash hack
-		while ((ff > sx) && (sx < xres)) sx++;
-		if (sx < xres)
+		while ((ff > sx) && (sx < xres_voxlap)) sx++;
+		if (sx < xres_voxlap)
 		{
 			ftol(f,&kmul);
-			for(;sx<xres;sx++) if (isshldiv16safe(kmul,(sx<<16)-cx16)) break; //Anti-crash hack
-			for(;sx<xres;sx++)
+			for(;sx<xres_voxlap;sx++) if (isshldiv16safe(kmul,(sx<<16)-cx16)) break; //Anti-crash hack
+			for(;sx<xres_voxlap;sx++)
 			{
 				ui = shldiv16(kmul,(sx<<16)-cx16);
 				u = mulshr16((p0<<16)-cy16,ui)+kadd;
 				while ((p0 > 0) && (u >= ui)) { u -= ui; lastx[--p0] = sx; }
 				uurend[sx] = u; uurend[sx+MAXXDIM] = ui; u += (p1-p0)*ui;
-				while ((p1 < yres) && (u < j)) { u += ui; lastx[p1++] = sx; }
+				while ((p1 < yres_voxlap) && (u < j)) { u += ui; lastx[p1++] = sx; }
 			}
 			if (giforzsgn < 0)
-				  { for(sy=p0;sy<p1;sy++) vrend(lastx[sy],sy,xres,lastx[sy],1); }
-			else { for(sy=p0;sy<p1;sy++) vrend(lastx[sy],sy,xres,-lastx[sy],-1); }
+				  { for(sy=p0;sy<p1;sy++) vrend(lastx[sy],sy,xres_voxlap,lastx[sy],1); }
+			else { for(sy=p0;sy<p1;sy++) vrend(lastx[sy],sy,xres_voxlap,-lastx[sy],-1); }
 			clearMMX();
 		}
 	}
@@ -4801,22 +4792,22 @@ void opticast ()
 		}
 
 		j <<= 16; f = (float)j / ((x2-x3)*grd); ftol((cx-x3)*grd*f,&kadd);
-		ftol(cx-.5f,&p1); p0 = lbound0(p1+1,xres); p1 = lbound0(p1,xres);
+		ftol(cx-.5f,&p1); p0 = lbound0(p1+1,xres_voxlap); p1 = lbound0(p1,xres_voxlap);
 		ftol(cy+0.50005f,&sy); if (sy < 0) sy = 0;
 		ff = (fabs((float)p1-cx)+1)*f/2147483647.0 + cy; //Anti-crash hack
-		while ((ff > sy) && (sy < yres)) sy++;
-		if (sy < yres)
+		while ((ff > sy) && (sy < yres_voxlap)) sy++;
+		if (sy < yres_voxlap)
 		{
 			ftol(f,&kmul);
-			for(;sy<yres;sy++) if (isshldiv16safe(kmul,(sy<<16)-cy16)) break; //Anti-crash hack
+			for(;sy<yres_voxlap;sy++) if (isshldiv16safe(kmul,(sy<<16)-cy16)) break; //Anti-crash hack
 			if (giforzsgn < 0) i = sy; else i = -sy;
-			for(;sy<yres;sy++,i-=giforzsgn)
+			for(;sy<yres_voxlap;sy++,i-=giforzsgn)
 			{
 				ui = shldiv16(kmul,(sy<<16)-cy16);
 				u = mulshr16((p0<<16)-cx16,ui)+kadd;
 				while ((p0 > 0) && (u >= ui)) { u -= ui; p0--; }
 				u1 = (p1-p0)*ui + u;
-				while ((p1 < xres) && (u1 < j)) { u1 += ui; p1++; }
+				while ((p1 < xres_voxlap) && (u1 < j)) { u1 += ui; p1++; }
 				if (p0 < p1) hrend(p0,sy,p1,u,ui,i);
 			}
 			clearMMX();
@@ -4836,8 +4827,8 @@ void opticast ()
 		}
 
 		j <<= 16; f = (float)j / ((y3-y0)*grd); ftol((cy-y0)*grd*f,&kadd);
-		ftol(cy-.5f,&p1); p0 = lbound0(p1+1,yres); p1 = lbound0(p1,yres);
-		ftol(cx-0.50005f,&sx); if (sx >= xres) sx = xres-1;
+		ftol(cy-.5f,&p1); p0 = lbound0(p1+1,yres_voxlap); p1 = lbound0(p1,yres_voxlap);
+		ftol(cx-0.50005f,&sx); if (sx >= xres_voxlap) sx = xres_voxlap-1;
 		ff = (fabs((float)p1-cy)+1)*f/2147483647.0 + cx; //Anti-crash hack
 		while ((ff < sx) && (sx >= 0)) sx--;
 		if (sx >= 0)
@@ -4850,7 +4841,7 @@ void opticast ()
 				u = mulshr16((p0<<16)-cy16,ui)+kadd;
 				while ((p0 > 0) && (u >= ui)) { u -= ui; lastx[--p0] = sx; }
 				uurend[sx] = u; uurend[sx+MAXXDIM] = ui; u += (p1-p0)*ui;
-				while ((p1 < yres) && (u < j)) { u += ui; lastx[p1++] = sx; }
+				while ((p1 < yres_voxlap) && (u < j)) { u += ui; lastx[p1++] = sx; }
 			}
 			for(sy=p0;sy<p1;sy++) vrend(0,sy,lastx[sy]+1,0,giforzsgn);
 			clearMMX();
@@ -9303,8 +9294,8 @@ void setkvx (const char *filename, long ox, long oy, long oz, long rot, long bak
 	//This here for game programmer only. I would never use it!
 void drawpoint2d (long sx, long sy, long col)
 {
-	if ((unsigned long)sx >= (unsigned long)xres) return;
-	if ((unsigned long)sy >= (unsigned long)yres) return;
+	if ((unsigned long)sx >= (unsigned long)xres_voxlap) return;
+	if ((unsigned long)sy >= (unsigned long)yres_voxlap) return;
 	*(long *)(ylookup[sy]+(sx<<2)+frameplace) = col;
 }
 
@@ -9320,8 +9311,8 @@ void drawpoint3d (float x0, float y0, float z0, long col)
 	x0 = (ox*gistr.x + oy*gistr.y + oz*gistr.z)*gihz;
 	y0 = (ox*gihei.x + oy*gihei.y + oz*gihei.z)*gihz;
 
-	ftol(x0*r + gihx-.5f,&x); if ((unsigned long)x >= (unsigned long)xres) return;
-	ftol(y0*r + gihy-.5f,&y); if ((unsigned long)y >= (unsigned long)yres) return;
+	ftol(x0*r + gihx-.5f,&x); if ((unsigned long)x >= (unsigned long)xres_voxlap) return;
+	ftol(y0*r + gihy-.5f,&y); if ((unsigned long)y >= (unsigned long)yres_voxlap) return;
 	*(long *)(ylookup[y]+(x<<2)+frameplace) = col;
 }
 
@@ -9357,8 +9348,8 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 	if (!tf) return;
 	sx0 = sx - mulshr16(tcx,xz); sx1 = sx0 + xz*tx;
 	sy0 = sy - mulshr16(tcy,yz); sy1 = sy0 + yz*ty;
-	x0 = MAX((sx0+65535)>>16,0); x1 = MIN((sx1+65535)>>16,xres);
-	y0 = MAX((sy0+65535)>>16,0); y1 = MIN((sy1+65535)>>16,yres);
+	x0 = MAX((sx0+65535)>>16,0); x1 = MIN((sx1+65535)>>16,xres_voxlap);
+	y0 = MAX((sy0+65535)>>16,0); y1 = MIN((sy1+65535)>>16,yres_voxlap);
 	ui = shldiv16(65536,xz); u = mulshr16(-sx0,ui);
 	vi = shldiv16(65536,yz); v = mulshr16(-sy0,vi);
 	if (!((black^white)&0xff000000)) //Ignore alpha
@@ -9695,7 +9686,7 @@ void drawline2d (float x1, float y1, float x2, float y2, long col)
 	long i, j, incr, ie;
 
 	dx = x2-x1; dy = y2-y1; if ((dx == 0) && (dy == 0)) return;
-	fxresm1 = (float)xres-.5; fyresm1 = (float)yres-.5;
+	fxresm1 = (float)xres_voxlap-.5; fyresm1 = (float)yres_voxlap-.5;
 	if (x1 >= fxresm1) { if (x2 >= fxresm1) return; y1 += (fxresm1-x1)*dy/dx; x1 = fxresm1; }
 	else if (x1 < 0) { if (x2 < 0) return; y1 += (0-x1)*dy/dx; x1 = 0; }
 	if (x2 >= fxresm1) { y2 += (fxresm1-x2)*dy/dx; x2 = fxresm1; }
@@ -9708,19 +9699,19 @@ void drawline2d (float x1, float y1, float x2, float y2, long col)
 	if (fabs(dx) >= fabs(dy))
 	{
 		if (x2 > x1) { ftol(x1,&i); ftol(x2,&ie); } else { ftol(x2,&i); ftol(x1,&ie); }
-		if (i < 0) i = 0; if (ie >= xres) ie = xres-1;
+		if (i < 0) i = 0; if (ie >= xres_voxlap) ie = xres_voxlap-1;
 		ftol(1048576.0*dy/dx,&incr); ftol(y1*1048576.0+((float)i+.5f-x1)*incr,&j);
 		for(;i<=ie;i++,j+=incr)
-			if ((unsigned long)(j>>20) < (unsigned long)yres)
+			if ((unsigned long)(j>>20) < (unsigned long)yres_voxlap)
 				*(long *)(ylookup[j>>20]+(i<<2)+frameplace) = col;
 	}
 	else
 	{
 		if (y2 > y1) { ftol(y1,&i); ftol(y2,&ie); } else { ftol(y2,&i); ftol(y1,&ie); }
-		if (i < 0) i = 0; if (ie >= yres) ie = yres-1;
+		if (i < 0) i = 0; if (ie >= yres_voxlap) ie = yres_voxlap-1;
 		ftol(1048576.0*dx/dy,&incr); ftol(x1*1048576.0+((float)i+.5f-y1)*incr,&j);
 		for(;i<=ie;i++,j+=incr)
-			if ((unsigned long)(j>>20) < (unsigned long)xres)
+			if ((unsigned long)(j>>20) < (unsigned long)xres_voxlap)
 				*(long *)(ylookup[i]+((j>>18)&~3)+frameplace) = col;
 	}
 }
@@ -9732,7 +9723,7 @@ void drawline2dclip (float x1, float y1, float x2, float y2, float rx0, float ry
 	long i, j, incr, ie, p;
 
 	dx = x2-x1; dy = y2-y1; if ((dx == 0) && (dy == 0)) return;
-	fxresm1 = (float)xres-.5; fyresm1 = (float)yres-.5;
+	fxresm1 = (float)xres_voxlap-.5; fyresm1 = (float)yres_voxlap-.5;
 	if (x1 >= fxresm1) { if (x2 >= fxresm1) return; y1 += (fxresm1-x1)*dy/dx; x1 = fxresm1; }
 	else if (x1 < 0) { if (x2 < 0) return; y1 += (0-x1)*dy/dx; x1 = 0; }
 	if (x2 >= fxresm1) { y2 += (fxresm1-x2)*dy/dx; x2 = fxresm1; }
@@ -9748,10 +9739,10 @@ void drawline2dclip (float x1, float y1, float x2, float y2, float rx0, float ry
 		Za = gihz*(rx0*rz1 - rx1*rz0); Zb = rz1; Zc = -gihx*rz1 - gihz*rx1;
 
 		if (x2 > x1) { ftol(x1,&i); ftol(x2,&ie); } else { ftol(x2,&i); ftol(x1,&ie); }
-		if (i < 0) i = 0; if (ie >= xres) ie = xres-1;
+		if (i < 0) i = 0; if (ie >= xres_voxlap) ie = xres_voxlap-1;
 		ftol(1048576.0*dy/dx,&incr); ftol(y1*1048576.0+((float)i+.5f-x1)*incr,&j);
 		for(;i<=ie;i++,j+=incr)
-			if ((unsigned long)(j>>20) < (unsigned long)yres)
+			if ((unsigned long)(j>>20) < (unsigned long)yres_voxlap)
 			{
 				p = ylookup[j>>20]+(i<<2)+frameplace;
 				z = Za / ((float)i*Zb + Zc);
@@ -9765,10 +9756,10 @@ void drawline2dclip (float x1, float y1, float x2, float y2, float rx0, float ry
 		Za = gihz*(ry0*rz1 - ry1*rz0); Zb = rz1; Zc = -gihy*rz1 - gihz*ry1;
 
 		if (y2 > y1) { ftol(y1,&i); ftol(y2,&ie); } else { ftol(y2,&i); ftol(y1,&ie); }
-		if (i < 0) i = 0; if (ie >= yres) ie = yres-1;
+		if (i < 0) i = 0; if (ie >= yres_voxlap) ie = yres_voxlap-1;
 		ftol(1048576.0*dx/dy,&incr); ftol(x1*1048576.0+((float)i+.5f-y1)*incr,&j);
 		for(;i<=ie;i++,j+=incr)
-			if ((unsigned long)(j>>20) < (unsigned long)xres)
+			if ((unsigned long)(j>>20) < (unsigned long)xres_voxlap)
 			{
 				p = ylookup[i]+((j>>18)&~3)+frameplace;
 				z = Za / ((float)i*Zb + Zc);
@@ -9854,7 +9845,7 @@ void drawspherefill (float ox, float oy, float oz, float bakrad, long col)
 	t = sqrt(ysq); //fsqrtasm(&ysq,&t);
 	h = .5f / Za;
 	ftol((-Zb+t)*h,&sy1); if (sy1 < 0) sy1 = 0;
-	ftol((-Zb-t)*h,&sy2); if (sy2 > yres) sy2 = yres;
+	ftol((-Zb-t)*h,&sy2); if (sy2 > yres_voxlap) sy2 = yres_voxlap;
 	if (sy1 >= sy2) return;
 	r2a = .5f / a; rr2a = r2a*r2a;
 	nbi = -b*r2a; nb = nbi*(float)sy1-d*r2a;
@@ -9872,7 +9863,7 @@ void drawspherefill (float ox, float oy, float oz, float bakrad, long col)
 			t = sqrt(isq); //fsqrtasm(&isq,&t);
 			ftol(nb-t,&sx1); if (sx1 < 0) sx1 = 0;
 			ftol(nb+t,&sx2);
-			sx2 = MIN(sx2,xres)-sx1;
+			sx2 = MIN(sx2,xres_voxlap)-sx1;
 			if (sx2 > 0) clearbuf((void *)((sx1<<2)+p),sx2,col);
 			p += bytesperline; if (p >= sy2) return;
 			isq += isqi; isqi += isqii; nb += nbi;
@@ -9897,7 +9888,7 @@ void drawspherefill (float ox, float oy, float oz, float bakrad, long col)
 			t = sqrt(isq); //fsqrtasm(&isq,&t);
 			ftol(nb-t,&sx1); if (sx1 < 0) sx1 = 0;
 			ftol(nb+t,&sx2);
-			if (sx2 > xres) sx2 = xres;
+			if (sx2 > xres_voxlap) sx2 = xres_voxlap;
 			for(sx=sx1;sx<sx2;sx++)
 				if (*(long *)&cz < *(long *)(p+(sx<<2)+zbufoff))
 				{
@@ -10211,7 +10202,7 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 		j = i+1; if (j >= n) j = 0;
 			//offset would normally be -.5, but need to bias by +1.0
 		ftol(py[j]+.5,&sy); if (sy < 0) sy = 0;
-		ftol(py[i]+.5,&sy1); if (sy1 > yres) sy1 = yres;
+		ftol(py[i]+.5,&sy1); if (sy1 > yres_voxlap) sy1 = yres_voxlap;
 		if (sy1 > sy)
 		{
 			ftol((px[i]-px[j])*4096.0/(py[i]-py[j]),&xi);
@@ -10225,7 +10216,7 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 		j = i+1; if (j >= n) j = 0;
 			//offset would normally be -.5, but need to bias by +1.0
 		ftol(py[i]+.5,&sy); if (sy < 0) sy = 0;
-		ftol(py[j]+.5,&sy1); if (sy1 > yres) sy1 = yres;
+		ftol(py[j]+.5,&sy1); if (sy1 > yres_voxlap) sy1 = yres_voxlap;
 		if (sy1 > sy)
 		{
 			ftol((px[j]-px[i])*4096.0/(py[j]-py[i]),&xi);
@@ -10233,7 +10224,7 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 			for(;sy<sy1;sy++,x+=xi)
 			{
 				sx = lastx[sy]; if (sx < 0) sx = 0;
-				sxe = (x>>12); if (sxe > xres) sxe = xres;
+				sxe = (x>>12); if (sxe > xres_voxlap) sxe = xres_voxlap;
 				if (sx >= sxe) continue;
 				p  = (long *)(sy*bytesperline+(sx<<2)+frameplace);
 				pe = (long *)(sy*bytesperline+(sxe<<2)+frameplace);
@@ -11752,7 +11743,7 @@ static void kv6draw (vx5sprite *spr)
 					npos.x*ginor[z].x + npos.y*ginor[z].y + npos.z*ginor[z].z < 0) return;
 	}
 #if 0   //There are bugs when some vertices are behind ifor plane
-	x = xres; y = xres; inx = 0; iny = 0;
+	x = xres_voxlap; y = xres_voxlap; inx = 0; iny = 0;
 	for(z=7;z>=0;z--) //This is useful for debugging.
 	{
 		tp.x = -kv->xpiv; if (z&1) tp.x += (float)kv->xsiz;
@@ -11775,9 +11766,9 @@ static void kv6draw (vx5sprite *spr)
 		if (inz > iny) iny = inz;
 	}
 	if (x < 0) x = 0;
-	if (inx > xres) inx = xres;
+	if (inx > xres_voxlap) inx = xres_voxlap;
 	if (y < 0) y = 0;
-	if (iny > yres) iny = yres;
+	if (iny > yres_voxlap) iny = yres_voxlap;
 	if (x < inx)
 		for(inz=y;inz<iny;inz++)
 			clearbuf((void *)(ylookup[inz]+(x<<2)+frameplace),inx-x,0L);
@@ -11822,8 +11813,8 @@ static void kv6draw (vx5sprite *spr)
 	f = nhei.z; nhei.z = nfor.z; nfor.z = -f;
 
 	if (kv->zsiz >= MAXZSIZ) return; //HACK TO PREVENT CRASHES FOR NOW... FIX!
-	qsum0[2] = qsum0[0] = 0x7fff-(xres-(long)gihx);
-	qsum0[3] = qsum0[1] = 0x7fff-(yres-(long)gihy);
+	qsum0[2] = qsum0[0] = 0x7fff-(xres_voxlap-(long)gihx);
+	qsum0[3] = qsum0[1] = 0x7fff-(yres_voxlap-(long)gihy);
 
 		//r1->x = nstr.z; r1->y = nhei.z; r1->z = nfor.z;
 		//minps(r1,r1,&ztab4[0]); //&ztab4[0] always 0
@@ -14153,16 +14144,16 @@ void voxsetframebuffer (long p, long b, long x, long y)
 	kv6bytesperline = qbplbpp[1] = b; qbplbpp[0] = 4;
 	kv6frameplace = p - (qsum1[0]*qbplbpp[0] + qsum1[1]*qbplbpp[1]);
 
-	if ((b != ylookup[1]) || (x != xres) || (y != yres))
+	if ((b != ylookup[1]) || (x != xres_voxlap) || (y != yres_voxlap))
 	{
-		bytesperline = b; xres = x; yres = y; xres4 = (xres<<2);
-		ylookup[0] = 0; for(i=0;i<yres;i++) ylookup[i+1] = ylookup[i]+bytesperline;
-		//gihx = gihz = (float)xres*.5f; gihy = (float)yres*.5f; //BAD!!!
+		bytesperline = b; xres_voxlap = x; yres_voxlap = y; xres4_voxlap = (xres_voxlap<<2);
+		ylookup[0] = 0; for(i=0;i<yres_voxlap;i++) ylookup[i+1] = ylookup[i]+bytesperline;
+		//gihx = gihz = (float)xres_voxlap*.5f; gihy = (float)yres_voxlap*.5f; //BAD!!!
 #if (USEZBUFFER == 1)
-		if ((ylookup[yres]+256 > zbuffersiz) || (!zbuffermem))  //Increase Z buffer size if too small
+		if ((ylookup[yres_voxlap]+256 > zbuffersiz) || (!zbuffermem))  //Increase Z buffer size if too small
 		{
 			if (zbuffermem) { free(zbuffermem); zbuffermem = 0; }
-			zbuffersiz = ylookup[yres]+256;
+			zbuffersiz = ylookup[yres_voxlap]+256;
 			if (!(zbuffermem = (long *)malloc(zbuffersiz))) evilquit("voxsetframebuffer: allocation too big");
 		}
 #endif
@@ -14345,10 +14336,10 @@ long screencapture32bit (const char *fname)
 {
 	long p, x, y;
 
-	pngoutopenfile(fname,xres,yres);
+	pngoutopenfile(fname,xres_voxlap,yres_voxlap);
 	p = frameplace;
-	for(y=0;y<yres;y++,p+=bytesperline)
-		for(x=0;x<xres;x++)
+	for(y=0;y<yres_voxlap;y++,p+=bytesperline)
+		for(x=0;x<xres_voxlap;x++)
 			pngoutputpixel(*(long *)(p+(x<<2)));
 
 	return(0);
@@ -14515,7 +14506,7 @@ long initvoxlap ()
 		return(-1);
 	//if (cputype&(1<<25)) fixsse(); //SSE
 
-	  //WARNING: xres&yres are local to VOXLAP5.C so don't rely on them here!
+	  //WARNING: xres_voxlap & yres_voxlap are local to VOXLAP5.C so don't rely on them here!
 	if (!(radarmem = (long *)malloc(MAX((((MAXXDIM*MAXYDIM*27)>>1)+7)&~7,(VSID+4)*3*SCPITCH*4+8))))
 		return(-1);
 	radar = (long *)((((long)radarmem)+7)&~7);
