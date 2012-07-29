@@ -1,0 +1,25 @@
+*	text=auto
+
+*.txt	text
+
+*.c	text
+*.h	text
+*.cpp	text
+*.hpp	text
+*.*asm	text
+
+*.mak	text
+
+*.bat	text
+*.sh	text
+
+
+*.zip	-text
+
+*.exe	-text
+*.dll	-text
+*.obj	-text
+
+*.elf	-text
+*.elf.so	-text
+*.elf.o	-text
