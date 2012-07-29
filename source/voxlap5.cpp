@@ -30,11 +30,15 @@
 	#endif
 #endif
 
-//Voxlap Preprocessor stuff
+	//Voxlap Preprocessor stuff
 #define VOXLAP5
 				//We never want to define C bindings if this is compiled as C++.
 #undef VOXLAP_C	//Putting this here just in case.
 #include "../include/voxlap5.h"
+
+	//KPlib Preprocessor stuff
+//#define KPLIB_C  //if kplib is compiled as C
+#include "../include/kplib.h"
 
 #define USEZBUFFER 1                 //Should a Z-Buffer be Used?
 //#define __NOASM__                  //Instructs compiler to use C(++) alternatives
