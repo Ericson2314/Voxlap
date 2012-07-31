@@ -77,12 +77,9 @@ $(locBIN)/sdlmain2.$(OBJSuf): $(locSRC)/sdlmain.c $(locINC)/sysmain.h
 
 # Clearn Script
 cleanall: clean
-	$(rm) "./decompv"*
 	cd "$(locBIN)"
 	$(rm) "*"
 clean:
-	$(rm) "* - debug.txt"
-	$(rm) asmcompare.txt
 	cd "$(locBIN)"
 	$(rm) "*.$(OBJSuf)"
 	$(rm) "*.$(EXESuf)"
