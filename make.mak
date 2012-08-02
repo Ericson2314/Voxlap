@@ -146,7 +146,7 @@ AFLAGS                 =$($(AsmName)_FLAGS) $($(PLATdep)_$(AsmName)_FLAGS)
 CXXFLAGS               =$($(CXX)_FLAGS) $($(CXX)_$(build)) $($(GFXdep)_$(CXX)_FLAGS) $($(PLATdep)_$(CXX)_FLAGS) $(Random_Macros)
 CMacroPre              =$($(CXX)_MacroPre)
 
-LNKFLAGS               =$($(LNK)_FLAGS) $($(LNK)_$(build)) $($(GFXdep)_$(LNK)_FLAGS) $($(PLATdep)_$(LNK)_FLAGS) $(if_USEV5ASM)
+LNKFLAGS               =$($(LNK)_FLAGS) $($(LNK)_$(build)) $($(GFXdep)_$(LNK)_FLAGS) $($(PLATdep)_$(LNK)_FLAGS)
 LNKlibPre              =$($(LNK)_libPre)
 LNKlibSuf              =$($(LNK)_libSuf)
 
