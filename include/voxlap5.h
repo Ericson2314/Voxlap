@@ -115,10 +115,7 @@ typedef struct { char z1, z0, x, y; } vspans;
 #define MAXFRM 1024 //MUST be even number for alignment!
 
 	//Voxlap5 shared global variables:
-#ifndef VOXLAP5
-extern
-#endif
-struct
+struct vx5_interface
 {
 	//------------------------ DATA coming from VOXLAP5 ------------------------
 
@@ -169,7 +166,12 @@ struct
 	long numlights;
 
 	long fallcheck;
-} vx5;
+};
+#ifdef VOXLAP5
+struct vx5_interface vx5;
+#else
+extern struct vx5_interface vx5;
+#endif 
 
 	//Initialization functions:
 extern long initvoxlap ();
