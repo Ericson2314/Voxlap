@@ -110,7 +110,7 @@ AFLAGS                 =/Fo$(@R) /c /coff
 # -----------------------------------
 # Toggle Random Macros
 !IF "$(USEV5ASM)"=="1"
-if_USEV5ASM            =$(locBIN)/v5.$(OBJSuf)
+if_USEV5ASM            =$(locBIN)/v5$(OBJSuf)
 !ENDIF
 Random_Macros          =$(CMacroPre)USEV5ASM=$(USEV5ASM)
 # END Toggle Random Macros
@@ -123,8 +123,8 @@ kwalkLIBs	           =$(GFXOBJ) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32
 
 
 
-OBJSuf                 =obj
-EXESuf                 =exe
+OBJSuf                 =.obj
+EXESuf                 =.exe
 rm                     =del /f
 
 # Call Common

@@ -99,7 +99,7 @@ win_$(LNK)_LIBs        =$(LNKlibPre)ddraw$(LNKlibSuf) $(LNKlibPre)dinput$(LNKlib
 # -----------------------------------
 # Platform
 
-posix_OBJSuf           =elf.o
+posix_OBJSuf           =.elf.o
 posix_EXESuf           =
 
 posix_nasm_FLAGS       =-f elf32
@@ -108,8 +108,8 @@ posix_ld_LIBs          =
 
 posix_LIBs             =
 
-win32_OBJSuf           =obj
-win32_EXESuf           =exe
+win32_OBJSuf           =.obj
+win32_EXESuf           =.exe
 
 win32_nasm_FLAGS       =-f win32
 win32_jwasm_FLAGS      =-coff -Dwin32
@@ -128,7 +128,7 @@ win32_LIBs             =$(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlib
 # -----------------------------------
 # Toggle Random Macros
 ifeq "$(USEV5ASM)" "1"
-if_USEV5ASM            =$(locBIN)/v5.$(OBJSuf)
+if_USEV5ASM            =$(locBIN)/v5$(OBJSuf)
 endif
 Random_Macros          =$(CMacroPre)USEV5ASM=$(USEV5ASM)
 # END Toggle Random Macros
