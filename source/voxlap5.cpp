@@ -1755,11 +1755,11 @@ static inline void mmxcoloradd (long *a)
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"movd	mm0, [eax]\n"
-		"psubusb	mm0, flashbrival\n"
-		"movd	[eax], mm0\n"
+		"psubusb	%[a], flashbrival\n"
 		".att_syntax prefix\n"
+		: [a] "=y" (*a)
+		:      "0" (*a)
+		:
 	);
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
@@ -1773,7 +1773,7 @@ static inline void mmxcoloradd (long *a)
 	#endif
 }
 
-static inline void mmxcolorsub (long *a) //WHY IS THIS THE SAME???
+static inline void mmxcolorsub (long *a)
 {
 	#ifdef __NOASM__
 	#endif
@@ -1781,11 +1781,11 @@ static inline void mmxcolorsub (long *a) //WHY IS THIS THE SAME???
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"movd	mm0, [eax]\n"
-		"psubusb	mm0, flashbrival\n"
-		"movd	[eax], mm0\n"
+		"paddusb	%[a], flashbrival\n"
 		".att_syntax prefix\n"
+		: [a] "=y" (*a)
+		:      "0" (*a)
+		:
 	);
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
