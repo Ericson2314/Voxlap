@@ -7135,12 +7135,12 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 									"movq mm2, qmulmip[ecx*8-8]\n"
 									"pcmpeqb mm6, mm6\n"
 									"movq mm7, mm0\n"
-								"vxlmipbeg0:\n"
+								".Lvxlmipbeg0:\n"
 									"movd mm1, mixc[eax+ecx*4-4]\n"
 									"punpcklbw mm1, mm7\n"
 									"paddw mm0, mm1\n"
 									"dec ecx\n"
-									"jnz short vxlmipbeg0\n"
+									"jnz short .Lvxlmipbeg0\n"
 									"paddw mm0, mm0\n"
 									"psubw mm0, mm6\n" //rounding bias
 									"pmulhw mm0, mm2\n"
@@ -7206,12 +7206,12 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 									"movq mm2, qmulmip[ecx*8-8]\n"
 									"pcmpeqb mm6, mm6\n"
 									"movq mm7, mm0\n"
-								"vxlmipbeg1:\n"
+								".Lvxlmipbeg1:\n"
 									"movd mm1, mixc[eax+ecx*4-4]\n"
 									"punpcklbw mm1, mm7\n"
 									"paddw mm0, mm1\n"
 									"dec ecx\n"
-									"jnz short vxlmipbeg1\n"
+									"jnz short .Lvxlmipbeg1\n"
 									"paddw mm0, mm0\n"
 									"psubw mm0, mm6\n" //rounding bias
 									"pmulhw mm0, mm2\n"
@@ -8686,11 +8686,14 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 				__asm__ __volatile__
 				(
 					".intel_syntax noprefix\n"
-					"cvtsi2ss	xmm0, x\n"      //xmm0:?,?,?,x
-					"cvtsi2ss	xmm7, y\n"      //xmm7:0,0,0,y
-					"movlhps	xmm0, xmm7\n"   //xmm0:0,y,?,x
-					"shufps	xmm0, xmm0, 0x08\n" //xmm0:x,x,y,x
+					"cvtsi2ss	%%xmm0, %[x]\n"     //xmm0:?,?,?,x
+					"cvtsi2ss	%%xmm7, %[y]\n"     //xmm7:0,0,0,y
+					"movlhps	%%xmm0, %%xmm7\n"   //xmm0:0,y,?,x
+					"shufps	%%xmm0, %%xmm0, 0x08\n" //xmm0:x,x,y,x
 					".att_syntax prefix"
+					:
+					: [x] "r" (x), [y] "r" (y)
+					:
 				);
 				#endif
 				#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
@@ -8714,12 +8717,20 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 					(
 						".intel_syntax noprefix\n"
 						"movhlps xmm3, xmm7\n"       //xmm3:?,?,0,0
-						"cvtsi2ss xmm7, z\n"         //xmm7:0,0,0,z
+						
+						".intel_syntax prefix\n"
+						"cvtsi2ss %%xmm7, %[z]\n"    //xmm7:0,0,0,z
+						".intel_syntax noprefix\n"
+						
 						"movlhps xmm0, xmm7\n"       //xmm0:0,z,y,x
-						"mov eax, numcurs\n"
-						"mov edx, p\n"
+						
+						".intel_syntax prefix\n"
+						"mov %%eax, %[numcurs]\n"
+						"mov %%edx, %[p]\n"
+						".intel_syntax noprefix\n"
+						
 						"lea eax, [eax+eax*2-3]\n"
-					"beg:\n"
+					".Lbeg:\n"
 						"movups xmm1, [edx+eax*4]\n" //xmm1: ?,pz,py,pz
 						"subps xmm1, xmm0\n"         //xmm1: ?,dz,dy,dx
 						"mulps xmm1, xmm1\n"         //xmm1: ?,dzý,dyý,dxý
@@ -8733,9 +8744,14 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 						"rcpss xmm1, xmm1\n"         //xmm1: ?,?,?,1/(dxý+dyý+dzý+256)
 						"addss xmm3, xmm1\n"
 						"sub eax, 3\n"
-						"jnc short beg\n"
-						"movss v, xmm3\n"
+						"jnc short .Lbeg\n"
+						
+						".intel_syntax prefix\n"
+						"movss [%[v]], %%xmm3\n"
 						".att_syntax prefix\n"
+						: 
+						: [z] "r" (z), [v] "r" (&v), [numcurs] "r" (numcurs), [p] "r" (p)
+						: "eax", "edx"
 					);
 					#endif
 					#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
