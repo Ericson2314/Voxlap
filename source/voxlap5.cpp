@@ -285,16 +285,17 @@ static inline void dcossin (double a, double *c, double *s)
 static inline void ftol (float f, long *a)
 {
 	#ifdef __NOASM__
-	
+	a = (long*)&(f);
 	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"fld	dword ptr f\n"
-		"fistp	dword ptr [eax]\n"
+		".intel_syntax prefix\n"
+		"fistp	dword ptr [%[a]]\n"
 		".att_syntax prefix\n"
+		: 
+		: [f]  "t" (f), [a] "r" (a)
+		:
 	);
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
@@ -393,13 +394,15 @@ static inline long mulshr16 (long a, long d)
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"mov	edx, d\n"
-		"imul	edx\n"
-		"shrd	eax, edx, 16\n"
+		".intel_syntax prefix\n"
+		"imul	%[d]\n"
+		"shrd	%[a], %[d], 16\n"
 		".att_syntax prefix\n"
+		: [a] "=a" (a)
+		:      "0" (a), [d] "r" (d)
+		:
 	);
+	return a;
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
@@ -419,13 +422,17 @@ static inline int64_t mul64 (long a, long d)
 	
 	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	int64_t out64;
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"imul	dword ptr d\n"
-		".att_syntax prefix\n"
+		".intel_syntax prefix \n"
+		"imul	%[d] \n"
+		".att_syntax prefix \n"
+		: "=A" (out64)
+		:  "a" (a),    [d] "r" (d)
+		:
 	);
+	return out64;
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
@@ -445,14 +452,17 @@ static inline long shldiv16 (long a, long b)
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"mov	edx, eax\n"
-		"shl	eax, 16\n"
-		"sar	edx, 16\n"
-		"idiv	dword ptr b\n"
+		".intel_syntax prefix\n"
+		"mov	%%edx, %[a]\n"
+		"shl	%[a], 16\n"
+		"sar	%%edx, 16\n"
+		"idiv	%[b]\n" //dword ptr
 		".att_syntax prefix\n"
+		: [a] "=a" (a)
+		:      "0" (a), [b] "r" (b)
+		: "edx"
 	);
+	return a;
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
@@ -475,26 +485,28 @@ static inline long isshldiv16safe (long a, long b)
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	edx, a\n"
-		"test	edx, edx\n"
-		"js	short skipneg0\n"
-		"neg	edx\n"
-	"skipneg0:\n"
-		"sar	edx, 14\n"
-
-		"mov	eax, b\n"
-		"test	eax, eax\n"
-		"js	short skipneg1\n"
-		"neg	eax\n"
-	"skipneg1:\n"
+		".intel_syntax prefix\n"
+		"test	%[a], %[a]\n"
+		"js	short .Lskipneg0\n"
+		"neg	%[a]\n"
+	".Lskipneg0$:\n"
+		"sar	%[a], 14\n"
+		
+		"test	%[b], %[b]\n"
+		"js	short .Lskipneg1\n"
+		"neg	%[b]\n"
+	".Lskipneg1$:\n"
 			//abs((a<<16)/b) < (1<<30) //1 extra for good luck!
 			//-abs(a)>>14 > -abs(b)    //use -abs because safe for 0x80000000
 			//eax-edx < 0
-		"sub	eax, edx\n"
-		"shr	eax, 31\n"
+		"sub	%[b], %[a]\n"
+		"shr	%[b], 31\n"
 		".att_syntax prefix\n"
+		: [a] "=r" (b)
+		:      "r" (a), [b] "0" (b)
+		: "cc"
 	);
+	return b;
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
@@ -529,12 +541,15 @@ static inline long umulshr32 (long a, long d)
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"mul	dword ptr d\n"
-		"mov	eax, edx\n"
+		".intel_syntax prefix\n"
+		"mul	%[d]\n" //dword ptr
+		"mov	%%eax, %%edx\n"
 		".att_syntax prefix\n"
+		: [a] "=a" (a)
+		:      "0" (a), [d] "r" (d)
+		: "edx"
 	);
+	return a;
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
@@ -622,15 +637,11 @@ static inline void copybuf (void *s, void *d, long c)
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
-		"push	esi\n"
-		"push	edi\n"
-		"mov	esi, s\n"
-		"mov	edi, d\n"
-		"mov	ecx, c\n"
 		"rep	movsd\n"
-		"pop	edi\n"
-		"pop	esi\n"
 		".att_syntax prefix\n"
+		: 
+		: "S" (s), "D" (d), "c" (c)
+		:
 	);
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
@@ -658,13 +669,11 @@ static inline void clearbuf (void *d, long c, long a)
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
-		"push	edi\n"
-		"mov	edi, d\n"
-		"mov	ecx, c\n"
-		"mov	eax, a\n"
 		"rep	stosd\n"
-		"pop	edi\n"
 		".att_syntax prefix\n"
+		: 
+		: "d" (d), "c" (c), "a" (a)
+		:
 	);
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
