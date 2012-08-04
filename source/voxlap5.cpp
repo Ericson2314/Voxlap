@@ -142,7 +142,7 @@ static long xbsox = -17, xbsoy, xbsof;
 static int64_t xbsbuf[25*5+1]; //need few bits before&after for protection
 
 	//Look tables for expandbitstack256:
-static long xbsceil[32], xbsflor[32];
+static long xbsceil[32], xbsflor[32]; //disabling mangling for inline asm
 
 	//float detection & falling code variables...
 	//WARNING: VLSTSIZ,FSTKSIZ,FLCHKSIZ can all have bounds errors! :(
@@ -594,21 +594,53 @@ static inline long dmulrethigh (long b, long c, long a, long d)
 	
 	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	
+	/*__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"imul	%D\n"
+		"mov	%%ecx, %A\n"
+		"push	%%edx\n"
+		"mov	%%eax, %B\n"
+		"imul	%C\n"
+		"sub	%%eax, %%ecx\n"
+		"pop	%%ecx\n"
+		"sbb	%%edx, %%ecx\n"
+		".att_syntax prefix\n"
+		:    "=d" (a)
+		: [A] "a" (a), [B] "g" (b), [C] "g" (c), [D] "g" (d)
+		: "edx"
+	); */
+
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"imul	dword ptr d\n"
-		"mov	ecx, eax\n"
-		"push	edx\n"
-		"mov	eax, b\n"
-		"imul	dword ptr c\n"
-		"sub	eax, ecx\n"
-		"pop	ecx\n"
-		"sbb	edx, ecx\n"
-		"mov	eax, edx\n"
+		".intel_syntax prefix\n"
+		"imul	%[d]\n"
 		".att_syntax prefix\n"
+		:    "=a" (a),    "=d" (d)
+		: [a] "0" (a), [d] "1" (d)
+		:
 	);
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"imul	%[c]\n"
+		".att_syntax prefix\n"
+		:    "=a" (b),    "=d" (c)
+		: [b] "0" (b), [c] "1" (c)
+		:
+	);
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"sub	%[b], %[a]\n"
+		"sbb	%[c], %[d]\n"
+		".att_syntax prefix\n"
+		:                              "=r" (c)
+		: [a] "r" (a), [b] "r" (b), [c] "0" (c), [d] "r" (d)
+		:
+	);
+	return c;
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
@@ -1331,55 +1363,60 @@ static inline void expandbit256 (void *s, void *d)
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
-		"push	esi\n"
-		"push	edi\n"
-		"mov	esi, s\n"
-		"mov	edi, d\n"
 		"mov	ecx, 32\n"   //current bit index
 		"xor	edx, edx\n"  //value of current 32-bit bits
-		"jmp	short in2it\n"
-	"begit:\n"
+		"jmp	short .Lin2it\n"
+	".Lbegit:\n"
 		"lea	esi, [esi+eax*4]\n"
 		"movzx	eax, byte ptr [esi+3]\n"
 		"sub	eax, ecx\n"                //xor mask [eax] for ceiling begins
-		"jl	short xskpc\n"
-	"xdoc:\n"
+		"jl	short .Lxskpc\n"
+	".Lxdoc:\n"
 		"mov	[edi], edx\n"
 		"add	edi, 4\n"
 		"mov	edx, -1\n"
 		"add	ecx, 32\n"
 		"sub	eax, 32\n"
-		"jge	short xdoc\n"
-	"xskpc:\n"
-		"and	edx, xbsceil[eax*4+128]\n" //~(-1<<eax)// xor mask [eax] for ceiling ends
-	"in2it:\n"
+		"jge	short .Lxdoc\n"
+	".Lxskpc:\n"
+		"and	edx, _ZL7xbsceil[eax*4+128]\n" //~(-1<<eax)// xor mask [eax] for ceiling ends
+		//".att_syntax prefix\n"
+		//"and	0x80($xbsceil,%%eax,4), %%edx\n" //~(-1<<eax)// xor mask [eax] for ceiling ends
+		//".intel_syntax noprefix\n"
+		
+	".Lin2it:\n"
 		"movzx	eax, byte ptr [esi+1]\n"
-		"sub	eax, ecx\n"                //xor mask [eax] for floor begins
-		"jl	short xskpf\n"
-	"xdof:\n"
+		"sub	eax, ecx\n"                //xor mask [eax] for floor begins //WARNING: NAME-MANGLING HARD CODED
+		"jl	short .Lxskpf\n"
+	".Lxdof:\n"
 		"mov	[edi], edx\n"
 		"add	edi, 4\n"
 		"xor	edx, edx\n"
 		"add	ecx, 32\n"
 		"sub	eax, 32\n"
-		"jge	short xdof\n"
-	"xskpf:\n"
-		"or	edx, xbsflor[eax*4+128]\n"     //(-1<<eax)// xor mask [eax] for floor ends
+		"jge	short .Lxdof\n"
+	".Lxskpf:\n"
+		"or	edx, _ZL7xbsflor[eax*4+128]\n"   //(-1<<eax)// xor mask [eax] for floor ends //WARNING: NAME-MANGLING HARD CODED
+		//".att_syntax prefix\n"
+		//"or	0x80($xbsflor,%%eax,4), %%edx\n" //(-1<<eax)// xor mask [eax] for floor ends
+		//".intel_syntax noprefix\n"
+		
 		"movzx	eax, byte ptr [esi]\n"
 		"test	eax, eax\n"
-		"jnz	short begit\n"
-		"sub	ecx, 256\n"                //finish writing buffer to [edi]
-		"jg	short xskpe\n"
-	"xdoe:\n"
+		"jnz	short .Lbegit\n"
+		"sub	ecx, 256\n"              //finish writing buffer to [edi]
+		"jg	short .Lxskpe\n"
+	".Lxdoe:\n"
 		"mov	[edi], edx\n"
 		"add	edi, 4\n"
 		"mov	edx, -1\n"
 		"add	ecx, 32\n"
-		"jle	short xdoe\n"
-	"xskpe:\n"
-		"pop	edi\n"
-		"pop	esi\n"
+		"jle	short .Lxdoe\n"
+	".Lxskpe:\n"
 		".att_syntax prefix\n"
+		: 
+		: "S" (s), "D" (d)
+		: "cc", "eax", "ecx", "edx"
 	);
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
