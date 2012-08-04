@@ -57,7 +57,7 @@ cl_Debug               =/MLd /ZI /GZ /RTCsuc /Od
 cl_Release             =/Ox
 cl_MacroPre            =/D                # for Micrsoft Compiler(cl)
 
-gcc_FLAGS              =-o $(@) -c -funsigned-char    # for GNU C++ Compiler (gcc)
+gcc_FLAGS              =-o $(@) -c -funsigned-char -mmmx # for GNU C++ Compiler (gcc)
 gcc_Debug              =
 gcc_Release            =
 gcc_MacroPre           =-D #                          # for GNU C++ Compiler (gcc)
