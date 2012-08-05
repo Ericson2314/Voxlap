@@ -11278,12 +11278,12 @@ static inline void movps (point4d *dest, point4d *src)
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, src\n"
-		"movaps	xmm7, [eax]\n"
-		"mov	eax, dest\n"
-		"movaps	[eax], xmm7\n"
+		".intel_syntax prefix\n"
+		"movaps	[%[dest]], %[src]\n"
 		".att_syntax prefix\n"
+		:
+		: [src] "x" (*src), [dest] "p" (dest)
+		:
 	);
 	#endif
 	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
@@ -11306,12 +11306,14 @@ static inline void intss (point4d *dest, long src)
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, dest\n"
-		"cvtsi2ss	xmm7, src\n"
-		"shufps	xmm7, xmm7, 0\n"
-		"movaps	[eax], xmm7\n"
+		".intel_syntax prefix\n"
+		"cvtsi2ss	%%xmm7, %[src]\n"
+		"shufps	%%xmm7, %%xmm7, 0\n"
+		"movaps	[%[dest]], %%xmm7\n"
 		".att_syntax prefix\n"
+		:
+		: [src] "x" (src), [dest] "p" (dest)
+		: "xmm7"
 	);
 	#endif
 	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
@@ -11334,14 +11336,13 @@ static inline void addps (point4d *sum, point4d *a, point4d *b)
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"movaps	xmm7, [eax]\n"
-		"mov	eax, b\n"
-		"addps	xmm7, [eax]\n"
-		"mov	eax, sum\n"
-		"movaps	[eax], xmm7\n"
+		".intel_syntax prefix\n"
+		"addps	%[a], [%[b]]\n"
+		"movaps	[%[sum]], %[a]\n"
 		".att_syntax prefix\n"
+		:
+		: [a] "x" (*a), [b] "p" (b), [sum] "p" (sum)
+		:
 	);
 	#endif
 	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
@@ -11367,13 +11368,12 @@ static inline void mulps (point4d *sum, point4d *a, point4d *b)
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"movaps	xmm7, [eax]\n"
-		"mov	eax, b\n"
-		"mulps	xmm7, [eax]\n"
-		"mov	eax, sum\n"
-		"movaps	[eax], xmm7\n"
+		"mulps	%[a], [%[b]]\n"
+		"movaps	[%[sum]], %[a]\n"
 		".att_syntax prefix\n"
+		:
+		: [a] "x" (*a), [b] "p" (b), [sum] "p" (sum)
+		:
 	);
 	#endif
 	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
@@ -11399,13 +11399,12 @@ static inline void subps (point4d *sum, point4d *a, point4d *b)
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"movaps	xmm7, [eax]\n"
-		"mov	eax, b\n"
-		"subps	xmm7, [eax]\n"
-		"mov	eax, sum\n"
-		"movaps	[eax], xmm7\n"
+		"subps	%[a], [%[b]]\n"
+		"movaps	[%[sum]], %[a]\n"
 		".att_syntax prefix\n"
+		:
+		: [a] "x" (*a), [b] "p" (b), [sum] "p" (sum)
+		:
 	);
 	#endif
 	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
@@ -11431,13 +11430,12 @@ static inline void minps (point4d *sum, point4d *a, point4d *b)
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"movaps	xmm7, [eax]\n"
-		"mov	eax, b\n"
-		"minps	xmm7, [eax]\n"
-		"mov	eax, sum\n"
-		"movaps	[eax], xmm7\n"
+		"minps	%[a], [%[b]]\n"
+		"movaps	[%[sum]], %[a]\n"
 		".att_syntax prefix\n"
+		:
+		: [a] "x" (*a), [b] "p" (b), [sum] "p" (sum)
+		:
 	);
 	#endif
 	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
@@ -11463,13 +11461,12 @@ static inline void maxps (point4d *sum, point4d *a, point4d *b)
 		__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"movaps	xmm7, [eax]\n"
-		"mov	eax, b\n"
-		"maxps	xmm7, [eax]\n"
-		"mov	eax, sum\n"
-		"movaps	[eax], xmm7\n"
+		"minps	%[a], [%[b]]\n"
+		"maxps	[%[sum]], %[a]\n"
 		".att_syntax prefix\n"
+		:
+		: [a] "x" (*a), [b] "p" (b), [sum] "p" (sum)
+		:
 	);
 	#endif
 	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
