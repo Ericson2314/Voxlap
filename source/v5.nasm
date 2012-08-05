@@ -58,9 +58,7 @@ CCALL(v5_asm_dep_unlock):
 	sub esp, 4
 	push dword esp
 	push dword 40h ;PAGE_EXECUTE_READWRITE ; _MANUAL FIX_ word to dword
-	mov eax, CCALL(dep_protect_end)
-	sub eax, CCALL(v5_asm_dep_unlock)
-	push dword eax
+	push dword CCALL(v5_asm_dep_unlock)-CCALL(dep_protect_end)
 	push dword CCALL(v5_asm_dep_unlock)
 	call dword __imp__VirtualProtect@16
 	add esp, 4
