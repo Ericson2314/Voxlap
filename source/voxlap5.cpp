@@ -142,7 +142,7 @@ static long xbsox = -17, xbsoy, xbsof;
 static int64_t xbsbuf[25*5+1]; //need few bits before&after for protection
 
 	//Look tables for expandbitstack256:
-static long xbsceil[32], xbsflor[32]; //disabling mangling for inline asm
+static long xbsceil[32] FORCE_NAME("xbsceil"), xbsflor[32] FORCE_NAME("xbsflor"); //disabling mangling for inline asm
 
 	//float detection & falling code variables...
 	//WARNING: VLSTSIZ,FSTKSIZ,FLCHKSIZ can all have bounds errors! :(
@@ -1379,7 +1379,7 @@ static inline void expandbit256 (void *s, void *d)
 		"sub	eax, 32\n"
 		"jge	short .Lxdoc\n"
 	".Lxskpc:\n"
-		"and	edx, _ZL7xbsceil[eax*4+128]\n" //~(-1<<eax)// xor mask [eax] for ceiling ends
+		"and	edx, xbsceil[eax*4+128]\n" //~(-1<<eax)// xor mask [eax] for ceiling ends
 		//".att_syntax prefix\n"
 		//"and	0x80($xbsceil,%%eax,4), %%edx\n" //~(-1<<eax)// xor mask [eax] for ceiling ends
 		//".intel_syntax noprefix\n"
@@ -1396,7 +1396,7 @@ static inline void expandbit256 (void *s, void *d)
 		"sub	eax, 32\n"
 		"jge	short .Lxdof\n"
 	".Lxskpf:\n"
-		"or	edx, _ZL7xbsflor[eax*4+128]\n"   //(-1<<eax)// xor mask [eax] for floor ends //WARNING: NAME-MANGLING HARD CODED
+		"or	edx, xbsflor[eax*4+128]\n"   //(-1<<eax)// xor mask [eax] for floor ends //WARNING: NAME-MANGLING HARD CODED
 		//".att_syntax prefix\n"
 		//"or	0x80($xbsflor,%%eax,4), %%edx\n" //(-1<<eax)// xor mask [eax] for floor ends
 		//".intel_syntax noprefix\n"
@@ -2483,7 +2483,7 @@ void vline (float x0, float y0, float x1, float y1, long *iy0, long *iy1)
 
 static float optistrx, optistry, optiheix, optiheiy, optiaddx, optiaddy;
 
-static int64_t foglut[2048], fogcol;
+static int64_t foglut[2048] FORCE_NAME("foglut"), fogcol;
 static long ofogdist = -1;
 
 EXTERN_C void *opti4asm;
@@ -10911,7 +10911,7 @@ void drawboundcube3dn (kv6voxtype *, long);
 //}
 
 static __ALIGN(8) short lightlist[MAXLIGHTS+1][4];
-static int64_t all32767 = 0x7fff7fff7fff7fff;
+static int64_t all32767 FORCE_NAME("all32767") = 0x7fff7fff7fff7fff;
 
 static void updatereflects (vx5sprite *spr)
 {
@@ -14262,25 +14262,27 @@ void voxsetframebuffer (long p, long b, long x, long y)
 				".intel_syntax noprefix\n"
 				"xor	eax, eax\n"
 				"mov	ecx, -2048*8\n"
-				"mov	edx, i\n"
-			"fogbeg:\n"
+			".Lfogbeg:\n"
 				"movd	mm0, eax\n"
 				"add	eax, edx\n"
-				"jo	short fogend\n"
+				"jo	short .Lfogend\n"
 				"pshufw	mm0, mm0, 0x55\n"
 				"movq	foglut[ecx+2048*8], mm0\n"
 				"add	ecx, 8\n"
-				"js	short fogbeg\n"
-				"jmp	short fogend2\n"
-			"fogend:\n"
+				"js	short .Lfogbeg\n"
+				"jmp	short .Lfogend2\n"
+			".Lfogend:\n"
 				"movq	mm0, all32767\n"
-			"fogbeg2:\n"
+			".Lfogbeg2:\n"
 				"movq	foglut[ecx+2048*8], mm0\n"
 				"add	ecx, 8\n"
-				"js	short fogbeg2\n"
-			"fogend2:\n"
+				"js	short .Lfogbeg2\n"
+			".Lfogend2:\n"
 				"emms\n"
 				".att_syntax prefix\n"
+				:
+				: [i] "d" (i)
+				: "eax", "ecx", "mm0"
 			);
 			#endif
 			#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
