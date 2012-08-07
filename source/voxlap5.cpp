@@ -10963,7 +10963,7 @@ static void updatereflects (vx5sprite *spr)
 	long i, j;
 
 #if 0
-	KV6 lighting calculations for: fog, white, black, intens(normal dot product), black currently not supported!
+	//KV6 lighting calculations for: fog, white, black, intens(normal dot product), black currently not supported!
 
 	long vx5.kv6black = 0x000000, vx5.kv6white = 0x808080;
 	long nw.r = vx5.kv6white.r-vx5.kv6black.r, nb.r = vx5.kv6black.r*2;
@@ -10988,7 +10988,7 @@ static void updatereflects (vx5sprite *spr)
 		if (i > 2047) i = 2047;
 		fogmul = foglut[i];
 
-	#if 0
+	#ifdef __NOASM__
 		i = (long)(*(short *)&fogmul);
 		((short *)kv6coladd)[0] = (short)((((long)(((short *)&fogcol)[0]))*i)>>1);
 		((short *)kv6coladd)[1] = (short)((((long)(((short *)&fogcol)[1]))*i)>>1);
@@ -11046,15 +11046,16 @@ static void updatereflects (vx5sprite *spr)
 		tp.z = spr->f.x*fx + spr->f.y*fy + spr->f.z*fz;
 
 		f = 64.0 / sqrt(tp.x*tp.x + tp.y*tp.y + tp.z*tp.z);
-
-			//for(i=255;i>=0;i--)
-			//{
-			//   ftol(univec[i].x*tp.x + univec[i].y*tp.y + univec[i].z*tp.z,&j);
-			//   j = (lbound0(j+128,255)<<8);
-			//   ((unsigned short *)(&kv6colmul[i]))[0] = j;
-			//   ((unsigned short *)(&kv6colmul[i]))[1] = j;
-			//   ((unsigned short *)(&kv6colmul[i]))[2] = j;
-			//}
+		#ifdef __NOASM__
+		for(i=255;i>=0;i--)
+		{
+		   ftol(univec[i].x*tp.x + univec[i].y*tp.y + univec[i].z*tp.z,&j);
+		   j = (lbound0(j+128,255)<<8);
+		   ((unsigned short *)(&kv6colmul[i]))[0] = j;
+		   ((unsigned short *)(&kv6colmul[i]))[1] = j;
+		   ((unsigned short *)(&kv6colmul[i]))[2] = j;
+		}
+		#else
 		g = ((float)((((long)fogmul)&32767)^32767))*(16.f*8.f/65536.f);
 		if (!(((vx5.kv6col&0xffff)<<8)^(vx5.kv6col&0xffff00))) //Cool way to check if R==G==B :)
 		{
@@ -11173,6 +11174,7 @@ static void updatereflects (vx5sprite *spr)
 			#endif
 		}
 		//NOTE: emms not necessary!
+		#endif
 	}
 	else
 	{
@@ -11215,24 +11217,25 @@ static void updatereflects (vx5sprite *spr)
 		}
 
 		fx = 0.0; fy = 0.5; fz = 1.0;
-
-			//tp.x = (sprs.x*fx + sprs.y*fy + sprs.z*fz)*16.0;
-			//tp.y = (sprh.x*fx + sprh.y*fy + sprh.z*fz)*16.0;
-			//tp.z = (sprf.x*fx + sprf.y*fy + sprf.z*fz)*16.0;
-			//for(i=255;i>=0;i--)
-			//{
-			//   f = tp.x*univec[i].x + tp.y*univec[i].y + tp.z*univec[i].z + 48;
-			//   for(k=lightcnt-1;k>=0;k--)
-			//   {
-			//      h = lightlist[k].x*univec[i].x + lightlist[k].y*univec[i].y + lightlist[k].z*univec[i].z;
-			//      if (*(long *)&h < 0) f -= h;
-			//   }
-			//   if (f > 255) f = 255;
-			//   ftol(f,&j); j <<= 8;
-			//   ((unsigned short *)(&kv6colmul[i]))[0] = j;
-			//   ((unsigned short *)(&kv6colmul[i]))[1] = j;
-			//   ((unsigned short *)(&kv6colmul[i]))[2] = j;
-			//}
+		#ifdef __NOASM__
+		tp.x = (sprs.x*fx + sprs.y*fy + sprs.z*fz)*16.0;
+		tp.y = (sprh.x*fx + sprh.y*fy + sprh.z*fz)*16.0;
+		tp.z = (sprf.x*fx + sprf.y*fy + sprf.z*fz)*16.0;
+		for(i=255;i>=0;i--)
+		{
+			f = tp.x*univec[i].x + tp.y*univec[i].y + tp.z*univec[i].z + 48;
+			for(k=lightcnt-1;k>=0;k--)
+			{
+				h = lightlist[k].x*univec[i].x + lightlist[k].y*univec[i].y + lightlist[k].z*univec[i].z;
+				if (*(long *)&h < 0) f -= h;
+			}
+			if (f > 255) f = 255;
+			ftol(f,&j); j <<= 8;
+			((unsigned short *)(&kv6colmul[i]))[0] = j;
+			((unsigned short *)(&kv6colmul[i]))[1] = j;
+			((unsigned short *)(&kv6colmul[i]))[2] = j;
+		}
+		#else
 		hh *= 16*16.f*8.f/2.f;
 		lightlist[lightcnt][0] = (short)((sprs.x*fx + sprs.y*fy + sprs.z*fz)*hh);
 		lightlist[lightcnt][1] = (short)((sprh.x*fx + sprh.y*fy + sprh.z*fz)*hh);
@@ -11309,6 +11312,7 @@ static void updatereflects (vx5sprite *spr)
 		}
 		#endif
 		//NOTE: emms not necessary!
+		#endif
 	}
 }
 
