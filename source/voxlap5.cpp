@@ -13674,7 +13674,9 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 									h = tp.x*fx+tp.y*fy+tp.z*fz; if (*(long *)&h >= 0) continue;
 									g = fx*fx+fy*fy+fz*fz; if (g >= vx5.lightsrc[j].r2) continue;
 
-										//g = 1.0/(g*sqrt(g))-lightsub[i]; //1.0/g;
+									#ifdef __NOASM__
+									g = 1.0/(g*sqrt(g))-lightsub[i]; //1.0/g;
+									#else
 									if (cputype&(1<<25))
 									{
 										#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
@@ -13735,6 +13737,7 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 										}
 										#endif
 									}
+									#endif
 									f -= g*h*vx5.lightsrc[j].sc;
 								}
 								if (*(long *)&f > 0x437f0000) f = 255; //0x437f0000 is 255.0
