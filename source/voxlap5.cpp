@@ -9403,12 +9403,14 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 	vi = shldiv16(65536,yz); v = mulshr16(-sy0,vi);
 	if (!((black^white)&0xff000000)) //Ignore alpha
 	{
-			//for(y=y0,vv=y*vi+v;y<y1;y++,vv+=vi)
-			//{
-			//   p = ylookup[y] + frameplace; j = (vv>>16)*tp + tf;
-			//   for(x=x0,uu=x*ui+u;x<x1;x++,uu+=ui)
-			//      *(long *)((x<<2)+p) = *(long *)(((uu>>16)<<2) + j);
-			//}
+		#ifdef __NOASM__
+		for(y=y0,vv=y*vi+v;y<y1;y++,vv+=vi)
+		{
+			p = ylookup[y] + frameplace; j = (vv>>16)*tp + tf;
+			for(x=x0,uu=x*ui+u;x<x1;x++,uu+=ui)
+			*(long *)((x<<2)+p) = *(long *)(((uu>>16)<<2) + j);
+		}
+		#else
 		if ((xz == 32768) && (yz == 32768))
 		{
 			long plc;
@@ -9481,9 +9483,6 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 			for(y=y0,vv=y*vi+v;y<y1;y++,vv+=vi)
 			{
 				p = ylookup[y] + frameplace; j = (vv>>16)*tp + tf;
-
-					//for(x=x0,uu=plc;x<x1;x++,uu+=ui)
-					//   *(long *)((x<<2)+p) = *(long *)(((uu>>16)<<2) + j);
 				#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 				__asm__ __volatile__
 				(
@@ -9583,6 +9582,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 			}
 			clearMMX();
 		}
+		#endif
 	}
 	else //Use alpha for masking
 	{
@@ -9630,15 +9630,16 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 			{
 				i = *(long *)(((uu>>16)<<2) + j);
 
+				#ifdef __NOASM__
+				i.a = i.a*(white.a-black.a)/256 + black.a
+				i.r = i.r*(white.r-black.r)/256 + black.r
+				i.g = i.g*(white.g-black.g)/256 + black.g
+				i.b = i.b*(white.b-black.b)/256 + black.b
+				#else
 				#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 				__asm__ __volatile__
 				(
 					".intel_syntax noprefix\n"
-						//                (mm5)              (mm4)
-						//i.a = i.a*(white.a-black.a)/256 + black.a
-						//i.r = i.r*(white.r-black.r)/256 + black.r
-						//i.g = i.g*(white.g-black.g)/256 + black.g
-						//i.b = i.b*(white.b-black.b)/256 + black.b
 					"movd mm0, i\n"           //mm1: [00000000AaRrGgBb]
 					"punpcklbw mm0, mm7\n"    //mm1: [00Aa00Rr00Gg00Bb]
 					"psllw mm0, 4\n"          //mm1: [0Aa00Rr00Gg00Bb0]
@@ -9653,11 +9654,6 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 				#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 				_asm
 				{
-						//                (mm5)              (mm4)
-						//i.a = i.a*(white.a-black.a)/256 + black.a
-						//i.r = i.r*(white.r-black.r)/256 + black.r
-						//i.g = i.g*(white.g-black.g)/256 + black.g
-						//i.b = i.b*(white.b-black.b)/256 + black.b
 					movd mm0, i           //mm1: [00000000AaRrGgBb]
 					punpcklbw mm0, mm7    //mm1: [00Aa00Rr00Gg00Bb]
 					psllw mm0, 4          //mm1: [0Aa00Rr00Gg00Bb0]
@@ -9667,6 +9663,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					packuswb mm0, mm0     //mm1: [AaRrGgBbAaRrGgBb]
 					movd i, mm0
 				}
+				#endif
 				#endif
 
 					//a = (((unsigned long)i)>>24);
