@@ -10285,25 +10285,25 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 					"add	ecx, offset dpqdistlut\n"
                     
 					"test dword ptr cputype, 1 shl 25\n"
-					"jz short dpqpre3dn\n"
+					"jz short .Ldpqpre3dn\n"
                     
 					"movss	xmm0, t\n" //dd+ddi*3 dd+ddi*2 dd+ddi*1 dd+ddi*0
 					"shufps	xmm0, xmm0, 0\n"
 					"addps	xmm0, xmm6\n"
-				"dpqbegsse:\n"
+				".Ldpqbegsse:\n"
 					"rcpps	xmm1, xmm0\n"
 					"addps	xmm0, xmm7\n"
 					"movaps	[eax+ecx], xmm1\n"
 					"add	eax, 16\n"
-					"jl	short dpqbegsse\n"
-					"jmp	short dpqendit\n"
+					"jl	short .Ldpqbegsse\n"
+					"jmp	short .Ldpqendit\n"
 
-				"dpqpre3dn:\n"
+				".Ldpqpre3dn:\n"
 					"movd	mm0, t\n" //dd+ddi*1 dd+ddi*0
 					"punpckldq	mm0, mm0\n"
 					"pfadd	mm0, dpq3dn[0]\n"
 					"movq	mm7, dpq3dn[8]\n"
-				"dpqbeg3dn:\n"
+				".Ldpqbeg3dn:\n"
 					"pswapd	mm2, mm0\n"
 					"pfrcp	mm1, mm0\n"     //mm1: 1/mm0l 1/mm0l
 					"pfrcp	mm2, mm2\n"     //mm2: 1/mm0h 1/mm0h
@@ -10311,9 +10311,9 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 					"pfadd	mm0, mm7\n"
 					"movq	[eax+ecx], mm1\n"
 					"add	eax, 8\n"
-					"jl	short dpqbeg3dn\n"
+					"jl	short .Ldpqbeg3dn\n"
 					"femms\n"
-				"dpqendit:\n"
+				".Ldpqendit:\n"
 					".att_syntax prefix\n"
 				);
 				#endif
