@@ -7150,10 +7150,12 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 							while ((((long)tbuf[oldn+2])<<1) < z)
 							{
 								zz = (long)tbuf[oldn+2];
-
+								#ifdef __NOASM__
+								*(long *)&tbuf[n] = mixc[zz][rand()%mixn[zz]];
+								mixn[zz] = 0;
 								#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
-								__asm__ __volatile__ //*(long *)&tbuf[n] = mixc[zz][rand()%mixn[zz]];
-								(    //mixn[zz] = 0;
+								__asm__ __volatile__
+								(
 									".intel_syntax noprefix\n"
 									"mov eax, zz\n"
 									"mov ecx, mixn[eax*4]\n"
@@ -7179,8 +7181,8 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 								);
 								#endif
 								#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
-								_asm //*(long *)&tbuf[n] = mixc[zz][rand()%mixn[zz]];
-								{    //mixn[zz] = 0;
+								_asm
+								{
 									mov eax, zz
 									mov ecx, mixn[eax*4]
 									mov mixn[eax*4], 0
@@ -7203,7 +7205,7 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 									movd tbuf[eax], mm0
 								}
 								#endif
-
+								#endif
 								tbuf[oldn+2]++; n += 4;
 							}
 						}
@@ -7222,9 +7224,12 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 							}
 							while ((cz<<1) < z)
 							{
+								#ifdef __NOASM__
+								*(long *)&tbuf[n] = mixc[cz][rand()%mixn[cz]];
+								mixn[cz] = 0;
 								#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
-								__asm__ __volatile__ //*(long *)&tbuf[n] = mixc[cz][rand()%mixn[cz]];
-								(    //mixn[cz] = 0;
+								__asm__ __volatile__ 
+								(
 									".intel_syntax noprefix\n"
 									"mov eax, cz\n"
 									"mov ecx, mixn[eax*4]\n"
@@ -7250,8 +7255,8 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 								);
 								#endif
 								#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
-								_asm //*(long *)&tbuf[n] = mixc[cz][rand()%mixn[cz]];
-								{    //mixn[cz] = 0;
+								_asm
+								{
 									mov eax, cz
 									mov ecx, mixn[eax*4]
 									mov mixn[eax*4], 0
@@ -7274,7 +7279,7 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 									movd tbuf[eax], mm0
 								}
 								#endif
-
+								#endif
 								cz++; n += 4;
 							}
 						}
