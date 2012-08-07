@@ -403,9 +403,9 @@ static inline long mulshr16 (long a, long d)
 
 static inline __int64 mul64 (long a, long d)
 {
-	#if defined(__NOASM__)
-	
-	#endif
+	#ifdef __NOASM__
+	return ((int64_t)a) * ((int64_t)d);
+	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	int64_t out64;
 	__asm__ __volatile__
