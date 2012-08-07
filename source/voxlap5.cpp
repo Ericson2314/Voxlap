@@ -11079,7 +11079,7 @@ static void updatereflects (vx5sprite *spr)
 				".intel_syntax noprefix\n"
 				"movq	mm6, lightlist[0]\n"
 				"mov	ecx, 255*8\n"
-			"nolighta:\n"
+			".Lnolighta:\n"
 				"movq	mm0, iunivec[ecx]\n"
 				"movq	mm1, iunivec[ecx-8]\n"
 				"pmaddwd	mm0, mm6\n" //mm0: [tp.a*iunivec.a + tp.z*iunivec.z][tp.y*iunivec.y + tp.x*iunivec.x]
@@ -11093,7 +11093,7 @@ static void updatereflects (vx5sprite *spr)
 				"movq	kv6colmul[ecx], mm0\n"
 				"movq	kv6colmul[ecx-8], mm1\n"
 				"sub	ecx, 2*8\n"
-				"jnc	short nolighta\n"
+				"jnc	short .Lnolighta\n"
 				".att_syntax prefix\n"
 			);
 			#endif
@@ -11134,7 +11134,7 @@ static void updatereflects (vx5sprite *spr)
 				"punpcklbw	mm5, vx5.kv6col\n"
 				"movq	mm6, lightlist[0]\n"
 				"mov	ecx, 255*8\n"
-			"nolightb:\n"
+			".Lnolightb:\n"
 				"movq	mm0, iunivec[ecx]\n"
 				"movq	mm1, iunivec[ecx-8]\n"
 				"pmaddwd	mm0, mm6\n" //mm0: [tp.a*iunivec.a + tp.z*iunivec.z][tp.y*iunivec.y + tp.x*iunivec.x]
@@ -11150,7 +11150,7 @@ static void updatereflects (vx5sprite *spr)
 				"movq	kv6colmul[ecx], mm0\n"
 				"movq	kv6colmul[ecx-8], mm1\n"
 				"sub	ecx, 2*8\n"
-				"jnc short nolightb\n"
+				"jnc short .Lnolightb\n"
 				".att_syntax prefix\n"
 			);
 			#endif
@@ -11255,7 +11255,7 @@ static void updatereflects (vx5sprite *spr)
 			"mov	edx, lightcnt\n"
 			"shl	edx, 3\n"
 			"mov	ecx, 255*8\n"
-		"beglig:\n"
+		".Lbeglig:\n"
 			"movq	mm3, iunivec[ecx]\n"   //mm3: 256 u[i].z*256 u[i].y*256 u[i].x*256
 			"mov	eax, edx\n"
 			"movq	mm0, lightlist[edx]\n" //mm0: 48*256,0 tp.z*256 tp.y*256 tp.x*256
@@ -11263,8 +11263,8 @@ static void updatereflects (vx5sprite *spr)
 			"pshufw	mm2, mm0, 0x4e\n"
 			"paddd	mm0, mm2\n"
 			"sub	eax, 8\n"
-			"js	short endlig\n"
-		"beglig2:\n"
+			"js	short .Lendlig\n"
+		".Lbeglig2:\n"
 			"movq	mm1, lightlist[eax]\n" //mm1: 0 tp.z*256 tp.y*256 tp.x*256
 			"pmaddwd	mm1, mm3\n"
 			"pshufw	mm2, mm1, 0x4e\n"
@@ -11272,13 +11272,13 @@ static void updatereflects (vx5sprite *spr)
 			"pminsw	mm1, mm6\n"            //16-bits is ugly, but ok here
 			"psubd	mm0, mm1\n"
 			"sub	eax, 8\n"
-			"jns	short beglig2\n"       //mm0: 00 II ii ii 00 II ii ii
-		"endlig:\n"
+			"jns	short .Lbeglig2\n"       //mm0: 00 II ii ii 00 II ii ii
+		".Lendlig:\n"
 			"pshufw	mm0, mm0, 0x55\n"      //mm0: 00 II 00 II 00 II 00 II
 			"pmulhuw	mm0, mm5\n"
 			"movq	kv6colmul[ecx], mm0\n"
 			"sub	ecx, 8\n"
-			"jnc	short beglig\n"
+			"jnc	short .Lbeglig\n"
 			".att_syntax prefix\n"
 		);
 		#endif
