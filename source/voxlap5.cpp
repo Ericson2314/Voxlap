@@ -12267,8 +12267,8 @@ void genperp (point3d *a, point3d *b, point3d *c)
 	//[asz ahz agz aoz][bsz bhz bgz boz]   [csz chz cgz coz]
 	//[  0   0   0   1][  0   0   0   1]   [  0   0   0   1]
 void mat0 (point3d *as, point3d *ah, point3d *ag, point3d *ao,
-			  point3d *bs, point3d *bh, point3d *bg, point3d *bo,
-			  point3d *cs, point3d *ch, point3d *cg, point3d *co)
+		   point3d *bs, point3d *bh, point3d *bg, point3d *bo,
+		   point3d *cs, point3d *ch, point3d *cg, point3d *co)
 {
 	point3d ts, th, tg, to;
 	ts.x = bs->x*cs->x + bh->x*ch->x + bg->x*cg->x;
@@ -12292,8 +12292,8 @@ void mat0 (point3d *as, point3d *ah, point3d *ag, point3d *ao,
 	//[asz ahz agz aoz][bsz bhz bgz boz]   [csz chz cgz coz]
 	//[  0   0   0   1][  0   0   0   1]   [  0   0   0   1]
 void mat1 (point3d *as, point3d *ah, point3d *ag, point3d *ao,
-			  point3d *bs, point3d *bh, point3d *bg, point3d *bo,
-			  point3d *cs, point3d *ch, point3d *cg, point3d *co)
+		   point3d *bs, point3d *bh, point3d *bg, point3d *bo,
+		   point3d *cs, point3d *ch, point3d *cg, point3d *co)
 {
 	point3d ts, th, tg, to;
 	float x = co->x-ao->x, y = co->y-ao->y, z = co->z-ao->z;
@@ -12318,227 +12318,23 @@ void mat1 (point3d *as, point3d *ah, point3d *ag, point3d *ao,
 	//[asz ahz afz aoz][bsz bhz bfz boz]   [csz chz cfz coz]
 	//[  0   0   0   1][  0   0   0   1]   [  0   0   0   1]
 void mat2 (point3d *a_s, point3d *a_h, point3d *a_f, point3d *a_o,
-			  point3d *b_s, point3d *b_h, point3d *b_f, point3d *b_o,
-			  point3d *c_s, point3d *c_h, point3d *c_f, point3d *c_o)
+		   point3d *b_s, point3d *b_h, point3d *b_f, point3d *b_o,
+		   point3d *c_s, point3d *c_h, point3d *c_f, point3d *c_o)
 {
-	if (cputype&(1<<25))
-	{
-		#ifdef __GNUC__ //gcc inline asm
-		__asm__ __volatile__
-		(
-			".intel_syntax noprefix\n"
-			"mov	eax, b_s\n"
-			"mov	edx, b_h\n"
-			"movups	xmm0, [eax]\n"     //xmm0:   -  bs.z bs.y bs.x
-			"movups	xmm4, [edx]\n"     //xmm4:   -  bh.z bh.y bh.x
-			"mov	eax, b_f\n"
-			"mov	edx, b_o\n"
-			"movups	xmm6, [eax]\n"     //xmm6:   -  bf.z bf.y bf.x
-			"movups	xmm3, [edx]\n"     //xmm3:   -  bo.z bo.y bo.x
-
-			"mov	eax, a_s\n"
-			"mov	edx, a_h\n"
-
-			"movaps	xmm2, xmm0\n"      //xmm2:   -  bs.z bs.y bs.x
-			"movaps	xmm5, xmm6\n"      //xmm5:   -  bf.z bf.y bf.x
-			"unpcklps	xmm0, xmm4\n"  //xmm0: bh.y bs.y bh.x bs.x
-			"unpcklps	xmm6, xmm3\n"  //xmm6: bo.y bf.y bo.x bf.x
-			"movhlps	xmm1, xmm0\n"  //xmm1:   -    -  bh.y bs.y
-			"movhlps	xmm7, xmm6\n"  //xmm7:   -    -  bo.y bf.y
-			"unpckhps	xmm2, xmm4\n"  //xmm2:   -    -  bh.z bs.z
-			"unpckhps	xmm5, xmm3\n"  //xmm5:   -    -  bo.z bf.z
-			"movlhps	xmm0, xmm6\n"  //xmm0: bo.x bf.x bh.x bs.x
-			"movlhps	xmm1, xmm7\n"  //xmm1: bo.y bf.y bh.y bs.y
-			"movlhps	xmm2, xmm5\n"  //xmm2: bo.z bf.z bh.z bs.z
-
-			"movss	xmm3, [eax]\n"
-			"shufps	xmm3, xmm3, 0\n"
-			"movss	xmm4, [eax+4]\n"
-			"shufps	xmm4, xmm4, 0\n"
-			"movss	xmm5, [eax+8]\n"
-			"shufps	xmm5, xmm5, 0\n"
-			"mulps	xmm3, xmm0\n"
-			"mulps	xmm4, xmm0\n"
-			"mulps	xmm5, xmm0\n"
-
-			"mov	eax, a_f\n"
-
-			"movss	xmm6, [edx]\n"
-			"shufps	xmm6, xmm6, 0\n"
-			"movss	xmm7, [edx+4]\n"
-			"shufps	xmm7, xmm7, 0\n"
-			"movss	xmm0, [edx+8]\n"
-			"shufps	xmm0, xmm0, 0\n"
-			"mulps	xmm6, xmm1\n"
-			"mulps	xmm7, xmm1\n"
-			"mulps	xmm0, xmm1\n"
-			"addps	xmm3, xmm6\n"
-			"addps	xmm4, xmm7\n"
-			"addps	xmm5, xmm0\n"
-
-			"mov	edx, c_s\n"
-
-			"movss	xmm6, [eax]\n"
-			"shufps	xmm6, xmm6, 0\n"
-			"movss	xmm7, [eax+4]\n"
-			"shufps	xmm7, xmm7, 0\n"
-			"movss	xmm0, [eax+8]\n"
-			"shufps	xmm0, xmm0, 0\n"
-			"mulps	xmm6, xmm2\n"
-			"mulps	xmm7, xmm2\n"
-			"mulps	xmm0, xmm2\n"
-			"addps	xmm3, xmm6\n"        //xmm3: to.x tf.x th.x ts.x
-			"addps	xmm4, xmm7\n"        //xmm4: to.y tf.y th.y ts.y
-			"addps	xmm5, xmm0\n"        //xmm5: to.z tf.z th.z ts.z
-
-			"mov	eax, c_f\n"
-
-			"movss	[edx], xmm3\n"
-			"movhlps	xmm0, xmm3\n"
-			"movss	[edx+4], xmm4\n"
-			"movhlps	xmm1, xmm4\n"
-			"movss	[edx+8], xmm5\n"
-			"movhlps	xmm2, xmm5\n"
-			"mov	edx, c_h\n"
-			"movss	[eax], xmm0\n"
-			"movss	[eax+4], xmm1\n"
-			"movss	[eax+8], xmm2\n"
-			"shufps	xmm3, xmm3, 0xb1\n"  //xmm3:   -  to.x   -  th.x
-			"shufps	xmm4, xmm4, 0xb1\n"  //xmm4:   -  to.y   -  th.y
-			"shufps	xmm5, xmm5, 0xb1\n"  //xmm5:   -  to.z   -  th.z
-			"mov	eax, a_o\n"
-			"movss	[edx], xmm3\n"
-			"movss	[edx+4], xmm4\n"
-			"movss	[edx+8], xmm5\n"
-			"mov	edx, c_o\n"
-			"movhlps	xmm0, xmm3\n"
-			"addss	xmm0, [eax]\n"
-			"movhlps	xmm1, xmm4\n"
-			"addss	xmm1, [eax+4]\n"
-			"movhlps	xmm2, xmm5\n"
-			"addss	xmm2, [eax+8]\n"
-			"movss	[edx], xmm0\n"
-			"movss	[edx+4], xmm1\n"
-			"movss	[edx+8], xmm2\n"
-			".att_syntax prefix\n"
-		);
-		#endif
-		#ifdef _MSC_VER //msvc inline asm
-		_asm
-		{
-			mov	eax, b_s
-			mov	edx, b_h
-			movups	xmm0, [eax]     //xmm0:   -  bs.z bs.y bs.x
-			movups	xmm4, [edx]     //xmm4:   -  bh.z bh.y bh.x
-			mov	eax, b_f
-			mov	edx, b_o
-			movups	xmm6, [eax]     //xmm6:   -  bf.z bf.y bf.x
-			movups	xmm3, [edx]     //xmm3:   -  bo.z bo.y bo.x
-
-			mov	eax, a_s
-			mov	edx, a_h
-
-			movaps	xmm2, xmm0      //xmm2:   -  bs.z bs.y bs.x
-			movaps	xmm5, xmm6      //xmm5:   -  bf.z bf.y bf.x
-			unpcklps	xmm0, xmm4  //xmm0: bh.y bs.y bh.x bs.x
-			unpcklps	xmm6, xmm3  //xmm6: bo.y bf.y bo.x bf.x
-			movhlps	xmm1, xmm0      //xmm1:   -    -  bh.y bs.y
-			movhlps	xmm7, xmm6      //xmm7:   -    -  bo.y bf.y
-			unpckhps	xmm2, xmm4  //xmm2:   -    -  bh.z bs.z
-			unpckhps	xmm5, xmm3  //xmm5:   -    -  bo.z bf.z
-			movlhps	xmm0, xmm6      //xmm0: bo.x bf.x bh.x bs.x
-			movlhps	xmm1, xmm7      //xmm1: bo.y bf.y bh.y bs.y
-			movlhps	xmm2, xmm5      //xmm2: bo.z bf.z bh.z bs.z
-
-			movss	xmm3, [eax]
-			shufps	xmm3, xmm3, 0
-			movss	xmm4, [eax+4]
-			shufps	xmm4, xmm4, 0
-			movss	xmm5, [eax+8]
-			shufps	xmm5, xmm5, 0
-			mulps	xmm3, xmm0
-			mulps	xmm4, xmm0
-			mulps	xmm5, xmm0
-
-			mov	eax, a_f
-
-			movss	xmm6, [edx]
-			shufps	xmm6, xmm6, 0
-			movss	xmm7, [edx+4]
-			shufps	xmm7, xmm7, 0
-			movss	xmm0, [edx+8]
-			shufps	xmm0, xmm0, 0
-			mulps	xmm6, xmm1
-			mulps	xmm7, xmm1
-			mulps	xmm0, xmm1
-			addps	xmm3, xmm6
-			addps	xmm4, xmm7
-			addps	xmm5, xmm0
-
-			mov	edx, c_s
-
-			movss	xmm6, [eax]
-			shufps	xmm6, xmm6, 0
-			movss	xmm7, [eax+4]
-			shufps	xmm7, xmm7, 0
-			movss	xmm0, [eax+8]
-			shufps	xmm0, xmm0, 0
-			mulps	xmm6, xmm2
-			mulps	xmm7, xmm2
-			mulps	xmm0, xmm2
-			addps	xmm3, xmm6        //xmm3: to.x tf.x th.x ts.x
-			addps	xmm4, xmm7        //xmm4: to.y tf.y th.y ts.y
-			addps	xmm5, xmm0        //xmm5: to.z tf.z th.z ts.z
-
-			mov	eax, c_f
-
-			movss	[edx], xmm3
-			movhlps	xmm0, xmm3
-			movss	[edx+4], xmm4
-			movhlps	xmm1, xmm4
-			movss	[edx+8], xmm5
-			movhlps	xmm2, xmm5
-			mov	edx, c_h
-			movss	[eax], xmm0
-			movss	[eax+4], xmm1
-			movss	[eax+8], xmm2
-			shufps	xmm3, xmm3, 0xb1  //xmm3:   -  to.x   -  th.x
-			shufps	xmm4, xmm4, 0xb1  //xmm4:   -  to.y   -  th.y
-			shufps	xmm5, xmm5, 0xb1  //xmm5:   -  to.z   -  th.z
-			mov	eax, a_o
-			movss	[edx], xmm3
-			movss	[edx+4], xmm4
-			movss	[edx+8], xmm5
-			mov	edx, c_o
-			movhlps	xmm0, xmm3
-			addss	xmm0, [eax]
-			movhlps	xmm1, xmm4
-			addss	xmm1, [eax+4]
-			movhlps	xmm2, xmm5
-			addss	xmm2, [eax+8]
-			movss	[edx], xmm0
-			movss	[edx+4], xmm1
-			movss	[edx+8], xmm2
-		}
-		#endif
-	}
-	else
-	{
-		point3d ts, th, tf, to;
-		ts.x = a_s->x*b_s->x + a_h->x*b_s->y + a_f->x*b_s->z;
-		ts.y = a_s->y*b_s->x + a_h->y*b_s->y + a_f->y*b_s->z;
-		ts.z = a_s->z*b_s->x + a_h->z*b_s->y + a_f->z*b_s->z;
-		th.x = a_s->x*b_h->x + a_h->x*b_h->y + a_f->x*b_h->z;
-		th.y = a_s->y*b_h->x + a_h->y*b_h->y + a_f->y*b_h->z;
-		th.z = a_s->z*b_h->x + a_h->z*b_h->y + a_f->z*b_h->z;
-		tf.x = a_s->x*b_f->x + a_h->x*b_f->y + a_f->x*b_f->z;
-		tf.y = a_s->y*b_f->x + a_h->y*b_f->y + a_f->y*b_f->z;
-		tf.z = a_s->z*b_f->x + a_h->z*b_f->y + a_f->z*b_f->z;
-		to.x = a_s->x*b_o->x + a_h->x*b_o->y + a_f->x*b_o->z + a_o->x;
-		to.y = a_s->y*b_o->x + a_h->y*b_o->y + a_f->y*b_o->z + a_o->y;
-		to.z = a_s->z*b_o->x + a_h->z*b_o->y + a_f->z*b_o->z + a_o->z;
-		(*c_s) = ts; (*c_h) = th; (*c_f) = tf; (*c_o) = to;
-	}
+	point3d ts, th, tf, to;
+	ts.x = a_s->x*b_s->x + a_h->x*b_s->y + a_f->x*b_s->z;
+	ts.y = a_s->y*b_s->x + a_h->y*b_s->y + a_f->y*b_s->z;
+	ts.z = a_s->z*b_s->x + a_h->z*b_s->y + a_f->z*b_s->z;
+	th.x = a_s->x*b_h->x + a_h->x*b_h->y + a_f->x*b_h->z;
+	th.y = a_s->y*b_h->x + a_h->y*b_h->y + a_f->y*b_h->z;
+	th.z = a_s->z*b_h->x + a_h->z*b_h->y + a_f->z*b_h->z;
+	tf.x = a_s->x*b_f->x + a_h->x*b_f->y + a_f->x*b_f->z;
+	tf.y = a_s->y*b_f->x + a_h->y*b_f->y + a_f->y*b_f->z;
+	tf.z = a_s->z*b_f->x + a_h->z*b_f->y + a_f->z*b_f->z;
+	to.x = a_s->x*b_o->x + a_h->x*b_o->y + a_f->x*b_o->z + a_o->x;
+	to.y = a_s->y*b_o->x + a_h->y*b_o->y + a_f->y*b_o->z + a_o->y;
+	to.z = a_s->z*b_o->x + a_h->z*b_o->y + a_f->z*b_o->z + a_o->z;
+	(*c_s) = ts; (*c_h) = th; (*c_f) = tf; (*c_o) = to;
 }
 
 static void setlimb (kfatype *kfa, long i, long p, long trans_type, short val)
