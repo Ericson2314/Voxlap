@@ -14325,10 +14325,13 @@ static inline unsigned long bswap (unsigned long a)
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"bswap	eax\n"
+		"bswap	%[a]\n"
 		".att_syntax prefix\n"
+		:    "=r" (a)
+		: [a] "0" (a)
+		:
 	);
+	return a;
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
