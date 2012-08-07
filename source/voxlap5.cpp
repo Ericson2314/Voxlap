@@ -489,13 +489,13 @@ static inline long isshldiv16safe (long a, long b)
 		"test	%[a], %[a]\n"
 		"js	short .Lskipneg0\n"
 		"neg	%[a]\n"
-	".Lskipneg0$:\n"
+	".Lskipneg0:\n"
 		"sar	%[a], 14\n"
 		
 		"test	%[b], %[b]\n"
 		"js	short .Lskipneg1\n"
 		"neg	%[b]\n"
-	".Lskipneg1$:\n"
+	".Lskipneg1:\n"
 			//abs((a<<16)/b) < (1<<30) //1 extra for good luck!
 			//-abs(a)>>14 > -abs(b)    //use -abs because safe for 0x80000000
 			//eax-edx < 0
@@ -594,24 +594,6 @@ static inline long dmulrethigh (long b, long c, long a, long d)
 	
 	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
-	
-	/*__asm__ __volatile__
-	(
-		".intel_syntax prefix\n"
-		"imul	%D\n"
-		"mov	%%ecx, %A\n"
-		"push	%%edx\n"
-		"mov	%%eax, %B\n"
-		"imul	%C\n"
-		"sub	%%eax, %%ecx\n"
-		"pop	%%ecx\n"
-		"sbb	%%edx, %%ecx\n"
-		".att_syntax prefix\n"
-		:    "=d" (a)
-		: [A] "a" (a), [B] "g" (b), [C] "g" (c), [D] "g" (d)
-		: "edx"
-	); */
-
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -10564,15 +10546,23 @@ static inline long dmulshr0 (long a, long d, long s, long t)
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"imul	dword ptr d\n"
-		"mov	ecx, eax\n"
-		"mov	eax, s\n"
-		"imul	dword ptr t\n"
-		"add	eax, ecx\n"
+		".intel_syntax prefix\n"
+		"imul	%[d]\n"
 		".att_syntax prefix\n"
+		:    "=a" (a)
+		: [a] "0" (a), [d] "r" (d)
+		:
 	);
+		__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"imul	%[d]\n"
+		".att_syntax prefix\n"
+		:    "=a" (s)
+		: [s] "0" (s), [d] "r" (t)
+		:
+	);
+	return a + s;
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
@@ -12887,19 +12877,34 @@ static inline long dmulshr22 (long a, long b, long c, long d)
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"imul	dword ptr b\n"
-		"mov	ecx, eax\n"
-		"push	edx\n"
-		"mov	eax, c\n"
-		"imul	dword ptr d\n"
-		"add	eax, ecx\n"
-		"pop	ecx\n"
-		"adc	edx, ecx\n"
-		"shrd	eax, edx, 22\n"
+		".intel_syntax prefix\n"
+		"imul	%[b]\n"
 		".att_syntax prefix\n"
+		:    "=a" (a),    "=d" (b)
+		: [a] "0" (a), [b] "1" (b)
+		:
 	);
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"imul	%[c]\n"
+		".att_syntax prefix\n"
+		:    "=a" (c),    "=d" (d)
+		: [c] "0" (c), [d] "1" (d)
+		:
+	);
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"add	%[c], %[a]\n"
+		"adc	%[d], %[b]\n"
+		"shrd	%[c], %[d], 22\n"
+		".att_syntax prefix\n"
+		:                              "=r" (c)
+		: [a] "r" (a), [b] "r" (b), [c] "0" (c), [d] "r" (d)
+		:
+	);
+	return c;
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
