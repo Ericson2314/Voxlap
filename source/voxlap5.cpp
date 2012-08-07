@@ -9447,13 +9447,13 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 							//ebx: p + x1*4
 							//ecx: plc + (x1-x0)*8
 							//edx: plc + (x1-x0)*8 + tp
-				"begdthalf:movq mm0, [eax*8+ecx]\n"  //mm0: A1R1G1B1 A0R0G0B0
+				".Lbegdthalf:movq mm0, [eax*8+ecx]\n"  //mm0: A1R1G1B1 A0R0G0B0
 					"pavgb mm0, [eax*8+edx]\n"       //mm0: A1R1G1B1 A0R0G0B0
 					"pshufw mm1, mm0, 0xe\n"         //mm1: ???????? A1R1G1B1
 					"pavgb mm0, mm1\n"               //mm1: ???????? AaRrGgBb
 					"movd [eax*4+ebx], mm0\n"
 					"inc eax\n"
-					"jnz short begdthalf\n"
+					"jnz short .Lbegdthalf\n"
 					"pop ebx\n"
 					".att_syntax prefix\n"
 				);
@@ -9507,14 +9507,14 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					"mov edi, x1\n"
 					"mov edx, x0\n"
 					"cmp edx, edi\n"
-					"jge short enddtnhalf\n"
+					"jge short .Lenddtnhalf\n"
 					"mov eax, p\n"
 					"mov esi, ui\n"
 					"mov ecx, plc\n"
 					"mov ebx, j\n"
 					"sub edx, edi\n"
 					"lea edi, [edi*4+eax]\n"
-				"begdtnhalf:\n"
+				".Lbegdtnhalf:\n"
 				#if 0
 					"mov eax, ecx\n"          //simple loop
 					"shr eax, 16\n"
@@ -9522,24 +9522,24 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					"add ecx, esi\n"
 					"mov [edx*4+edi], eax\n"
 					"add edx, 1\n"
-					"jnz short begdtnhalf\n"
+					"jnz short .Lbegdtnhalf\n"
 				#else
 					"lea eax, [ecx+esi]\n"    //unrolled once loop; uses movntq
 					"shr ecx, 16\n"
 					"add edx, 1\n"
 					"movd mm0, [ecx*4+ebx]\n"
 					"lea ecx, [eax+esi]\n"
-					"jz short preenddtnhalf\n"
+					"jz short .Lpreenddtnhalf\n"
 					"shr eax, 16\n"
 					"punpckldq mm0, [eax*4+ebx]\n"
 					"movntq [edx*4+edi-4], mm0\n"
 					"add edx, 1\n"
-					"jnz short begdtnhalf\n"
-					"jmp short enddtnhalf\n"
-				"preenddtnhalf:\n"
+					"jnz short .Lbegdtnhalf\n"
+					"jmp short .Lenddtnhalf\n"
+				".Lpreenddtnhalf:\n"
 					"movd [edx*4+edi-4], mm0\n"
 				#endif
-				"enddtnhalf:\n"
+				".Lenddtnhalf:\n"
 					"pop edi\n"
 					"pop esi\n"
 					"pop ebx\n"
