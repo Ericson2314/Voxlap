@@ -215,11 +215,11 @@ static inline long mulshr16 (long a, long d)
 	(
 		".intel_syntax prefix\n"
 		"imul	%[d]\n"
-		"shrd	%[a], %[d], 16\n"
+		"shrd	%[a], %%edx, 16\n"
 		".att_syntax prefix\n"
 		: [a] "=a" (a)
 		:      "0" (a), [d] "r" (d)
-		:
+		: "edx"
 	);
 	return a;
 	#endif
@@ -230,6 +230,36 @@ static inline long mulshr16 (long a, long d)
 		mov	edx, d
 		imul	edx
 		shrd	eax, edx, 16
+	}
+	#endif
+	#endif
+}
+
+static inline long mulshr24 (long a, long d)
+{
+	#ifdef __NOASM__
+	return (long)((((int64_t)a) * ((int64_t)d)) >> 24);
+	#else
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"imul	%[d]\n"
+		"shrd	%[a], %%edx, 24\n"
+		".att_syntax prefix\n"
+		: [a] "=a" (a)
+		:      "0" (a), [d] "r" (d)
+		: "edx"
+	);
+	return a;
+	#endif
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	_asm
+	{
+		mov eax, a
+		mov edx, d
+		imul edx
+		shrd eax, edx, 24
 	}
 	#endif
 	#endif
@@ -266,7 +296,7 @@ static inline int64_t mul64 (long a, long d)
 static inline long shldiv16 (long a, long b)
 {
 	#ifdef __NOASM__
-	return (long)((((int64_t)a) << 16) / ((int64_t)d));
+	return (long)((((int64_t)a) << 16) / ((int64_t)b));
 	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -352,36 +382,21 @@ static inline long isshldiv16safe (long a, long b)
 	#endif
 }
 
-static inline long mulshr24 (long a, long d)
-{
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
-	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-	_asm
-	{
-		mov eax, a
-		mov edx, d
-		imul edx
-		shrd eax, edx, 24
-	}
-	#endif
-}
-
 static inline long umulshr32 (long a, long d)
 {
 	#ifdef __NOASM__
-	return (long)(((uint64_t)a * (uint64_t)d) >> 32);
+	return (long)((((uint64_t)a) * ((uint64_t)d)) >> 32);
 	#else
-	long product;
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	long product;
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
 		"mul	%[d]\n" //dword ptr
 		".att_syntax prefix\n"
-		: [a] "=a" (a),    "=d" (product)
-		:      "0" (a), [d] "r" (d)
-		: "edx"
+		: "=d" (product)
+		:  "a" (a), [d] "r" (d)
+		:
 	);
 	return product;
 	#endif
