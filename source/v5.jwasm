@@ -58,18 +58,25 @@ ASSUME cs:text,ds:text
 PUBLIC CCALL(v5_asm_dep_unlock) ;Data Execution Prevention unlock (works under XP2 SP2)
 CCALL(v5_asm_dep_unlock):
 	IFDEF WIN32
-	EXTERN __imp__VirtualProtect@16:NEAR
-	sub esp, 4
-	pushd esp
-	pushd 40h ;PAGE_EXECUTE_READWRITE
-	mov eax, offset CCALL(dep_protect_end)
-	sub eax, offset CCALL(v5_asm_dep_unlock)
-	pushd eax
-	pushd offset CCALL(v5_asm_dep_unlock)
-	call dword ptr __imp__VirtualProtect@16
-	add esp, 4
-	ret
+		EXTERN __imp__VirtualProtect@16:NEAR
+		sub esp, 4
+		pushd esp
+		pushd 40h ;PAGE_EXECUTE_READWRITE 
+		pushd offset CCALL(dep_protect_end) - offset CCALL(v5_asm_dep_unlock)
+		pushd offset CCALL(v5_asm_dep_unlock)
+		call dword ptr __imp__VirtualProtect@16
+		add esp, 4
+		ret
 	ELSE
+		EXTERN mprotect:NEAR
+		mov  ebp,esp
+		sub  esp,18h
+		mov dword ptr [esp+8], 7h
+		mov dword ptr [esp+4], offset CCALL(dep_protect_end) - offset CCALL(v5_asm_dep_unlock)
+		mov dword ptr [esp],   offset CCALL(v5_asm_dep_unlock)
+		call dword ptr mprotect
+		leave
+		ret
 	ENDIF
 
 PUBLIC CCALL(cfasm), CCALL(skycast)

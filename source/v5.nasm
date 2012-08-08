@@ -64,6 +64,15 @@ CCALL(v5_asm_dep_unlock):
 	add esp, 4
 	retn
 	%else
+		EXTERN mprotect
+		mov  ebp,esp
+		sub  esp,18h
+		movd [esp+8], 7h
+		movd [esp+4], CCALL(dep_protect_end)-CCALL(v5_asm_dep_unlock)
+		movd [esp],   CCALL(v5_asm_dep_unlock)
+		call dword mprotect
+		leave
+		ret
 	%endif
 
 GLOBAL	CCALL(cfasm), CCALL(skycast)
