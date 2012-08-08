@@ -1483,6 +1483,11 @@ static int kensoundinit (int samprate, int numchannels, int bytespersamp)
 
 // Kensound code ends ---------------------------------------------------------
 
+void setvolume (long percentmax)
+{
+	//Dummy function to get rid of linking error for game.cpp
+}
+
 
 //Quitting routines ----------------------------------------------------------
 
