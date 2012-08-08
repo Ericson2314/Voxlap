@@ -439,6 +439,101 @@ static inline long scale (long a, long d, long c)
 	#endif
 }
 
+static inline long dmulshr0 (long a, long d, long s, long t)
+{
+	#ifdef __NOASM__
+	return a*d + s*t;
+	#else
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"imul	%[d]\n"
+		".att_syntax prefix\n"
+		:    "=a" (a)
+		: [a] "0" (a), [d] "r" (d)
+		:
+	);
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"imul	%[d]\n"
+		".att_syntax prefix\n"
+		:    "=a" (s)
+		: [s] "0" (s), [d] "r" (t)
+		:
+	);
+	return a + s;
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	_asm
+	{
+		mov	eax, a
+		imul	d
+		mov	ecx, eax
+		mov	eax, s
+		imul	t
+		add	eax, ecx
+	}
+	#endif
+	#endif
+}
+
+static inline long dmulshr22 (long a, long b, long c, long d)
+{
+	#ifdef __NOASM__
+	return (long)(((((int64_t)a)*((int64_t)b)) + (((int64_t)c)*((int64_t)d))) >> 22);
+	#else
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"imul	%[b]\n"
+		".att_syntax prefix\n"
+		:    "=a" (a),    "=d" (b)
+		: [a] "0" (a), [b] "1" (b)
+		:
+	);
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"imul	%[c]\n"
+		".att_syntax prefix\n"
+		:    "=a" (c),    "=d" (d)
+		: [c] "0" (c), [d] "1" (d)
+		:
+	);
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"add	%[c], %[a]\n"
+		"adc	%[d], %[b]\n"
+		"shrd	%[c], %[d], 22\n"
+		".att_syntax prefix\n"
+		:                              "=r" (c)
+		: [a] "r" (a), [b] "r" (b), [c] "0" (c), [d] "r" (d)
+		:
+	);
+	return c;
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	_asm
+	{
+		mov	eax, a
+		imul	b
+		mov	ecx, eax
+		push	edx
+		mov	eax, c
+		imul	d
+		add	eax, ecx
+		pop	ecx
+		adc	edx, ecx
+		shrd	eax, edx, 22
+	}
+	#endif
+	#endif
+}
+
 static inline long dmulrethigh (long b, long c, long a, long d)
 {
 	#ifdef __NOASM__
@@ -554,6 +649,38 @@ static inline void clearbuf (void *d, long c, long a)
 		mov	eax, a
 		rep	stosd
 		pop	edi
+	}
+	#endif
+	#endif
+}
+
+static inline unsigned long bswap (unsigned long a)
+{
+	#ifdef __NOASM__
+	#ifdef __GNUC__
+	return __builtin_bswap32(a);
+	#endif
+	#ifdef _MSC_VER
+	return _byteswap_ulong(a);
+	#endif
+	#else
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"bswap	%[a]\n"
+		".att_syntax prefix\n"
+		:    "=r" (a)
+		: [a] "0" (a)
+		:
+	);
+	return a;
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	_asm
+	{
+		mov	eax, a
+		bswap	eax
 	}
 	#endif
 	#endif
