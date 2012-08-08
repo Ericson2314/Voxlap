@@ -43,20 +43,21 @@ LNK_MODE               =$(LNK_Debug)
 # GNU Compiler Collection Macros
 !IFDEF __GNUC__
 CXX                    =gcc  #for GNU C++ Compiler
-LNK                    =ld   #for GNU linker
+LNK                    =gcc  #for GNU linker, call through compiler
+LNK_exec               =$(LNK)
 
 # Flags
 CXXFLAGS               =-o $(@) -c -funsigned-char -mwindows $(CXX_MODE) $(GFXCFLAGS) $(Random_Macros) # for GNU C++ Compiler (gcc)
 CMacroPre              =-D # #for GNU C++ Compiler (gcc)
 
-CXX_Debug              =
-CXX_Release            =
+CXX_Debug              =-ggdb
+CXX_Release            =-O3
 
 LNKFLAGS               =-o $(@) $(LNK_MODE) # for GNU linker (ld)
 LNKlibPre              =-l # for GNU linker (ld)
 
-LNK_Debug              =
-LNK_Release            =
+LNK_Debug              =-ggdb
+LNK_Release            =-O3
 
 !ENDIF
 # END GNU Compiler Collection Macros

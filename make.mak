@@ -58,13 +58,13 @@ cl_Release             =/Ox
 cl_MacroPre            =/D                # for Micrsoft Compiler(cl)
 
 gcc_FLAGS              =-o $(@) -c -funsigned-char -msse # for GNU C++ Compiler (gcc)
-gcc_Debug              =
-gcc_Release            =
+gcc_Debug              =-ggdb
+gcc_Release            =-O3
 gcc_MacroPre           =-D #                          # for GNU C++ Compiler (gcc)
 
 ld_FLAGS               =-o $(@)                       # for GNU linker (ld)
-ld_Debug               =
-ld_Release             =
+ld_Debug               =-ggdb
+ld_Release             =-O3
 ld_libPre              =-l #                          # for GNU linker (ld)
 ld_libSuf              =
 
@@ -74,8 +74,11 @@ link_Release           =
 link_libPre            =
 link_libSuf            =.lib                          # for Microsfoft Linker (link)
 
-
-
+ifeq "$(LNK)" "ld"
+LNK_exec               =gcc
+else
+LNK_exec               =$(LNK)
+endif
 
 # END Build Flags
 # -----------------------------------
