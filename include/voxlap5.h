@@ -1,8 +1,7 @@
 // VOXLAP engine by Ken Silverman (http://advsys.net/ken)
 // This file has been modified from Ken Silverman's original release
 
-#ifndef KEN_VOXLAP5_H
-#define KEN_VOXLAP5_H
+#pragma once
 
 #define MAXXDIM 1024
 #define MAXYDIM 768
@@ -295,6 +294,4 @@ extern void voxredraw ();
 
 #if defined(VOXLAP_C) && defined(__cplusplus)
 }
-#endif
-
 #endif

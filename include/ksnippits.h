@@ -2,6 +2,8 @@
  * ksnippits.h: Bit's of inline assembly Ken commonly used because the C compiler sucked          *
  **************************************************************************************************/
 
+#pragma once
+
 	//Ericson2314's dirty porting tricks
 #include "../include/porthacks.h"
 
