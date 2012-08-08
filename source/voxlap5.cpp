@@ -13879,6 +13879,14 @@ unsigned long pngocrc, pngoadcrc;
 
 static inline unsigned long bswap (unsigned long a)
 {
+	#ifdef __NOASM__
+	#ifdef __GNUC__
+	return __builtin_bswap32(a);
+	#endif
+	#ifdef _MSC_VER
+	return _byteswap_ulong(a);
+	#endif
+	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
@@ -13897,6 +13905,7 @@ static inline unsigned long bswap (unsigned long a)
 		mov	eax, a
 		bswap	eax
 	}
+	#endif
 	#endif
 }
 
