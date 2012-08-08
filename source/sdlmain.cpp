@@ -1617,7 +1617,9 @@ void quitloop ()
 
 void evilquit (const char *str) //Evil because this function makes awful assumptions!!!
 {
+#ifndef NOSOUND
 	kensoundclose();
+#endif
 	SDL_Quit();
 	if (str) fprintf(stderr,"fatal error! %s\n",str);
 	uninitapp();
@@ -1777,7 +1779,9 @@ static void sdlmsgloop(void)
 				break;
 #endif
 			case SDL_QUIT:
+#ifndef NOSOUND
 				kensoundclose();
+#endif
 				SDL_Quit();
 				uninitapp();
 				quitprogram = 1;
