@@ -68,6 +68,7 @@ LNK_Release            =-O3
 !IFDEF __MSVC__
 CXX                    =cl   #for Micrsoft Compiler
 LNK                    =link #for Microsfoft Linker
+LNK_exec               =$(LNK)
 
 # Flags
 CXXFLAGS               =/Fo$(@R) /c /J $(CXX_MODE) $(GFXCFLAGS) $(Random_Macros) # for Micrsoft Compiler(cl)
