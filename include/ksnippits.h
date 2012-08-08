@@ -442,7 +442,7 @@ static inline long scale (long a, long d, long c)
 static inline long dmulrethigh (long b, long c, long a, long d)
 {
 	#ifdef __NOASM__
-	
+	return (long)(((((int64_t)a)*((int64_t)b)) + (((int64_t)c)*((int64_t)d))) >> 32);
 	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
