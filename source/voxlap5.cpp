@@ -10071,6 +10071,9 @@ static equivectyp equivec;
 
 static inline long dmulshr0 (long a, long d, long s, long t)
 {
+	#ifdef __NOASM__
+	return a*d + s*t;
+	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
@@ -10102,6 +10105,7 @@ static inline long dmulshr0 (long a, long d, long s, long t)
 		imul	t
 		add	eax, ecx
 	}
+	#endif
 	#endif
 }
 
@@ -12416,11 +12420,11 @@ void setkv6 (vx5sprite *spr)
 
 #else
 
-//#ifdef _MSC_VER
-
-	//dmulshr22 = ((a*b + c*d)>>22)
 static inline long dmulshr22 (long a, long b, long c, long d)
 {
+	#ifdef __NOASM__
+	return (long)(((((int64_t)a)*((int64_t)b)) + (((int64_t)c)*((int64_t)d))) >> 22);
+	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
@@ -12468,10 +12472,9 @@ static inline long dmulshr22 (long a, long b, long c, long d)
 		shrd	eax, edx, 22
 	}
 	#endif
+	#endif
 }
 
-
-//#endif more mysterious _MSC_VER
 
 static kv6data *gfrezkv;
 static lpoint3d gfrezx, gfrezy, gfrezz, gfrezp;
