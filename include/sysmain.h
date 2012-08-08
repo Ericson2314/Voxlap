@@ -1,15 +1,14 @@
-﻿/***************************************************************************************************
-WINMAIN.CPP & SYSMAIN.H
-
-Windows layer code written by Ken Silverman (http://advsys.net/ken) (1997-2009)
-Additional modifications by Tom Dobrowolski (http://ged.ax.pl/~tomkh)
-You may use this code for non-commercial purposes as long as credit is maintained.
-***************************************************************************************************/
+﻿/**************************************************************************************************
+ * WINMAIN.CPP & SYSMAIN.H                                                                        *
+ *                                                                                                *
+ * Windows layer code written by Ken Silverman (http://advsys.net/ken) (1997-2009)                *
+ * Additional modifications by Tom Dobrowolski (http://ged.ax.pl/~tomkh)                          *
+ * You may use this code for non-commercial purposes as long as credit is maintained.             *
+ **************************************************************************************************/
 
 // This file has been modified from Ken Silverman's original release
 
-#ifndef KEN_SYSMAIN_H
-#define KEN_SYSMAIN_H
+#pragma once
 
 #if !defined(SYSMAIN_C) && !defined(__cplusplus) && !defined(SYSMAIN)
 #error "Cannot link C frontend to C++ Backend"
@@ -110,6 +109,4 @@ extern void code_rwx_unlock ( void * dep_protect_start, void * dep_protect_end);
 
 #if defined(SYSMAIN_C) && defined(__cplusplus)
 }
-#endif
-
 #endif

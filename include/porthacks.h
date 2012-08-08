@@ -2,6 +2,7 @@
  * porthacks.h: Macros-out differences between GCC & VS, and GNUC & MSVC                          *
  **************************************************************************************************/
 
+#pragma once
 
 /**
  * Compiler Directive Hacks
