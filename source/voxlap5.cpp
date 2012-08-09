@@ -7153,6 +7153,7 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 								#ifdef __NOASM__
 								*(long *)&tbuf[n] = mixc[zz][rand()%mixn[zz]];
 								mixn[zz] = 0;
+								#else
 								#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 								__asm__ __volatile__
 								(
@@ -7227,6 +7228,7 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 								#ifdef __NOASM__
 								*(long *)&tbuf[n] = mixc[cz][rand()%mixn[cz]];
 								mixn[cz] = 0;
+								#else
 								#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 								__asm__ __volatile__ 
 								(
@@ -8702,9 +8704,9 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 		_asm
 		{
 			mov eax, 256
-			xorps xmm7, xmm7    ;xmm7: 0,0,0,0
-			cvtsi2ss xmm6, eax  ;xmm6: ?,?,?,256
-			movlhps xmm6, xmm6  ;xmm6: ?,256,?,256
+			xorps xmm7, xmm7    //xmm7: 0,0,0,0
+			cvtsi2ss xmm6, eax  //xmm6: ?,?,?,256
+			movlhps xmm6, xmm6  //xmm6: ?,256,?,256
 		}
 		#endif
 	}
