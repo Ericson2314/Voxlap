@@ -9547,6 +9547,9 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 		__asm__ __volatile__
 		(
 			".intel_syntax noprefix\n"
+			"pxor mm7, mm7\n"
+			"movd mm5, white\n"
+			"movd mm4, black\n"
 			"punpcklbw mm5, mm7\n"   //mm5: [00Wa00Wr00Wg00Wb]
 			"punpcklbw mm4, mm7\n"   //mm4: [00Ba00Br00Bg00Bb]
 			"psubw mm5, mm4\n"       //mm5: each word range: -255 to 255
@@ -9557,6 +9560,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 			"psubw mm5, mm0\n"
 			"paddw mm5, mm1\n"
 			"psllw mm5, 4\n"         //mm5: [-WBa-WBr-WBg-WBb]
+			"movq mm6, rgbmask64\n"
 			".att_syntax prefix\n"
 		);
 		#endif
