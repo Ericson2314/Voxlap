@@ -4762,63 +4762,8 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 							while ((((long)tbuf[oldn+2])<<1) < z)
 							{
 								zz = (long)tbuf[oldn+2];
-								#ifdef NOASM
 								*(long *)&tbuf[n] = mixc[zz][rand()%mixn[zz]];
 								mixn[zz] = 0;
-								#else
-								#ifdef __GNUC__ //gcc inline asm
-								__asm__ __volatile__
-								(
-									".intel_syntax noprefix\n"
-									"mov eax, zz\n"
-									"mov ecx, mixn[eax*4]\n"
-									"mov dword ptr mixn[eax*4], 0\n"
-									"shl eax, 5\n"
-									"pxor mm0, mm0\n"
-									"movq mm2, qmulmip[ecx*8-8]\n"
-									"pcmpeqb mm6, mm6\n"
-									"movq mm7, mm0\n"
-								".Lvxlmipbeg0:\n"
-									"movd mm1, mixc[eax+ecx*4-4]\n"
-									"punpcklbw mm1, mm7\n"
-									"paddw mm0, mm1\n"
-									"dec ecx\n"
-									"jnz short .Lvxlmipbeg0\n"
-									"paddw mm0, mm0\n"
-									"psubw mm0, mm6\n" //rounding bias
-									"pmulhw mm0, mm2\n"
-									"packuswb mm0, mm0\n"
-									"mov eax, n\n"
-									"movd tbuf[eax], mm0\n"
-									".att_syntax prefix\n"
-								);
-								#endif
-								#ifdef _MSC_VER //msvc inline asm
-								_asm
-								{
-									mov eax, zz
-									mov ecx, mixn[eax*4]
-									mov mixn[eax*4], 0
-									shl eax, 5
-									pxor mm0, mm0
-									movq mm2, qmulmip[ecx*8-8]
-									pcmpeqb mm6, mm6
-									movq mm7, mm0
-								vxlmipbeg0:
-									movd mm1, mixc[eax+ecx*4-4]
-									punpcklbw mm1, mm7
-									paddw mm0, mm1
-									dec ecx
-									jnz short vxlmipbeg0
-									paddw mm0, mm0
-									psubw mm0, mm6 //rounding bias
-									pmulhw mm0, mm2
-									packuswb mm0, mm0
-									mov eax, n
-									movd tbuf[eax], mm0
-								}
-								#endif
-								#endif
 								tbuf[oldn+2]++; n += 4;
 							}
 						}
@@ -4837,63 +4782,8 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 							}
 							while ((cz<<1) < z)
 							{
-								#ifdef NOASM
 								*(long *)&tbuf[n] = mixc[cz][rand()%mixn[cz]];
 								mixn[cz] = 0;
-								#else
-								#ifdef __GNUC__ //gcc inline asm
-								__asm__ __volatile__
-								(
-									".intel_syntax noprefix\n"
-									"mov eax, cz\n"
-									"mov ecx, mixn[eax*4]\n"
-									"mov dword ptr mixn[eax*4], 0\n"
-									"shl eax, 5\n"
-									"pxor mm0, mm0\n"
-									"movq mm2, qmulmip[ecx*8-8]\n"
-									"pcmpeqb mm6, mm6\n"
-									"movq mm7, mm0\n"
-								".Lvxlmipbeg1:\n"
-									"movd mm1, mixc[eax+ecx*4-4]\n"
-									"punpcklbw mm1, mm7\n"
-									"paddw mm0, mm1\n"
-									"dec ecx\n"
-									"jnz short .Lvxlmipbeg1\n"
-									"paddw mm0, mm0\n"
-									"psubw mm0, mm6\n" //rounding bias
-									"pmulhw mm0, mm2\n"
-									"packuswb mm0, mm0\n"
-									"mov eax, n\n"
-									"movd tbuf[eax], mm0\n"
-									".att_syntax prefix\n"
-								);
-								#endif
-								#ifdef _MSC_VER //msvc inline asm
-								_asm
-								{
-									mov eax, cz
-									mov ecx, mixn[eax*4]
-									mov mixn[eax*4], 0
-									shl eax, 5
-									pxor mm0, mm0
-									movq mm2, qmulmip[ecx*8-8]
-									pcmpeqb mm6, mm6
-									movq mm7, mm0
-								vxlmipbeg1:
-									movd mm1, mixc[eax+ecx*4-4]
-									punpcklbw mm1, mm7
-									paddw mm0, mm1
-									dec ecx
-									jnz short vxlmipbeg1
-									paddw mm0, mm0
-									psubw mm0, mm6 //rounding bias
-									pmulhw mm0, mm2
-									packuswb mm0, mm0
-									mov eax, n
-									movd tbuf[eax], mm0
-								}
-								#endif
-								#endif
 								cz++; n += 4;
 							}
 						}
@@ -4957,29 +4847,6 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 		}
 		gmipnum--;
 	}
-
-	clearMMX();
-
-#if 0 //TEMP HACK!!!
-	{
-	FILE *fil;
-	dpoint3d dp;
-	if (!(fil = fopen("temp512.vxl","wb"))) return;
-	i = 0x09072000; fwrite(&i,4,1,fil);  //Version
-	i = (VSID>>1); fwrite(&i,4,1,fil);
-	i = (VSID>>1); fwrite(&i,4,1,fil);
-	dp.x = (double)i*.5; dp.y = (double)i*.5; dp.z = (double)i*.5;
-	fwrite(&dp,24,1,fil);
-	dp.x = 1.0; dp.y = 0.0; dp.z = 0.0; fwrite(&dp,24,1,fil);
-	dp.x = 0.0; dp.y = 0.0; dp.z = 1.0; fwrite(&dp,24,1,fil);
-	dp.x = 0.0; dp.y =-1.0; dp.z = 0.0; fwrite(&dp,24,1,fil);
-	for(i=0;i<(VSID>>1)*(VSID>>1);i++)
-		fwrite((void *)sptr[i+VSID*VSID],slng(sptr[i+VSID*VSID]),1,fil);
-	fclose(fil);
-	}
-	gmipnum = 1;
-#endif
-
 }
 
 void setsphere (lpoint3d *hit, long hitrad, long dacol)
