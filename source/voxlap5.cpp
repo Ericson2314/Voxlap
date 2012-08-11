@@ -9389,53 +9389,6 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 	ub = pu[0] - px[0]*ux - py[0]*uy;
 	vb = pv[0] - px[0]*vx - py[0]*vy;
 
-#if 1
-		//Make sure k's are in good range for conversion to integers...
-	t = fabs(ux);
-	if (fabs(uy) > t) t = fabs(uy);
-	if (fabs(ub) > t) t = fabs(ub);
-	if (fabs(vx) > t) t = fabs(vx);
-	if (fabs(vy) > t) t = fabs(vy);
-	if (fabs(vb) > t) t = fabs(vb);
-	if (fabs(dx) > t) t = fabs(dx);
-	if (fabs(dy) > t) t = fabs(dy);
-	if (fabs(db) > t) t = fabs(db);
-	scaler = -268435456.0 / t;
-	ux *= scaler; uy *= scaler; ub *= scaler;
-	vx *= scaler; vy *= scaler; vb *= scaler;
-	dx *= scaler; dy *= scaler; db *= scaler;
-	ftol(dx,&ddi);
-	uvmax = (rysiz-1)*rbpl + (rxsiz<<2);
-
-	scaler = 1.f/scaler; t = dx*scaler;
-	if (cputype&(1<<25))
-	{
-		#ifdef __GNUC__ //gcc inline asm
-		__asm__ __volatile__ //SSE
-		(
-			".intel_syntax noprefix\n"
-			"movss xmm6, t\n"         //xmm6: -,-,-,dx*scaler
-			"shufps xmm6, xmm6, 0\n"  //xmm6: dx*scaler,dx*scaler,dx*scaler,dx*scaler
-			"movaps xmm7, xmm6\n"     //xmm7: dx*scaler,dx*scaler,dx*scaler,dx*scaler
-			"mulps xmm6, dpqmulval\n" //xmm6: dx*scaler*3,dx*scaler*2,dx*scaler*1,0
-			"mulps xmm7, dpqfour\n"   //xmm7: dx*scaler*4,dx*scaler*4,dx*scaler*4,dx*scaler*4
-			".att_syntax prefix\n"
-		);
-		#endif
-		#ifdef _MSC_VER //msvc inline asm
-		_asm //SSE
-		{
-			movss xmm6, t         //xmm6: -,-,-,dx*scaler
-			shufps xmm6, xmm6, 0  //xmm6: dx*scaler,dx*scaler,dx*scaler,dx*scaler
-			movaps xmm7, xmm6     //xmm7: dx*scaler,dx*scaler,dx*scaler,dx*scaler
-			mulps xmm6, dpqmulval //xmm6: dx*scaler*3,dx*scaler*2,dx*scaler*1,0
-			mulps xmm7, dpqfour   //xmm7: dx*scaler*4,dx*scaler*4,dx*scaler*4,dx*scaler*4
-		}
-		#endif
-	}
-	else { dpq3dn[0] = 0; dpq3dn[1] = t; dpq3dn[2] = dpq3dn[3] = t+t; } //3DNow!
-#endif
-
 	imin = (py[1]<py[0]); imax = 1-imin;
 	for(i=n-1;i>1;i--)
 	{
@@ -9475,7 +9428,6 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 				if (sx >= sxe) continue;
 				p  = (long *)(sy*bytesperline+(sx<<2)+frameplace);
 				pe = (long *)(sy*bytesperline+(sxe<<2)+frameplace);
-			#if 0
 					//Brute force
 				do
 				{
@@ -9491,123 +9443,6 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 					}
 					p++; sx++;
 				} while (p < pe);
-			#else
-					//Optimized (in C) hyperbolic texture-mapping (Added Z-buffer using SSE/3DNow! for recip's)
-				t = dx*(float)sx + dy*(float)sy + db; r = 1.0 / t;
-				u = ux*(float)sx + uy*(float)sy + ub; ftol(u*r-.5,&iu);
-				v = vx*(float)sx + vy*(float)sy + vb; ftol(v*r-.5,&iv);
-				ftol(t,&dd);
-				ftol((float)iu*dx - ux,&uui); ftol((float)iu*t - u,&uu);
-				ftol((float)iv*dx - vx,&vvi); ftol((float)iv*t - v,&vv);
-				if (ux*t < u*dx) k =    -4; else { uui = -(uui+ddi); uu = -(uu+dd); k =    4; }
-				if (vx*t < v*dx) l = -rbpl; else { vvi = -(vvi+ddi); vv = -(vv+dd); l = rbpl; }
-				iu = iv*rbpl + (iu<<2);
-
-				t *= scaler;
-				#ifdef __GNUC__ //gcc inline asm
-				__asm__ __volatile__
-				(
-					".intel_syntax noprefix\n"
-					"mov	ecx, sxe\n"
-					"sub	ecx, sx\n"
-					"xor	eax, eax\n"
-					"lea	ecx, [ecx*4]\n"
-					"sub	eax, ecx\n"
-					"add	ecx, offset dpqdistlut\n"
-
-					"test dword ptr cputype, 1 shl 25\n"
-					"jz short .Ldpqpre3dn\n"
-
-					"movss	xmm0, t\n" //dd+ddi*3 dd+ddi*2 dd+ddi*1 dd+ddi*0
-					"shufps	xmm0, xmm0, 0\n"
-					"addps	xmm0, xmm6\n"
-				".Ldpqbegsse:\n"
-					"rcpps	xmm1, xmm0\n"
-					"addps	xmm0, xmm7\n"
-					"movaps	[eax+ecx], xmm1\n"
-					"add	eax, 16\n"
-					"jl	short .Ldpqbegsse\n"
-					"jmp	short .Ldpqendit\n"
-
-				".Ldpqpre3dn:\n"
-					"movd	mm0, t\n" //dd+ddi*1 dd+ddi*0
-					"punpckldq	mm0, mm0\n"
-					"pfadd	mm0, dpq3dn[0]\n"
-					"movq	mm7, dpq3dn[8]\n"
-				".Ldpqbeg3dn:\n"
-					"pswapd	mm2, mm0\n"
-					"pfrcp	mm1, mm0\n"     //mm1: 1/mm0l 1/mm0l
-					"pfrcp	mm2, mm2\n"     //mm2: 1/mm0h 1/mm0h
-					"punpckldq	mm1, mm2\n" //mm1: 1/mm0h 1/mm0l
-					"pfadd	mm0, mm7\n"
-					"movq	[eax+ecx], mm1\n"
-					"add	eax, 8\n"
-					"jl	short .Ldpqbeg3dn\n"
-					"femms\n"
-				".Ldpqendit:\n"
-					".att_syntax prefix\n"
-				);
-				#endif
-				#ifdef _MSC_VER //msvc inline asm
-				_asm
-				{
-					mov	ecx, sxe
-					sub	ecx, sx
-					xor	eax, eax
-					lea	ecx, [ecx*4]
-					sub	eax, ecx
-					add	ecx, offset dpqdistlut
-
-					test	cputype, 1 shl 25
-					jz	short dpqpre3dn
-
-					movss	xmm0, t //dd+ddi*3 dd+ddi*2 dd+ddi*1 dd+ddi*0
-					shufps	xmm0, xmm0, 0
-					addps	xmm0, xmm6
-				dpqbegsse:
-					rcpps	xmm1, xmm0
-					addps	xmm0, xmm7
-					movaps	[eax+ecx], xmm1
-					add	eax, 16
-					jl	short dpqbegsse
-					jmp	short dpqendit
-
-				dpqpre3dn:
-					movd	mm0, t //dd+ddi*1 dd+ddi*0
-					punpckldq	mm0, mm0
-					pfadd	mm0, dpq3dn[0]
-					movq	mm7, dpq3dn[8]
-				dpqbeg3dn:
-					pswapd	mm2, mm0
-					pfrcp	mm1, mm0     //mm1: 1/mm0l 1/mm0l
-					pfrcp	mm2, mm2     //mm2: 1/mm0h 1/mm0h
-					punpckldq	mm1, mm2 //mm1: 1/mm0h 1/mm0l
-					pfadd	mm0, mm7
-					movq	[eax+ecx], mm1
-					add	eax, 8
-					jl	short dpqbeg3dn
-					femms
-				dpqendit:
-				}
-				#endif
-				distlutoffs = ((long)dpqdistlut)-((long)p);
-				do
-				{
-				#if (USEZBUFFER != 0)
-					if (*(long *)(((long)p)+zbufoff) > *(long *)(((long)p)+distlutoffs))
-					{
-						*(long *)(((long)p)+zbufoff) = *(long *)(((long)p)+distlutoffs);
-				#endif
-						if ((unsigned long)iu < uvmax) p[0] = *(long *)(rpic+iu);
-				#if (USEZBUFFER != 0)
-					}
-				#endif
-					dd += ddi;
-					uu += uui; while (uu < 0) { iu += k; uui -= ddi; uu -= dd; }
-					vv += vvi; while (vv < 0) { iu += l; vvi -= ddi; vv -= dd; }
-					p++;
-				} while (p < pe);
-			#endif
 			}
 		}
 		i = j;
