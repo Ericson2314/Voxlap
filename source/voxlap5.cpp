@@ -9160,17 +9160,6 @@ void drawpicinquad (long rpic, long rbpl, long rxsiz, long rysiz,
 	long i, j, k, l, imin, imax, sx, sxe, sy, sy1, dd, uu, vv, ddi, uui, vvi;
 	long x, xi, *p, *pe, uvmax, iu, iv;
 
-	#if defined(__GNUC__) && !defined(NOASM) //only for gcc inline asm
-	register lpoint2d reg0 asm("mm0");
-	register lpoint2d reg1 asm("mm1");
-	register lpoint2d reg2 asm("mm2");
-	//register lpoint2d reg3 asm("mm3");
-	register lpoint2d reg4 asm("mm4");
-	register lpoint2d reg5 asm("mm5");
-	register lpoint2d reg6 asm("mm6");
-	register lpoint2d reg7 asm("mm7");
-	#endif
-
 	px[0] = x0; px[1] = x1; px[2] = x2; px[3] = x3;
 	py[0] = y0; py[1] = y1; py[2] = y2; py[3] = y3;
 
@@ -9302,17 +9291,6 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 	long x, xi, *p, *pe, uvmax, iu, iv, n;
 	long dd, uu, vv, ddi, uui, vvi, distlutoffs;
 
-	#if defined(__GNUC__) && !defined(NOASM) //only for gcc inline asm
-	//register lpoint2d reg0 asm("xmm0");
-	//register lpoint2d reg1 asm("xmm1");
-	//register lpoint2d reg2 asm("xmm2");
-	//register lpoint2d reg3 asm("xmm3");
-	//register lpoint2d reg4 asm("xmm4");
-	//register lpoint2d reg5 asm("xmm5");
-	register lpoint2d reg6 asm("xmm6");
-	register lpoint2d reg7 asm("xmm7");
-	#endif
-
 	px2[0] = x0; py2[0] = y0; pz2[0] = z0; pu2[0] = u0; pv2[0] = v0;
 	px2[1] = x1; py2[1] = y1; pz2[1] = z1; pu2[1] = u1; pv2[1] = v1;
 	px2[2] = x2; py2[2] = y2; pz2[2] = z2; pu2[2] = u2; pv2[2] = v2;
@@ -9411,55 +9389,6 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 	ub = pu[0] - px[0]*ux - py[0]*uy;
 	vb = pv[0] - px[0]*vx - py[0]*vy;
 
-#if 1
-		//Make sure k's are in good range for conversion to integers...
-	t = fabs(ux);
-	if (fabs(uy) > t) t = fabs(uy);
-	if (fabs(ub) > t) t = fabs(ub);
-	if (fabs(vx) > t) t = fabs(vx);
-	if (fabs(vy) > t) t = fabs(vy);
-	if (fabs(vb) > t) t = fabs(vb);
-	if (fabs(dx) > t) t = fabs(dx);
-	if (fabs(dy) > t) t = fabs(dy);
-	if (fabs(db) > t) t = fabs(db);
-	scaler = -268435456.0 / t;
-	ux *= scaler; uy *= scaler; ub *= scaler;
-	vx *= scaler; vy *= scaler; vb *= scaler;
-	dx *= scaler; dy *= scaler; db *= scaler;
-	ftol(dx,&ddi);
-	uvmax = (rysiz-1)*rbpl + (rxsiz<<2);
-
-	scaler = 1.f/scaler; t = dx*scaler;
-	if (cputype&(1<<25))
-	{
-		#ifdef __GNUC__ //gcc inline asm
-		__asm__ __volatile__ //SSE
-		(
-			                            //xmm6: -,-,-,dx*scaler
-			"shufps	$0, %[x6], %[x6]\n" //xmm6: dx*scaler,dx*scaler,dx*scaler,dx*scaler
-			"movaps	%[x6], %[x7]\n"     //xmm7: dx*scaler,dx*scaler,dx*scaler,dx*scaler
-			"mulps	%c[mulv], %[x6]\n"  //xmm6: dx*scaler*3,dx*scaler*2,dx*scaler*1,0
-			"mulps	%c[four], %[x6]\n"  //xmm7: dx*scaler*4,dx*scaler*4,dx*scaler*4,dx*scaler*4
-			:     "=x" (reg6), [x7] "=x" (reg7)
-			: [x6] "0" (t),
-			  [mulv] "p" (&dpqmulval), [four] "p" (&dpqfour)
-			:
-		);
-		#endif
-		#ifdef _MSC_VER //msvc inline asm
-		_asm //SSE
-		{
-			movss	xmm6, t         //xmm6: -,-,-,dx*scaler
-			shufps	xmm6, xmm6, 0   //xmm6: dx*scaler,dx*scaler,dx*scaler,dx*scaler
-			movaps	xmm7, xmm6      //xmm7: dx*scaler,dx*scaler,dx*scaler,dx*scaler
-			mulps	xmm6, dpqmulval //xmm6: dx*scaler*3,dx*scaler*2,dx*scaler*1,0
-			mulps	xmm7, dpqfour   //xmm7: dx*scaler*4,dx*scaler*4,dx*scaler*4,dx*scaler*4
-		}
-		#endif
-	}
-	else { dpq3dn[0] = 0; dpq3dn[1] = t; dpq3dn[2] = dpq3dn[3] = t+t; } //3DNow!
-#endif
-
 	imin = (py[1]<py[0]); imax = 1-imin;
 	for(i=n-1;i>1;i--)
 	{
@@ -9499,7 +9428,6 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 				if (sx >= sxe) continue;
 				p  = (long *)(sy*bytesperline+(sx<<2)+frameplace);
 				pe = (long *)(sy*bytesperline+(sxe<<2)+frameplace);
-			#if 0
 					//Brute force
 				do
 				{
@@ -9515,142 +9443,6 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 					}
 					p++; sx++;
 				} while (p < pe);
-			#else
-					//Optimized (in C) hyperbolic texture-mapping (Added Z-buffer using SSE/3DNow! for recip's)
-				t = dx*(float)sx + dy*(float)sy + db; r = 1.0 / t;
-				u = ux*(float)sx + uy*(float)sy + ub; ftol(u*r-.5,&iu);
-				v = vx*(float)sx + vy*(float)sy + vb; ftol(v*r-.5,&iv);
-				ftol(t,&dd);
-				ftol((float)iu*dx - ux,&uui); ftol((float)iu*t - u,&uu);
-				ftol((float)iv*dx - vx,&vvi); ftol((float)iv*t - v,&vv);
-				if (ux*t < u*dx) k =    -4; else { uui = -(uui+ddi); uu = -(uu+dd); k =    4; }
-				if (vx*t < v*dx) l = -rbpl; else { vvi = -(vvi+ddi); vv = -(vv+dd); l = rbpl; }
-				iu = iv*rbpl + (iu<<2);
-
-				t *= scaler;
-
-				if (cputype&(1<<25)) {
-					#ifdef __GNUC__ //gcc inline asm
-					__asm__ __volatile__
-					(
-						"sub	%[c], %[a]\n"
-						"add	%[distlut], %[c]\n" //distlut not deref
-
-						//dd+ddi*3 dd+ddi*2 dd+ddi*1 dd+ddi*0
-						"shufps	$0, %[x0], %[x0]\n"
-						"addps	%[x6], %[x0]\n"
-					".Ldpqbegsse:\n"
-						"rcpps	%[x0], %[x1]\n"
-						"addps  %[x7], %[x0]\n"
-						"movaps	%[x1], (%[a],%[c])\n"
-						"add	$16, %[a]\n"
-						"jl	.Ldpqbegsse\n"
-						"femms\n"
-						:
-						: [a] "r" (0), [c] "r" (4*(sxe - sx)),
-						  [distlut] "p" (&dpqdistlut),
-						  [x0] "x" (t), [x1] "x" (0),
-						  [x6] "x" (reg6), [x7] "x" (reg7)
-						:
-					);
-					#endif
-					#ifdef _MSC_VER //msvc inline asm
-					_asm
-					{
-						mov	ecx, sxe
-						sub	ecx, sx
-						xor	eax, eax
-						lea	ecx, [ecx*4]
-						sub	eax, ecx
-						add	ecx, offset dpqdistlut
-
-						movss	xmm0, t //dd+ddi*3 dd+ddi*2 dd+ddi*1 dd+ddi*0
-						shufps	xmm0, xmm0, 0
-						addps	xmm0, xmm6
-					dpqbegsse:
-						rcpps	xmm1, xmm0
-						addps	xmm0, xmm7
-						movaps	[eax+ecx], xmm1
-						add	eax, 16
-						jl	short dpqbegsse
-						femms
-					}
-					#endif
-				}
-				else
-				{
-					#ifdef __GNUC__ //gcc inline asm
-					__asm__ __volatile__
-					(
-						"sub	%[c], %[a]\n"
-						"add	%[distlut], %[c]\n" //distlut not deref
-
-						"punpckldq	%[y0], %[y0]\n"
-						"pfadd	%c[dpq],%[y0]\n"
-					".Ldpqbeg3dn:\n"
-						"pswapd	%[y0], %[y2]\n"
-						"pfrcp	%[y0], %[y1]\n"     //mm1: 1/mm0l 1/mm0l
-						"pfrcp	%[y2], %[y2]\n"     //mm2: 1/mm0h 1/mm0h
-						"punpckldq	%[y2], %[y1]\n" //mm1: 1/mm0h 1/mm0l
-						"pfadd	%[y7], %[y0]\n"
-						"movq	%[y0], (%[a],%[c])\n"
-						"add	$8, %[a]\n"
-						"jl	.Ldpqbeg3dn\n"
-						"femms\n"
-						:
-						: [a] "r" (0), [c] "r" (4*(sxe - sx)),
-						  [distlut] "p" (&dpqdistlut), [dpq] "p" (&dpq3dn), //(lpoint2d*)
-						  [y1] "y" (0), [y2] "y" (0),
-						  [y0] "y" (t), [y7] "y" (dpq3dn[8])
-						:
-					);
-					#endif
-					#ifdef _MSC_VER //msvc inline asm
-					_asm
-					{
-						mov	ecx, sxe
-						sub	ecx, sx
-						xor	eax, eax
-						lea	ecx, [ecx*4]
-						sub	eax, ecx
-						add	ecx, offset dpqdistlut
-
-						movd	mm0, t           //dd+ddi*1 dd+ddi*0
-						punpckldq	mm0, mm0
-						pfadd	mm0, dpq3dn[0]
-						movq	mm7, dpq3dn[8]
-					dpqbeg3dn:
-						pswapd	mm2, mm0
-						pfrcp	mm1, mm0         //mm1: 1/mm0l 1/mm0l
-						pfrcp	mm2, mm2         //mm2: 1/mm0h 1/mm0h
-						punpckldq	mm1, mm2     //mm1: 1/mm0h 1/mm0l
-						pfadd	mm0, mm7
-						movq	[eax+ecx], mm1
-						add	eax, 8
-						jl	short dpqbeg3dn
-						femms
-					}
-					#endif
-				}
-
-				distlutoffs = ((long)dpqdistlut)-((long)p);
-				do
-				{
-				#if (USEZBUFFER != 0)
-					if (*(long *)(((long)p)+zbufoff) > *(long *)(((long)p)+distlutoffs))
-					{
-						*(long *)(((long)p)+zbufoff) = *(long *)(((long)p)+distlutoffs);
-				#endif
-						if ((unsigned long)iu < uvmax) p[0] = *(long *)(rpic+iu);
-				#if (USEZBUFFER != 0)
-					}
-				#endif
-					dd += ddi;
-					uu += uui; while (uu < 0) { iu += k; uui -= ddi; uu -= dd; }
-					vv += vvi; while (vv < 0) { iu += l; vvi -= ddi; vv -= dd; }
-					p++;
-				} while (p < pe);
-			#endif
 			}
 		}
 		i = j;
