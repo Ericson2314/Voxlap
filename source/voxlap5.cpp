@@ -6168,144 +6168,20 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 
 	ndacol = (dacol==-1)-2;
 
-	if (cputype&(1<<25))
-	{
-		#ifdef __GNUC__ //gcc inline asm
-		__asm__ __volatile__
-		(
-			"mov	$256,%eax\n"
-			"xorps	%xmm7,%xmm7\n"      //xmm7: 0,0,0,0
-			"cvtsi2ss	%eax,%xmm6\n"   //xmm6: ?,?,?,256
-			"movlhps	%xmm6,%xmm6\n"  //xmm6: ?,256,?,256
-		);
-		#endif
-		#ifdef _MSC_VER //msvc inline asm
-		_asm
-		{
-			mov eax, 256
-			xorps xmm7, xmm7    //xmm7: 0,0,0,0
-			cvtsi2ss xmm6, eax  //xmm6: ?,?,?,256
-			movlhps xmm6, xmm6  //xmm6: ?,256,?,256
-		}
-		#endif
-	}
-
 	nrad = (float)numcurs / ((float)vx5.currad*(float)vx5.currad + 256.0);
 	for(y=ys;y<=ye;y++)
 		for(x=xs;x<=xe;x++)
 		{
-			if (cputype&(1<<25))
-			{
-				#ifdef __GNUC__ //gcc inline asm
-				__asm__ __volatile__
-				(
-					".intel_syntax noprefix\n"
-					"cvtsi2ss	%%xmm0, %[x]\n"     //xmm0:?,?,?,x
-					"cvtsi2ss	%%xmm7, %[y]\n"     //xmm7:0,0,0,y
-					"movlhps	%%xmm0, %%xmm7\n"   //xmm0:0,y,?,x
-					"shufps	%%xmm0, %%xmm0, 0x08\n" //xmm0:x,x,y,x
-					".att_syntax prefix"
-					:
-					: [x] "r" (x), [y] "r" (y)
-					:
-				);
-				#endif
-				#ifdef _MSC_VER //msvc inline asm
-				_asm
-				{
-					cvtsi2ss	xmm0, x      //xmm0:?,?,?,x
-					cvtsi2ss	xmm7, y      //xmm7:0,0,0,y
-					movlhps	xmm0, xmm7       //xmm0:0,y,?,x
-					shufps	xmm0, xmm0, 0x08 //xmm0:x,x,y,x
-				}
-				#endif
-			}
-
 			got = 0;
 			for(z=zs;z<=ze;z++)
 			{
-				if (cputype&(1<<25))
+				v = 0;
+				for(i=numcurs-1;i>=0;i--)
 				{
-					#ifdef __GNUC__ //gcc inline asm
-					__asm__ __volatile__
-					(
-						".intel_syntax noprefix\n"
-						"movhlps xmm3, xmm7\n"       //xmm3:?,?,0,0
-
-						".intel_syntax prefix\n"
-						"cvtsi2ss %%xmm7, %[z]\n"    //xmm7:0,0,0,z
-						".intel_syntax noprefix\n"
-
-						"movlhps xmm0, xmm7\n"       //xmm0:0,z,y,x
-
-						".intel_syntax prefix\n"
-						"mov %%eax, %[numcurs]\n"
-						"mov %%edx, %[p]\n"
-						".intel_syntax noprefix\n"
-
-						"lea eax, [eax+eax*2-3]\n"
-					".Lbeg:\n"
-						"movups xmm1, [edx+eax*4]\n" //xmm1: ?,pz,py,pz
-						"subps xmm1, xmm0\n"         //xmm1: ?,dz,dy,dx
-						"mulps xmm1, xmm1\n"         //xmm1: ?,dzý,dyý,dxý
-						"movhlps xmm6, xmm1\n"       //xmm6: ?,256,?,dzý
-						"shufps xmm1, xmm6, 0x84\n"  //xmm1: 256,dzý,dyý,dxý
-						"movhlps xmm2, xmm1\n"       //xmm2: ?,?,256,dzý
-						"addps xmm1, xmm2\n"         //xmm1: ?,?,dyý+256,dxý+dzý
-						"movss xmm2, xmm1\n"         //xmm2: ?,?,256,dxý+dzý
-						"shufps xmm1, xmm1, 0x1\n"   //xmm1: dxý+dzý,dxý+dzý,dxý+dzý,dyý+256
-						"addss xmm1, xmm2\n"         //xmm1: ?,?,?,dxý+dyý+dzý+256
-						"rcpss xmm1, xmm1\n"         //xmm1: ?,?,?,1/(dxý+dyý+dzý+256)
-						"addss xmm3, xmm1\n"
-						"sub eax, 3\n"
-						"jnc short .Lbeg\n"
-
-						".intel_syntax prefix\n"
-						"movss [%[v]], %%xmm3\n"
-						".att_syntax prefix\n"
-						:
-						: [z] "r" (z), [v] "r" (&v), [numcurs] "r" (numcurs), [p] "r" (p)
-						: "eax", "edx"
-					);
-					#endif
-					#ifdef _MSC_VER //msvc inline asm
-					_asm
-					{
-						movhlps xmm3, xmm7       //xmm3:?,?,0,0
-						cvtsi2ss xmm7, z         //xmm7:0,0,0,z
-						movlhps xmm0, xmm7       //xmm0:0,z,y,x
-						mov eax, numcurs
-						mov edx, p
-						lea eax, [eax+eax*2-3]
-					beg:
-						movups xmm1, [edx+eax*4] //xmm1: ?,pz,py,pz
-						subps xmm1, xmm0         //xmm1: ?,dz,dy,dx
-						mulps xmm1, xmm1         //xmm1: ?,dzý,dyý,dxý
-						movhlps xmm6, xmm1       //xmm6: ?,256,?,dzý
-						shufps xmm1, xmm6, 0x84  //xmm1: 256,dzý,dyý,dxý
-						movhlps xmm2, xmm1       //xmm2: ?,?,256,dzý
-						addps xmm1, xmm2         //xmm1: ?,?,dyý+256,dxý+dzý
-						movss xmm2, xmm1         //xmm2: ?,?,256,dxý+dzý
-						shufps xmm1, xmm1, 0x1   //xmm1: dxý+dzý,dxý+dzý,dxý+dzý,dyý+256
-						addss xmm1, xmm2         //xmm1: ?,?,?,dxý+dyý+dzý+256
-						rcpss xmm1, xmm1         //xmm1: ?,?,?,1/(dxý+dyý+dzý+256)
-						addss xmm3, xmm1
-						sub eax, 3
-						jnc short beg
-						movss v, xmm3
-					}
-					#endif
-				}
-				else
-				{
-					v = 0;
-					for(i=numcurs-1;i>=0;i--)
-					{
-						dx = p[i].x-(float)x;
-						dy = p[i].y-(float)y;
-						dz = p[i].z-(float)z;
-						v += 1.0f / (dx*dx + dy*dy + dz*dz + 256.0f);
-					}
+					dx = p[i].x-(float)x;
+					dy = p[i].y-(float)y;
+					dz = p[i].z-(float)z;
+					v += 1.0f / (dx*dx + dy*dy + dz*dz + 256.0f);
 				}
 				if (*(long *)&v > *(long *)&nrad) { templongbuf[z] = ndacol; got = 1; }
 			}
