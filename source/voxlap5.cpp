@@ -12213,66 +12213,7 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 									h = tp.x*fx+tp.y*fy+tp.z*fz; if (*(long *)&h >= 0) continue;
 									g = fx*fx+fy*fy+fz*fz; if (g >= vx5.lightsrc[j].r2) continue;
 
-									#ifdef NOASM
 									g = 1.0/(g*sqrt(g))-lightsub[i]; //1.0/g;
-									#else
-									if (cputype&(1<<25))
-									{
-										#ifdef __GNUC__ //gcc inline asm
-										__asm__ __volatile__
-										(
-											"rcpss	%[x0], %[x1]\n"     //xmm1=1/g
-											"rsqrtss	%[x0], %[x0]\n" //xmm0=1/sqrt(g)
-											"mulss	%[x0], %[x1]\n"     //xmm1=1/(g*sqrt(g))
-											"subss	%c[lsub](,%[i],4), %[x1]\n"
-											: [x1] "=x" (g)
-											: [x0] "x" (g), [i] "r" (i), [lsub] "p" (lightsub)
-											:
-										);
-										#endif
-										#ifdef _MSC_VER //msvc inline asm
-										_asm
-										{
-											movss	xmm0, g        //xmm0=g
-											rcpss	xmm1, xmm0     //xmm1=1/g
-											rsqrtss	xmm0, xmm0     //xmm0=1/sqrt(g)
-											mulss	xmm1, xmm0     //xmm1=1/(g*sqrt(g))
-											mov	eax, i
-											subss	xmm1, lightsub[eax*4]
-											movss	g, xmm1
-										}
-										#endif
-									}
-									else
-									{
-										#ifdef __GNUC__ //gcc inline asm
-										__asm__ __volatile__
-										(
-											"pfrcp	%[y0], %%mm1\n"
-											"pfrsqrt	%[y0], %[y0]\n"
-											"pfmul	%%mm1, %[y0]\n"
-											"pfsub	%c[lsub](,%[i],4), %[y0]\n"
-											"femms\n"
-											: [y0] "+y" (g)
-											: [i]   "r" (i), [lsub] "p" (lightsub)
-											: "mm1"
-										);
-										#endif
-										#ifdef _MSC_VER //msvc inline asm
-										_asm
-										{
-											movd mm0, g
-											pfrcp	mm1, mm0
-											pfrsqrt	mm0, mm0
-											pfmul	mm0, mm1
-											mov	eax, i
-											pfsub	mm0, lightsub[eax*4]
-											movd	g, xmm0
-											femms
-										}
-										#endif
-									}
-									#endif
 									f -= g*h*vx5.lightsrc[j].sc;
 								}
 								if (*(long *)&f > 0x437f0000) f = 255; //0x437f0000 is 255.0
