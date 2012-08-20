@@ -108,11 +108,10 @@ EXTERN zbufoff         ; dword
 %endif
 EXTERN ptfaces16       ; dword
 
-GLOBAL	opti4asm, caddasm, ztabasm, scisdist, kv6colmul, kv6coladd
+GLOBAL	caddasm, ztabasm, scisdist, kv6colmul, kv6coladd
 GLOBAL	qsum0, qsum1, qbplbpp, kv6frameplace, kv6bytesperline
 
 ALIGN 16
-opti4asm times	5*4	dd 0        ;NOTE: this used by ?render
 caddasm times	8*4	dd 0
 ztabasm times	(MAXZSIZ+3*4)	dd 0
 scisdist dd 40800000h,0,0,0

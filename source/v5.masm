@@ -108,11 +108,10 @@ EXTERN zbufoff         : dword
 endif
 EXTERN ptfaces16       : dword
 
-PUBLIC opti4asm, caddasm, ztabasm, scisdist, kv6colmul, kv6coladd
+PUBLIC caddasm, ztabasm, scisdist, kv6colmul, kv6coladd
 PUBLIC qsum0, qsum1, qbplbpp, kv6frameplace, kv6bytesperline
 
 ALIGN 16
-opti4asm dd 5*4 dup(0)        ;NOTE: this used by ?render
 caddasm Label XMMWORD
 dd 8*4 dup(0)
 ztabasm Label XMMWORD
