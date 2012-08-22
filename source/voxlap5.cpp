@@ -10375,32 +10375,6 @@ long surroundcapture32bit (dpoint3d *pos, const char *fname, long boxsiz)
 	return(0);
 }
 
-#if 0
-  //This doesn't speed it up and it only makes it crash on some computers :/
-static inline void fixsse ()
-{
-	static long asm32;
-	#ifdef __GNUC__ //gcc inline asm
-	__asm__ __volatile__
-	(
-		".intel_syntax noprefix\n"
-		"stmxcsr	[asm32]\n" //Default is:0x1f80
-		"or	asm32, 0x8040\n"   //enable ftz&daz to prevent slow denormals!
-		"ldmxcsr	[asm32]\n"
-		".att_syntax prefix\n"
-	);
-	#endif
-	#ifdef _MSC_VER //msvc inline asm
-	_asm
-	{
-		stmxcsr	[asm32]   //Default is:0x1f80
-		or	asm32, 0x8040 //enable ftz&daz to prevent slow denormals!
-		ldmxcsr	[asm32]
-	}
-	#endif
-}
-#endif
-
 /**
  * If you generate any sprites using one of the melt* functions, and then
  * generate mip-maps for it, you can use this function to de-allocate
