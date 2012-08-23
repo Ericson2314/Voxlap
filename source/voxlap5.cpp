@@ -686,7 +686,7 @@ static inline void clearbuf (void *d, long c, long a)
 		"rep	stosd\n"
 		".att_syntax prefix\n"
 		: 
-		: "d" (d), "c" (c), "a" (a)
+		: "D" (d), "c" (c), "a" (a)
 		:
 	);
 	#endif

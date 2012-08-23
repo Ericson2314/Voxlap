@@ -29,11 +29,11 @@
 
 static inline void clearMMX () // inserts opcode emms, used to avoid many compiler checks
 {
-	#ifdef _MSC_VER
-	_asm { emms }
-	#endif
 	#ifdef __GNUC__
 	__asm__ __volatile__ ("emms" : : : "cc");
+	#endif
+	#ifdef _MSC_VER
+	_asm { emms }
 	#endif
 }
 
