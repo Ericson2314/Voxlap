@@ -148,8 +148,13 @@ long cubedistweight[4] = {192,7,5,4};
 long colfnum = 2;
 void *colfunclst[] =
 {
-	curcolfunc,floorcolfunc,jitcolfunc,manycolfunc,
-	sphcolfunc,woodcolfunc,pngcolfunc
+	(void *)&curcolfunc,
+	(void *)&floorcolfunc,
+	(void *)&jitcolfunc,
+	(void *)&manycolfunc,
+	(void *)&sphcolfunc,
+	(void *)&woodcolfunc,
+	(void *)&pngcolfunc,
 };
 #define numcolfunc (sizeof(colfunclst)>>2)
 
@@ -158,140 +163,6 @@ void *colfunclst[] =
 float fcmousx, fcmousy;
 long gbri, cpik, spik, clcnt, cmousx, cmousy, colselectmode = 0;
 short clx[CGRAD*6+1];
-
-#ifdef __WATCOMC__
-
-	//mm4: [0Gii0Bii]
-	//mm5: [00000Rii]
-void rgbcolselinitinc (long, long, long);
-#pragma aux rgbcolselinitinc =\
-	"movd mm4, ecx"\
-	"movd mm0, ebx"\
-	"punpckldq mm4, mm0"\
-	"movd mm5, eax"\
-	parm nomemory [eax][ebx][ecx]\
-	modify exact []\
-	value
-
-	//mm2: [0Ggg0Bbb]
-	//mm3: [00000Rrr]
-void rgbcolselrend (long, long, long, long, long);
-#pragma aux rgbcolselrend =\
-	"movd mm2, ecx"\
-	"movd mm0, ebx"\
-	"punpckldq mm2, mm0"\
-	"movd mm3, eax"\
-	"sub edi, esi"\
-	"beg: movq mm0, mm2"\
-	"packuswb mm0, mm3"\
-	"paddd mm2, mm4"\
-	"psrlw mm0, 8"\
-	"paddd mm3, mm5"\
-	"packuswb mm0, mm0"\
-	"movd [edi+esi], mm0"\
-	"add edi, 4"\
-	"js short beg"\
-	parm [eax][ebx][ecx][edi][esi]\
-	modify exact [edi]\
-	value
-
-#endif
-
-static inline void rgbcolselinitinc (long a, long b, long c)
-{
-	#ifdef __GNUC__ //gcc inline asm
-	__asm__
-	(
-		"mov a, %eax\n"
-		"mov b, %edx\n"
-		"mov c, %ecx\n"
-		"movd %ecx, %mm4\n"
-		"movd %edx, %mm0\n"
-		"punpckldq %mm0, %mm4\n"
-		"movd %eax, %mm5\n"
-	);
-	#endif
-	#ifdef _MSC_VER //msvc inline asm
-	_asm
-	{
-		mov eax, a
-		mov edx, b
-		mov ecx, c
-		movd mm4, ecx
-		movd mm0, edx
-		punpckldq mm4, mm0
-		movd mm5, eax
-	}
-	#endif
-}
-
-static inline void rgbcolselrend (long a, long b, long c, long t, long s)
-{
-	#ifdef __GNUC__ //gcc inline asm
-	__asm__
-	(
-		"push %ebx\n"
-		"push %esi\n"
-		"push %edi\n"
-		"mov a, %eax\n"
-		"mov b, %ebx\n"
-		"mov c, %ecx\n"
-		"mov t, %edi\n"
-		"mov s, %esi\n"
-		"movd %ecx, %mm2\n"
-		"movd %ebx, %mm0\n"
-		"punpckldq %mm0, %mm2\n"
-		"movd %eax, %mm3\n"
-		"sub %esi, %edi\n"
-	"beg:\n"
-		"movq %mm2, %mm0\n"
-		"packuswb %mm3, %mm0\n"
-		"paddd %mm4, %mm2\n"
-		"psrlw $8, %mm0\n"
-		"paddd %mm5, %mm3\n"
-		"packuswb %mm0, %mm0\n"
-		"movd %mm0, (%edi,%esi)\n"
-		"add $4, %edi\n"
-		"js short beg\n"
-
-		"pop %edi\n"
-		"pop %esi\n"
-		"pop %ebx\n"
-	);
-	#endif
-	#ifdef _MSC_VER //msvc inline asm
-	_asm
-	{
-		push ebx
-		push esi
-		push edi
-		mov eax, a
-		mov ebx, b
-		mov ecx, c
-		mov edi, t
-		mov esi, s
-		movd mm2, ecx
-		movd mm0, ebx
-		punpckldq mm2, mm0
-		movd mm3, eax
-		sub edi, esi
-	beg:
-		movq mm0, mm2
-		packuswb mm0, mm3
-		paddd mm2, mm4
-		psrlw mm0, 8
-		paddd mm3, mm5
-		packuswb mm0, mm0
-		movd [edi+esi], mm0
-		add edi, 4
-		js short beg
-
-		pop edi
-		pop esi
-		pop ebx
-	}
-	#endif
-}
 
 void initrgbcolselect ()
 {
@@ -378,7 +249,7 @@ void rgb2cub (long dacol, long *mx, long *my, long *dabri)
 
 void drawcolorbar ()
 {
-	long i, j, x, y, xx, yy, z, r, g, b, l;
+	long i, j, k, m, x, y, xx, yy, z, r, g, b, l;
 
 	l = mulshr24(spik,gbri); x = clx[0]; z = 1; yy = -CGRAD*cpik;
 	y = (yres-CGRAD*2-4)*bytesperline+((xres-CGRAD)<<2)+frameplace;
@@ -392,33 +263,31 @@ void drawcolorbar ()
 			r = mulshr24(xx-yy,gbri) + gbri;
 			b = mulshr24(-xx-yy,gbri) + gbri;
 			g = gbri;
-			rgbcolselinitinc(l,0,-l); //i = l; j = 0; k = -l;
+			i = l; j = 0; k = -l;
 		}
 		else if (xx < 0)
 		{
 			r = mulshr24(xx+xx,gbri) + gbri;
 			g = mulshr24(xx+yy,gbri) + gbri;
 			b = gbri;
-			rgbcolselinitinc(l<<1,l,0); //i = (l<<1); j = l; k = 0;
+			i = (l<<1); j = l; k = 0;
 		}
 		else
 		{
 			g = mulshr24(-xx+yy,gbri) + gbri;
 			b = mulshr24(-xx-xx,gbri) + gbri;
 			r = gbri;
-			rgbcolselinitinc(0,-l,-(l<<1)); //i = 0; j = -l; k = -(l<<1);
+			i = 0; j = -l; k = -(l<<1);
 		}
-			//x = (x<<2)+y; m = (clx[z]<<2)+y;
-			//do
-			//{
-			//   *(long *)x = (r&0xff0000)+((g>>8)&0xff00)+(b>>16);
-			//   x += 4; r += i; g += j; b += k;
-			//} while (x < m);
-		rgbcolselrend(r,g,b,(x<<2)+y,(clx[z]<<2)+y);
+		x = (x<<2)+y; m = (clx[z]<<2)+y;
+		do
+		{
+		   *(long *)x = (r&0xff0000)+((g>>8)&0xff00)+(b>>16);
+		   x += 4; r += i; g += j; b += k;
+		} while (x < m);
 
 		x = clx[z++];
 	} while (z < clcnt);
-	clearMMX();
 }
 
 static char relpathbase[MAX_PATH];
@@ -916,7 +785,6 @@ void photonflash (dpoint3d *ipos, long brightness, long numrays)
 				}
 			}
 		}
-		clearMMX();
 	}
 }
 
@@ -4203,7 +4071,6 @@ void doframe ()
 
 				//(*(long *)&v[j<<2]) = colormul(*(long *)&v[j<<2],256-64);
 			}
-			clearMMX();
 		}
 	}
 
