@@ -1921,7 +1921,7 @@ void vline (float x0, float y0, float x1, float y1, long *iy0, long *iy1)
 
 static float optistrx, optistry, optiheix, optiheiy, optiaddx, optiaddy;
 
-static int64_t foglut[2048] FORCE_NAME("foglut"), fogcol;
+static int64_t foglut[2048], fogcol;
 static long ofogdist = -1;
 
 void (*hrend)(long,long,long,long,long,long);
@@ -7819,8 +7819,8 @@ kv6data *getkv6 (const char *filnam)
 
 #define MAXZSIZ 1024
 	//variables now initialized here and not in assembly
-//__ALIGN(16) point4d caddasm[8]         = {};
-//__ALIGN(16) point4d ztabasm[MAXZSIZ+3] = {};
+//EXTERN_C __ALIGN(16) point4d caddasm[8]         = {};
+//EXTERN_C __ALIGN(16) point4d ztabasm[MAXZSIZ+3] = {};
 EXTERN_C __ALIGN(16) unsigned short qsum0[4]    = {}; //[8000h-hy,8000h-hx,8000h-hy,8000h-hx]
 EXTERN_C __ALIGN(16) unsigned short qsum1[4]    = {}; //[8000h-fy,8000h-fx,8000h-fy,8000h-fx]
 EXTERN_C __ALIGN(16) unsigned short qbplbpp[4]  = {}; //[0,0,bpl,bpp]
@@ -7870,7 +7870,7 @@ void drawboundcube3dn (kv6voxtype *, long);
 //}
 
 static __ALIGN(8) short lightlist[MAXLIGHTS+1][4];
-static int64_t all32767 FORCE_NAME("all32767") = 0x7fff7fff7fff7fff;
+static int64_t all32767 = 0x7fff7fff7fff7fff;
 
 static void updatereflects (vx5sprite *spr)
 {
