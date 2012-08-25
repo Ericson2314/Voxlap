@@ -42,7 +42,7 @@ LNK                    =link #for Microsfoft Linker
 
 # Flags
 CXXFLAGS               =/Fo$(@R) /c /J $(CXX_MODE) $(GFXCFLAGS) $(Random_Macros) # for Micrsoft Compiler(cl)
-CXX_Debug              =/MLd /ZI /GZ /RTCsuc /Od
+CXX_Debug              =/MLd /ZI /Fdbinaries\ /GZ /RTCsuc /Od
 CXX_Release            =/Ox
 
 LNKFLAGS               =/out:$(@) $(LNK_MODE) # for Microsfoft Linker (link)
