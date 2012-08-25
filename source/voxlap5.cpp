@@ -7819,8 +7819,8 @@ kv6data *getkv6 (const char *filnam)
 
 #define MAXZSIZ 1024
 	//variables now initialized here and not in assembly
-//EXTERN_C __ALIGN(16) point4d caddasm[8]         = {};
-//EXTERN_C __ALIGN(16) point4d ztabasm[MAXZSIZ+3] = {};
+EXTERN_C __ALIGN(16) point4d caddasm[8]         = {};
+EXTERN_C __ALIGN(16) point4d ztabasm[MAXZSIZ+3] = {};
 EXTERN_C __ALIGN(16) unsigned short qsum0[4]    = {}; //[8000h-hy,8000h-hx,8000h-hy,8000h-hx]
 EXTERN_C __ALIGN(16) unsigned short qsum1[4]    = {}; //[8000h-fy,8000h-fx,8000h-fy,8000h-fx]
 EXTERN_C __ALIGN(16) unsigned short qbplbpp[4]  = {}; //[0,0,bpl,bpp]
@@ -7831,8 +7831,8 @@ EXTERN_C __ALIGN(16) long kv6bytesperline       =  0;
 EXTERN_C __ALIGN(16) float scisdist             =  0;
 //((uint8_t *)&scisdist)[4] = { 40800000h,0,0,0};
 
-EXTERN_C point4d caddasm[8];
-EXTERN_C point4d ztabasm[MAXZSIZ+3];
+//EXTERN_C point4d caddasm[8];
+//EXTERN_C point4d ztabasm[MAXZSIZ+3];
 
 #ifdef __cplusplus
 extern "C" {
