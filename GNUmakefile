@@ -10,14 +10,20 @@ locBIN            =./binaries
 # "Debug" for debug build, "Release" for release build
 build            ?=Debug
 
-# "nasm" for Netwide Assembler, masm" for Micrsoft Macro Assembler
-AsmName          ?=jwasm
-
 # "win" for Windows 32-bit, "posix" for POSIX (32-bit for now)
 PLATdep          ?=posix
 
-# "1" to use v5.$(AsmName), "0" to not use
+# "1" to use v5.$(AS), "0" to not use
 USEV5ASM         ?=1
+
+# "nasm" for Netwide Assembler, "jwasm" for Japeth Open-Watcomm Assembler
+AS                =jwasm
+
+# C compiler must be able to accept gcc flags
+CC               ?=gcc
+ifeq "$(CC)" "cc"
+CC                =gcc
+endif
 
 # END Choices
 # -----------------------------------
@@ -25,14 +31,11 @@ USEV5ASM         ?=1
 # -----------------------------------
 # Build Flags
 
-ifeq "$(CC)" "cc"
-CC                =gcc
-endif
 
-AS                =jwasm
+
 nasm_FLAGS        =-o $(@)           # Netwide Assembler (nasm)
 jwasm_FLAGS       =-Fo $(@) -c -8    # Micrsoft Macro Assembler (masm)
-AFLAGS            =$($(AsmName)_FLAGS) $($(PLATdep)_$(AsmName)_FLAGS)
+AFLAGS            =$($(AS)_FLAGS) $($(PLATdep)_$(AS)_FLAGS)
 
 CFLAGS            =-o $(@) -funsigned-char -msse -Wattributes $(CC_$(build)) `sdl-config --cflags` $(Random_Macros)
 CC_Debug          =-ggdb
@@ -64,8 +67,8 @@ posix_jwasm_FLAGS =-elf
 win_OBJSuf        =.obj
 win_EXESuf        =.exe
 
-win_nasm_FLAGS    =-f win -Dwin32
-win_jwasm_FLAGS   =-coff -Dwin32
+win_nasm_FLAGS    =-f win -DWIN32
+win_jwasm_FLAGS   =-coff -DWIN32
 
 # END Platform
 # -----------------------------------

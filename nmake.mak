@@ -39,7 +39,6 @@ LNK_MODE               =$(LNK_Debug)
 
 CXX                    =cl   #for Micrsoft Compiler
 LNK                    =link #for Microsfoft Linker
-LNK_exec               =$(LNK)
 
 # Flags
 CXXFLAGS               =/Fo$(@R) /c /J $(CXX_MODE) $(GFXCFLAGS) $(Random_Macros) # for Micrsoft Compiler(cl)
@@ -58,13 +57,13 @@ LNK_Release            =
 # Japheth (Open) Watcomm Assembler (jwasm)
 !IF "$(AsmName)"=="jwasm"
 AS                     =jwasm
-AFLAGS                 =-Fo$(@R) -c -coff -8 -Dwin32
+AFLAGS                 =-Fo$(@R) -c -coff -8 -DWIN32
 !ENDIF
 
 # Netwide Assembler (nasm)
 !IF "$(AsmName)"=="nasm"
 AS                     =nasm
-AFLAGS                 =-o $(@) -f win32
+AFLAGS                 =-o $(@) -f win32 -DWIN32
 !ENDIF
 
 # Micrsoft Macro Assembler (masm)
@@ -104,19 +103,19 @@ default:                      $(locBIN)/game$(EXESuf) $(locBIN)/simple$(EXESuf) 
 # executable ($(EXESuf)) (meta)targets
 game:                         $(locBIN)/game$(EXESuf)
 $(locBIN)/game$(EXESuf):      $(locBIN)/game$(OBJSuf)   $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain1$(OBJSuf)
-	$(LNK_exec) $(LNKFLAGS)   $(locBIN)/game$(OBJSuf)   $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain1$(OBJSuf) $(gameLIBs)
+	$(LNK) $(LNKFLAGS)        $(locBIN)/game$(OBJSuf)   $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain1$(OBJSuf) $(gameLIBs)
 
 simple:                       $(locBIN)/simple$(OBJSuf)
 $(locBIN)/simple$(EXESuf):    $(locBIN)/simple$(OBJSuf) $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain1$(OBJSuf)
-	$(LNK_exec) $(LNKFLAGS)   $(locBIN)/simple$(OBJSuf) $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain1$(OBJSuf) $(simpleLIBs)
+	$(LNK) $(LNKFLAGS)        $(locBIN)/simple$(OBJSuf) $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain1$(OBJSuf) $(simpleLIBs)
 
 voxed:                        $(locBIN)/voxed$(OBJSuf)
 $(locBIN)/voxed$(EXESuf):     $(locBIN)/voxed$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain2$(OBJSuf)
-	$(LNK_exec) $(LNKFLAGS)   $(locBIN)/voxed$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain2$(OBJSuf) $(voxedLIBs)
+	$(LNK) $(LNKFLAGS)        $(locBIN)/voxed$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain2$(OBJSuf) $(voxedLIBs)
 	
 kwalk:                        $(locBIN)/kwalk$(OBJSuf)
 $(locBIN)/kwalk$(EXESuf):     $(locBIN)/kwalk$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain2$(OBJSuf)
-	$(LNK_exec) $(LNKFLAGS)   $(locBIN)/kwalk$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain2$(OBJSuf) $(kwalkLIBs)
+	$(LNK) $(LNKFLAGS)        $(locBIN)/kwalk$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain2$(OBJSuf) $(kwalkLIBs)
 
 
 # binary object ($(OBJSuf)) targets
