@@ -108,9 +108,8 @@ EXTERN zbufoff         ; dword
 %endif
 EXTERN ptfaces16       ; dword
 
-GLOBAL	caddasm, ztabasm
-;EXTERN caddasm         ; XMMWORD[8]
-;EXTERN ztabasm         ; XMMWORD[MAXZSIZ+3]
+EXTERN caddasm         ; XMMWORD[8]
+EXTERN ztabasm         ; XMMWORD[MAXZSIZ+3]
 EXTERN kv6colmul       ; qword
 EXTERN kv6coladd       ; qword
 EXTERN qsum0           ; qword
@@ -119,10 +118,6 @@ EXTERN qbplbpp         ; qword
 EXTERN kv6frameplace   ; dword[256]
 EXTERN kv6bytesperline ; dword[256]
 EXTERN scisdist        ; dword
-
-ALIGN 16
-caddasm times	8*4	dd 0
-ztabasm times	(MAXZSIZ+3*4)	dd 0
 
 
 ;----------------------------------------------------------------------------
