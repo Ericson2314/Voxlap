@@ -7817,15 +7817,22 @@ kv6data *getkv6 (const char *filnam)
 	return(kv6ptr);
 }
 
+#define MAXZSIZ 1024
+	//variables now initialized here and not in assembly
+//__ALIGN(16) point4d caddasm[8]         = {};
+//__ALIGN(16) point4d ztabasm[MAXZSIZ+3] = {};
+EXTERN_C __ALIGN(16) unsigned short qsum0[4]    = {}; //[8000h-hy,8000h-hx,8000h-hy,8000h-hx]
+EXTERN_C __ALIGN(16) unsigned short qsum1[4]    = {}; //[8000h-fy,8000h-fx,8000h-fy,8000h-fx]
+EXTERN_C __ALIGN(16) unsigned short qbplbpp[4]  = {}; //[0,0,bpl,bpp]
+EXTERN_C __ALIGN(16) int64_t kv6colmul[256]     = {};
+EXTERN_C __ALIGN(16) int64_t kv6coladd[256]     = {};
+EXTERN_C __ALIGN(16) long kv6frameplace         =  0;
+EXTERN_C __ALIGN(16) long kv6bytesperline       =  0;
+EXTERN_C __ALIGN(16) float scisdist             =  0;
+//((uint8_t *)&scisdist)[4] = { 40800000h,0,0,0};
 
-EXTERN_C void *caddasm;
-#define cadd4 ((point4d *)&caddasm)
-EXTERN_C void *ztabasm;
-#define ztab4 ((point4d *)&ztabasm)
-EXTERN_C short qsum0[4], qsum1[4], qbplbpp[4];
-EXTERN_C long kv6frameplace, kv6bytesperline;
-EXTERN_C float scisdist;
-EXTERN_C int64_t kv6colmul[256], kv6coladd[256];
+EXTERN_C point4d caddasm[8];
+EXTERN_C point4d ztabasm[MAXZSIZ+3];
 
 #ifdef __cplusplus
 extern "C" {
@@ -8066,7 +8073,6 @@ static inline void maxps (point4d *sum, point4d *a, point4d *b)
 	}
 
 	//Code taken from renderboundcube of SLAB6D (Pentium III version :)
-#define MAXZSIZ 1024
 static void kv6draw (vx5sprite *spr)
 {
 	point4d *r0, *r1, *r2;
@@ -8159,7 +8165,7 @@ static void kv6draw (vx5sprite *spr)
 	if (!cansee(&gipos,&spr->p,&lp)) return; //Very crappy Z-buffer!
 #endif
 
-	r0 = &ztab4[MAXZSIZ]; r1 = &ztab4[MAXZSIZ+1]; r2 = &ztab4[MAXZSIZ+2];
+	r0 = &ztabasm[MAXZSIZ]; r1 = &ztabasm[MAXZSIZ+1]; r2 = &ztabasm[MAXZSIZ+2];
 
 		//Rotate sprite from world to screen coordinates:
 	mat2(&gixs,&giys,&gizs,&giadd, &ts,&th,&tf,&spr->p, &nstr,&nhei,&nfor,&npos);
@@ -8197,71 +8203,71 @@ static void kv6draw (vx5sprite *spr)
 	qsum0[3] = qsum0[1] = 0x7fff-(yres_voxlap-(long)gihy);
 
 		//r1->x = nstr.z; r1->y = nhei.z; r1->z = nfor.z;
-		//minps(r1,r1,&ztab4[0]); //&ztab4[0] always 0
+		//minps(r1,r1,&ztabasm[0]); //&ztabasm[0] always 0
 		//scisdist = -(r1->x + r1->y + r1->z);
 	scisdist = 0;
 	if (*(long *)&nstr.z < 0) scisdist -= nstr.z;
 	if (*(long *)&nhei.z < 0) scisdist -= nhei.z;
 	if (*(long *)&nfor.z < 0) scisdist -= nfor.z;
 
-	cadd4[1].x = nstr.x*gihz; cadd4[1].y = nstr.y*gihz; cadd4[1].z = cadd4[1].z2 = nstr.z;
-	cadd4[2].x = nhei.x*gihz; cadd4[2].y = nhei.y*gihz; cadd4[2].z = cadd4[2].z2 = nhei.z;
-	cadd4[4].x = nfor.x*gihz; cadd4[4].y = nfor.y*gihz; cadd4[4].z = cadd4[4].z2 = nfor.z;
+	caddasm[1].x = nstr.x*gihz; caddasm[1].y = nstr.y*gihz; caddasm[1].z = caddasm[1].z2 = nstr.z;
+	caddasm[2].x = nhei.x*gihz; caddasm[2].y = nhei.y*gihz; caddasm[2].z = caddasm[2].z2 = nhei.z;
+	caddasm[4].x = nfor.x*gihz; caddasm[4].y = nfor.y*gihz; caddasm[4].z = caddasm[4].z2 = nfor.z;
 		  r1->x = npos.x*gihz;      r1->y = npos.y*gihz;      r1->z =      r1->z2 = npos.z;
 
 	updatereflects(spr);
 	//No more 8087 code after here!!! ----------------------------------------
 
-	addps(&cadd4[3],&cadd4[1],&cadd4[2]);
-	addps(&cadd4[5],&cadd4[1],&cadd4[4]);
-	addps(&cadd4[6],&cadd4[2],&cadd4[4]);
-	addps(&cadd4[7],&cadd4[3],&cadd4[4]);
+	addps(&caddasm[3],&caddasm[1],&caddasm[2]);
+	addps(&caddasm[5],&caddasm[1],&caddasm[4]);
+	addps(&caddasm[6],&caddasm[2],&caddasm[4]);
+	addps(&caddasm[7],&caddasm[3],&caddasm[4]);
 
-	for(z=1;z<kv->zsiz;z++) addps(&ztab4[z],&ztab4[z-1],&cadd4[2]);
-	intss(r2,-kv->ysiz); mulps(r2,r2,&cadd4[4]);
+	for(z=1;z<kv->zsiz;z++) addps(&ztabasm[z],&ztabasm[z-1],&caddasm[2]);
+	intss(r2,-kv->ysiz); mulps(r2,r2,&caddasm[4]);
 
-	subps(r1,r1,&cadd4[4]); //ANNOYING HACK!!!
+	subps(r1,r1,&caddasm[4]); //ANNOYING HACK!!!
 
 	xv = kv->vox; ylenptr = kv->ylen;
 	for(x=0;x<inx;x++,ylenptr+=kv->ysiz)
 	{
 		if ((x < nxplanemin) || (x >= nxplanemax))
-			{ xv += kv->xlen[x]; addps(r1,r1,&cadd4[1]); continue; }
+			{ xv += kv->xlen[x]; addps(r1,r1,&caddasm[1]); continue; }
 		yv = xv+kv->xlen[x]; movps(r0,r1);
 		for(y=0;y<iny;y++)
 		{
 			v0 = xv; xv += ylenptr[y]; v1 = xv-1;
 			DRAWBOUNDCUBELINE(0xa)
-			subps(r0,r0,&cadd4[4]);
+			subps(r0,r0,&caddasm[4]);
 		}
 		xv = yv;
 		addps(r0,r1,r2);
-		addps(r1,r1,&cadd4[1]);
+		addps(r1,r1,&caddasm[1]);
 		for(y=kv->ysiz-1;y>iny;y--)
 		{
-			addps(r0,r0,&cadd4[4]);
+			addps(r0,r0,&caddasm[4]);
 			v1 = yv-1; yv -= ylenptr[y]; v0 = yv;
 			DRAWBOUNDCUBELINE(0x6)
 		}
 		if ((unsigned long)iny < (unsigned long)kv->ysiz)
 		{
-			addps(r0,r0,&cadd4[4]);
+			addps(r0,r0,&caddasm[4]);
 			v1 = yv-1; yv -= ylenptr[y]; v0 = yv;
 			DRAWBOUNDCUBELINE(0x2)
 		}
 	}
 	xv = &kv->vox[kv->numvoxs]; ylenptr = &kv->ylen[(kv->xsiz-1)*kv->ysiz];
-	intss(r0,kv->xsiz-x); mulps(r0,r0,&cadd4[1]); addps(r1,r1,r0);
+	intss(r0,kv->xsiz-x); mulps(r0,r0,&caddasm[1]); addps(r1,r1,r0);
 	for(x=kv->xsiz-1;x>inx;x--,ylenptr-=kv->ysiz)
 	{
 		if ((x < nxplanemin) || (x >= nxplanemax))
-			{ xv -= kv->xlen[x]; subps(r1,r1,&cadd4[1]); continue; }
+			{ xv -= kv->xlen[x]; subps(r1,r1,&caddasm[1]); continue; }
 		yv = xv-kv->xlen[x];
-		subps(r1,r1,&cadd4[1]);
+		subps(r1,r1,&caddasm[1]);
 		addps(r0,r1,r2);
 		for(y=kv->ysiz-1;y>iny;y--)
 		{
-			addps(r0,r0,&cadd4[4]);
+			addps(r0,r0,&caddasm[4]);
 			v1 = xv-1; xv -= ylenptr[y]; v0 = xv;
 			DRAWBOUNDCUBELINE(0x5)
 		}
@@ -8270,7 +8276,7 @@ static void kv6draw (vx5sprite *spr)
 		{
 			v0 = yv; yv += ylenptr[y]; v1 = yv-1;
 			DRAWBOUNDCUBELINE(0x9)
-			subps(r0,r0,&cadd4[4]);
+			subps(r0,r0,&caddasm[4]);
 		}
 		if ((unsigned long)iny < (unsigned long)kv->ysiz)
 		{
@@ -8282,11 +8288,11 @@ static void kv6draw (vx5sprite *spr)
 	{
 		if ((x < nxplanemin) || (x >= nxplanemax)) { { clearMMX(); } return;}
 		yv = xv-kv->xlen[x];
-		subps(r1,r1,&cadd4[1]);
+		subps(r1,r1,&caddasm[1]);
 		addps(r0,r1,r2);
 		for(y=kv->ysiz-1;y>iny;y--)
 		{
-			addps(r0,r0,&cadd4[4]);
+			addps(r0,r0,&caddasm[4]);
 			v1 = xv-1; xv -= ylenptr[y]; v0 = xv;
 			DRAWBOUNDCUBELINE(0x4)
 		}
@@ -8295,7 +8301,7 @@ static void kv6draw (vx5sprite *spr)
 		{
 			v0 = yv; yv += ylenptr[y]; v1 = yv-1;
 			DRAWBOUNDCUBELINE(0x8)
-			subps(r0,r0,&cadd4[4]);
+			subps(r0,r0,&caddasm[4]);
 		}
 		if ((unsigned long)iny < (unsigned long)kv->ysiz)
 		{

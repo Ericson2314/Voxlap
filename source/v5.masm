@@ -108,22 +108,23 @@ EXTERN zbufoff         : dword
 endif
 EXTERN ptfaces16       : dword
 
-PUBLIC caddasm, ztabasm, scisdist, kv6colmul, kv6coladd
-PUBLIC qsum0, qsum1, qbplbpp, kv6frameplace, kv6bytesperline
+PUBLIC caddasm, ztabasm
+;EXTERN caddasm         : XMMWORD
+;EXTERN ztabasm         : XMMWORD
+EXTERN kv6colmul       : qword
+EXTERN kv6coladd       : qword
+EXTERN qsum0           : qword
+EXTERN qsum1           : qword
+EXTERN qbplbpp         : qword
+EXTERN kv6frameplace   : dword
+EXTERN kv6bytesperline : dword
+EXTERN scisdist        : dword
 
 ALIGN 16
 caddasm Label XMMWORD
 dd 8*4 dup(0)
 ztabasm Label XMMWORD
 dd (MAXZSIZ+3)*4 dup(0)
-scisdist dd 40800000h,0,0,0
-kv6colmul dq 256 dup(0)
-kv6coladd dq 0
-qsum0 dq 0   ;[8000h-hy,8000h-hx,8000h-hy,8000h-hx]
-qsum1 dq 0   ;[8000h-fy,8000h-fx,8000h-fy,8000h-fx]
-qbplbpp dq 0 ;[0,0,bpl,bpp]
-kv6frameplace dd 0
-kv6bytesperline dd 0
 
 
 ;----------------------------------------------------------------------------
