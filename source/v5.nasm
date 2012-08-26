@@ -135,9 +135,9 @@ v5_asm_dep_unlock:
 		sub esp, 4
 		push dword esp
 		push dword 40h ;PAGE_EXECUTE_READWRITE ; _MANUAL FIX_ word to dword
-		push dword v5_asm_dep_unlock-dep_protect_end
+		push dword dep_protect_end-v5_asm_dep_unlock
 		push dword v5_asm_dep_unlock
-		call dword _imp__VirtualProtect@16
+		call dword [_imp__VirtualProtect@16]
 		add esp, 4
 		ret
 	%else
