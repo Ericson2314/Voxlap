@@ -133,28 +133,8 @@ kv6bytesperline dd 0
 
 PUBLIC v5_asm_dep_unlock ;Data Execution Prevention unlock (works under XP2 SP2)
 v5_asm_dep_unlock:
-	EXTERN _imp__VirtualProtect@16:NEAR
-	sub esp, 4
-	pushd esp
-	pushd 40h ;PAGE_EXECUTE_READWRITE
-	pushd offset dep_protect_end - offset v5_asm_dep_unlock
-	pushd offset v5_asm_dep_unlock
-	call dword ptr _imp__VirtualProtect@16
-	add esp, 4
 	ret
 
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
 ALIGN 16
 
 	;THE INNER LOOP:
@@ -1142,5 +1122,6 @@ retboundcube_3dn:
 	pop ebx
 	ret
 
+PUBLIC dep_protect_end
 dep_protect_end:
 END

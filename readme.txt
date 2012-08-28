@@ -195,6 +195,15 @@ Option 3: Any other scenario allowed under Ken’s license, with my explicit
 I tried to write this to be compatible with Ken’s license, but of course I
 cannot modify his license, so if a conflict arises, ask me for details.
 
+------------------------------------------------------------------------------
+Acknolodgements:
+
+Freenode IRC network: It about as indispensable a resource as exists for
+programming these days. #C and especially #asm in particular for this project.
+Many people on the network offered excellent advice, and copious amounts of
+patience and time, but I'd especially like to thank:
+	- vulture: (on #asm) for helping me get v5 to change memory permissions on
+	  Linux for the sake of self-modifying code.
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 [Original] Voxlap engine notes by Ken Silverman (http://advsys.net/ken)

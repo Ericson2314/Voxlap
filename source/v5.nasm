@@ -131,27 +131,7 @@ SEGMENT	.text
 
 GLOBAL v5_asm_dep_unlock ;Data Execution Prevention unlock (works under XP2 SP2)
 v5_asm_dep_unlock:
-	%ifdef WIN32
-		EXTERN _imp__VirtualProtect@16 ; near
-		sub esp, 4
-		push dword esp
-		push dword 40h ;PAGE_EXECUTE_READWRITE ; _MANUAL FIX_ word to dword
-		push dword dep_protect_end-v5_asm_dep_unlock
-		push dword v5_asm_dep_unlock
-		call dword [_imp__VirtualProtect@16]
-		add esp, 4
-		ret
-	%else
-		EXTERN mprotect
-		mov  ebp,esp
-		sub  esp,18h
-		movd [esp+8], 7h
-		movd [esp+4], dep_protect_end-v5_asm_dep_unlock
-		movd [esp],   v5_asm_dep_unlock
-		call dword mprotect
-		leave
-		ret
-	%endif
+	ret
 
 ALIGN 16
 
@@ -1140,5 +1120,6 @@ retboundcube_3dn:
 	pop ebx
 	retn
 
+Global dep_protect_end
 dep_protect_end:
 ;END
