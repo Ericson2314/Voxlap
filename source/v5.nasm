@@ -678,7 +678,7 @@ skipngxmax2:
 	jmp skipixy2
 
 startsky:
-	mov esp, [cfasm+2048]
+	mov esp, cfasm+2048
 	cmp esp, [ce]
 	ja retsub
 	mov esi, [skyoff]
