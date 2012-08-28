@@ -199,7 +199,14 @@ long gpz[2], gdz[2], gxmip, gxmax, gixy[2], gpixy;
 static long gmaxscandist;
 
 //long reax, rebx, recx, redx, resi, redi, rebp, resp, remm[16];
-void v5_asm_dep_unlock();
+
+#if (defined(USEV5ASM) && (USEV5ASM != 0)) //if true
+#include <unistd.h>
+#include <sys/mman.h>
+EXTERN_C void v5_asm_dep_unlock();
+EXTERN_C void dep_protect_end();
+#endif
+
 void grouscanasm (long);
 #if (USEZBUFFER == 1)
 long zbufoff;
@@ -14622,7 +14629,22 @@ long initvoxlap ()
 	long i, j, k, z, zz;
 	float f, ff;
 
-	v5_asm_dep_unlock();
+		//unlocking code memory for self-modifying code
+	#if (defined(USEV5ASM) && (USEV5ASM != 0)) //if true
+		#ifdef _WIN32
+		do
+		{
+			unsigned long oldprotectcode;
+			VirtualProtect((void *)v5_asm_dep_unlock, ((size_t)dep_protect_end - (size_t)v5_asm_dep_unlock), PAGE_EXECUTE_READWRITE, &oldprotectcode);
+		} while (0);
+		#else
+		do
+		{
+			size_t floorptr = (size_t)v5_asm_dep_unlock & -sysconf(_SC_PAGE_SIZE);
+			mprotect((void *)floorptr, ((size_t)dep_protect_end - (size_t)floorptr), PROT_READ|PROT_WRITE);
+		} while (0);
+		#endif
+	#endif
 
 		//CPU Must have: FPU,RDTSC,CMOV,MMX,MMX+
 	if ((cputype&((1<<0)|(1<<4)|(1<<15)|(1<<22)|(1<<23))) !=
