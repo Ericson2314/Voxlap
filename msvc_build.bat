@@ -14,7 +14,7 @@ call "C:\Program Files\Microsoft Visual Studio 10.0\VC\bin\vcvars32.bat"
 set LIB=/Program Files/Microsoft DirectX SDK (June 2010)/LIB/x86;%LIB%
 
 @rem Assembler Choice
-set _AsmName=jwasm
+set _AsmName=nasm
 
 @rem Random options
 set USEV5ASM=1

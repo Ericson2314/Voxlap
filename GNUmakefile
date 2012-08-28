@@ -17,7 +17,7 @@ PLATdep          ?=posix
 USEV5ASM         ?=1
 
 # "nasm" for Netwide Assembler, "jwasm" for Japeth Open-Watcomm Assembler
-AS                =jwasm
+AS                =nasm
 
 # C compiler must be able to accept gcc flags
 CC               ?=gcc
