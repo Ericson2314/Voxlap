@@ -201,8 +201,10 @@ static long gmaxscandist;
 //long reax, rebx, recx, redx, resi, redi, rebp, resp, remm[16];
 
 #if (defined(USEV5ASM) && (USEV5ASM != 0)) //if true
-#include <unistd.h>
-#include <sys/mman.h>
+#ifndef _WIN32
+	#include <unistd.h>
+	#include <sys/mman.h>
+#endif
 EXTERN_C void v5_asm_dep_unlock();
 EXTERN_C void dep_protect_end();
 #endif
