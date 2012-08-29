@@ -37,6 +37,13 @@ static inline void clearMMX () // inserts opcode emms, used to avoid many compil
 	#endif
 }
 
+#ifdef __GNUC__
+	#define DEBUG_BREAK() __asm__ __volatile__ ("int $3\n");
+#endif
+#ifdef _MSC_VER
+	#define DEBUG_BREAK() _asm { int 3 }
+#endif
+
 /**
  * Standard Library Hacks
  **/
