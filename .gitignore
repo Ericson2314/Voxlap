@@ -1,0 +1,17 @@
+binaries/
+binaries/*
+decomp/
+decomp/*
+share/documentation/html/
+share/documentation/html/*
+share/documentation/latex/
+share/documentation/latex/*
+share/documentation/man/
+share/documentation/man/*
+
+*.user
+*.suo
+_ReSharper.*
+*.sln.cache
+*~
+desktop.ini
