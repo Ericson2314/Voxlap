@@ -26,7 +26,7 @@ _s6_asm_dep_unlock:
 	sub esp, 4
 	push esp
 	push 40h ;PAGE_EXECUTE_READWRITE
-	push offset _dep_protect_end - offset _s6_asm_dep_unlock
+	pushd offset _dep_protect_end - offset _s6_asm_dep_unlock
 	push offset _s6_asm_dep_unlock
 	call dword ptr __imp__VirtualProtect@16
 	add esp, 4

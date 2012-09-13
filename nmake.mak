@@ -105,18 +105,21 @@ game:                         $(locBIN)/game$(EXESuf)
 $(locBIN)/game$(EXESuf):      $(locBIN)/game$(OBJSuf)   $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain1$(OBJSuf)
 	$(LNK) $(LNKFLAGS)        $(locBIN)/game$(OBJSuf)   $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain1$(OBJSuf) $(gameLIBs)
 
-simple:                       $(locBIN)/simple$(OBJSuf)
+simple:                       $(locBIN)/simple$(EXESuf)
 $(locBIN)/simple$(EXESuf):    $(locBIN)/simple$(OBJSuf) $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain1$(OBJSuf)
 	$(LNK) $(LNKFLAGS)        $(locBIN)/simple$(OBJSuf) $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain1$(OBJSuf) $(simpleLIBs)
 
-voxed:                        $(locBIN)/voxed$(OBJSuf)
+voxed:                        $(locBIN)/voxed$(EXESuf)
 $(locBIN)/voxed$(EXESuf):     $(locBIN)/voxed$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain2$(OBJSuf)
 	$(LNK) $(LNKFLAGS)        $(locBIN)/voxed$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain2$(OBJSuf) $(voxedLIBs)
 	
-kwalk:                        $(locBIN)/kwalk$(OBJSuf)
+kwalk:                        $(locBIN)/kwalk$(EXESuf)
 $(locBIN)/kwalk$(EXESuf):     $(locBIN)/kwalk$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain2$(OBJSuf)
 	$(LNK) $(LNKFLAGS)        $(locBIN)/kwalk$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain2$(OBJSuf) $(kwalkLIBs)
 
+slab6:                        $(locBIN)/slab6$(EXESuf)
+$(locBIN)/slab6$(EXESuf):     $(locBIN)/slab6$(OBJSuf)  $(locBIN)/s6$(OBJSuf) $(locBIN)/slab6.res                          $(locBIN)/winmain2$(OBJSuf)
+	$(LNK) $(LNKFLAGS)        $(locBIN)/slab6$(OBJSuf)  $(locBIN)/s6$(OBJSuf) $(locBIN)/slab6.res                          $(locBIN)/winmain2$(OBJSuf) $(kwalkLIBs)
 
 # binary object ($(OBJSuf)) targets
 
@@ -139,6 +142,13 @@ kwalk_o:                           $(locSRC)/kwalk.cpp
 $(locBIN)/kwalk$(OBJSuf):          $(locSRC)/kwalk.cpp  $(locINC)/voxlap5.h $(locINC)/sysmain.h
 	$(CXX) $(CXXFLAGS)             $(locSRC)/kwalk.cpp
 
+slab6_0:                           $(locSRC)/slab6.cpp
+$(locBIN)/slab6$(OBJSuf):          $(locSRC)/slab6.cpp  $(locINC)/sysmain.h
+	$(CXX) $(CXXFLAGS)             $(locSRC)/slab6.cpp
+
+$(locBIN)/slab6.res:               $(locSRC)/slab6.rc $(locSRC)/slab6.ico
+	rc -r /fo $(locBIN)/slab6.res  $(locSRC)/slab6.rc
+
 # Secondary Objects                 
 voxlap:                            $(locSRC)/voxlap5.cpp 
 $(locBIN)/voxlap5$(OBJSuf):        $(locSRC)/voxlap5.cpp $(locINC)/voxlap5.h
@@ -147,6 +157,10 @@ $(locBIN)/voxlap5$(OBJSuf):        $(locSRC)/voxlap5.cpp $(locINC)/voxlap5.h
 v5:                                $(locBIN)/v5$(OBJSuf)
 $(locBIN)/v5$(OBJSuf):             $(locSRC)/v5.$(AsmName)
 	$(AS)  $(AFLAGS)               $(locSRC)/v5.$(AsmName)
+
+s6:
+$(locBIN)/s6$(OBJSuf):             $(locSRC)/s6.asm
+	$(AS)  $(AFLAGS)               $(locSRC)/s6.asm
 
 kplib:                             $(locBIN)/kplib$(OBJSuf)
 $(locBIN)/kplib$(OBJSuf):          $(locSRC)/kplib.c
