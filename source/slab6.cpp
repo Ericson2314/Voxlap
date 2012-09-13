@@ -1,10 +1,10 @@
 #if 0 //To compile, type: "nmake slab6.c"
-slab6.exe: slab6.obj winmain.obj s6.obj slab6.res
-	link    slab6.obj winmain.obj s6.obj slab6.res ddraw.lib dinput.lib dxguid.lib user32.lib gdi32.lib comdlg32.lib /nologo /opt:nowin98
-slab6.obj:   slab6.c sysmain.h ; cl /c /J /TP slab6.c     /Ox /G6Fy /MD /nologo
-winmain.obj: winmain.cpp       ; cl /c /J /TP winmain.cpp /Ox /G6Fy /MD /nologo /DNOSOUND
-s6.obj:      s6.asm            ; ml /c /coff s6.asm /nologo
-slab6.res:   slab6.rc slab6.ico; rc -r slab6.rc
+slab6.exe:   slab6.obj winmain.obj s6.obj slab6.res
+	link     slab6.obj winmain.obj s6.obj slab6.res ddraw.lib dinput.lib dxguid.lib user32.lib gdi32.lib comdlg32.lib /nologo /opt:nowin98
+slab6.obj:   slab6.cpp ../include/sysmain.h ; cl /c /J /TP slab6.cpp     /Ox /G6Fy /MD /nologo
+winmain.obj: winmain.cpp                    ; cl /c /J /TP winmain.cpp   /Ox /G6Fy /MD /nologo /DNOSOUND
+s6.obj:      s6.asm                         ; ml /c /coff s6.asm /nologo
+slab6.res:   slab6.rc slab6.ico             ; rc -r slab6.rc
 !if 0
 #endif
 
@@ -92,7 +92,7 @@ License for this code:
 #include <sys\stat.h>
 #include <math.h>
 #include <direct.h>
-#include "sysmain.h"
+#include "../include/sysmain.h"
 
 #define OPTIMIZEFOR 6
 
@@ -353,7 +353,7 @@ void initfsqrtasm ()
 	long i, j;
 	float f, s1, s2;
 
-	s1 = 16777216 / sqrt(1<<LOGFSQSIZ); s2 = s1*sqrt(0.5);
+	s1 = 16777216 / sqrt((float)(1<<LOGFSQSIZ)); s2 = s1*sqrt(0.5);
 	for(i=(1<<(LOGFSQSIZ-1));i<(1<<LOGFSQSIZ);i++)
 	{
 		f = sqrt((float)i); j = (i<<(23-LOGFSQSIZ));
@@ -3633,7 +3633,7 @@ static char getkenslogocol (long x, long y, long z)
 #endif
 static char paldef[24] =
 	{63,63,63,48,48,63,63,48,32,63,32,24,63,24,24,32,32,63,24,63,24,63,32,63};
-static loadefaultkvx ()
+static int loadefaultkvx ()
 {
 	char ch, davis;
 	long i, j, x, y, z;
