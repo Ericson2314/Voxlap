@@ -247,14 +247,26 @@ static long keyrepeat (long scancode)
 //³ 11 = 0         (c) ³ 11 = 64-bit    (3) ³
 //ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
 
-long fpumode;
-long fstcw ();
-
 #if (OPTIMIZEFOR == 6)
 
 	//Better for Pentium Pros (with Fastvid)
 static inline void clearbufbyte (void *d, long c, long a)
 {
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"test ecx, ecx\n"
+		"js short .Lskipit\n"
+		"rep	stosd\n"
+	".Lskipit:\n"
+		".att_syntax prefix\n"
+		: 
+		: "D" (d), "c" (c), "a" (a)
+		:
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		mov edi, d
@@ -263,8 +275,9 @@ static inline void clearbufbyte (void *d, long c, long a)
 		test ecx, ecx
 		js short skipit
 		rep stosb
-skipit:
+	skipit:
 	}
+	#endif
 }
 
 #else
@@ -272,6 +285,31 @@ skipit:
 	//Better for Pentiums
 static inline void clearbufbyte (void *d, long c, long a)
 {
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"lea ecx, [edi+edi*2]\n"
+		"and ecx, 3\n"
+		"sub edx, ecx\n"
+		"jle short .Lskip1\n"
+		"rep stosb\n"
+		"mov ecx, edx\n"
+		"and edx, 3\n"
+		"shr ecx, 2\n"
+		"rep stosd\n"
+	".Lskip1:\n"
+		"add ecx, edx\n"
+		"jl short .Lskip2\n"
+		"rep stosb\n"
+	".Lskip2:\n"
+		".att_syntax prefix\n"
+		: 
+		: "D" (d), "c" (c), "a" (a)
+		: "edx"
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		mov edi, d
@@ -286,11 +324,13 @@ static inline void clearbufbyte (void *d, long c, long a)
 		and edx, 3
 		shr ecx, 2
 		rep stosd
-skip1: add ecx, edx
+	skip1:
+		add ecx, edx
 		jl short skip2
 		rep stosb
-skip2:
+	skip2:
 	}
+	#endif
 }
 
 #endif
@@ -298,13 +338,39 @@ skip2:
 static inline long fstcw ()
 {
 	long fpumode;
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"fstcw %[fpumode]\n"
+		".att_syntax prefix\n"
+		: 
+		: [fpumode] "p" (&fpumode)
+		:
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm fstcw fpumode
+	#endif
 	return(fpumode);
 }
 
 static inline void fldcw (long fpumode)
 {
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"fldcw %[fpumode]\n"
+		".att_syntax prefix\n"
+		:
+		: [fpumode] "p" (&fpumode)
+		:
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm fldcw fpumode
+	#endif
 }
 
 static inline void ftol (float f, long *a)
@@ -403,35 +469,96 @@ void initfrecipasm ()
 
 static inline void qinterpolatedown16 (long *a, long c, long d, long s)
 {
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"mov	ebx, ecx\n"
+		"shr	ecx, 1\n"
+		"jz short .Lskipbegcalc\n"
+	".Lbegqcalc:\n"
+		"lea edi, [edx+esi]\n"
+		"sar	edx, 16\n"
+		"mov	dword ptr [eax], edx\n"
+		"lea	edx, [edi+esi]\n"
+		"sar	edi, 16\n"
+		"mov	dword ptr [eax+4], edi\n"
+		"add	eax, 8\n"
+		"dec	ecx\n"
+		"jnz	short begqcalc\n"
+		"test	ebx, 1\n"
+		"jz	short .Lskipbegqcalc2\n"
+	".Lskipbegcalc:\n"
+		"sar	edx, 16\n"
+		"mov	dword ptr [eax], edx\n"
+	".Lskipbegqcalc2:\n"
+		".att_syntax prefix\n"
+		:
+		: "a" (a), "c" (c), "d" (d), "S" (s)
+		: "ebx" "edi"
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov eax, a
-		mov ecx, c
-		mov edx, d
-		mov esi, s
+		mov	eax, a
+		mov	ecx, c
+		mov	edx, d
+		mov	esi, s
 
-		mov ebx, ecx
-		shr ecx, 1
-		jz short skipbegcalc
-		begqcalc: lea edi, [edx+esi]
-		sar edx, 16
-		mov dword ptr [eax], edx
-		lea edx, [edi+esi]
-		sar edi, 16
-		mov dword ptr [eax+4], edi
-		add eax, 8
-		dec ecx
-		jnz short begqcalc
-		test ebx, 1
-		jz short skipbegqcalc2
-skipbegcalc: sar edx, 16
-		mov dword ptr [eax], edx
-skipbegqcalc2:
+		mov	ebx, ecx
+		shr	ecx, 1
+		jz	short skipbegcalc
+	begqcalc:
+		lea edi, [edx+esi]
+		sar	edx, 16
+		mov	dword ptr [eax], edx
+		lea	edx, [edi+esi]
+		sar	edi, 16
+		mov	dword ptr [eax+4], edi
+		add	eax, 8
+		dec	ecx
+		jnz	short begqcalc
+		test	ebx, 1
+		jz	short skipbegqcalc2
+	skipbegcalc:
+		sar	edx, 16
+		mov	dword ptr [eax], edx
+	skipbegqcalc2:
 	}
+	#endif
 }
 
 static inline void qinterpolatehiadd16 (long *a, long c, long d, long s)
 {
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		"mov	ebx, ecx\n"
+		"shr	ecx, 1\n"
+		"jz	short .Lskipbegcalc\n"
+	".Lbegqcalc:\n"
+		"lea	edi, [edx+esi]\n"
+		"and	edx, 0xffff0000\n"
+		"add	dword ptr [eax], edx\n"
+		"lea	edx, [edi+esi]\n"
+		"and	edi, 0xffff0000\n"
+		"add	dword ptr [eax+4], edi\n"
+		"add	eax, 8\n"
+		"dec	ecx\n"
+		"jnz	short .Lbegqcalc\n"
+		"test	ebx, 1\n"
+		"jz	short .Lskipbegqcalc2\n"
+	".Lskipbegcalc:\n"
+		"and	edx, 0xffff0000\n"
+		"add	dword ptr [eax], edx\n"
+	".Lskipbegqcalc2:\n"
+		:
+		: "a" (a), "c" (c), "d" (d), "S" (s)
+		: "ebx" "edi"
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		mov eax, a
@@ -442,7 +569,8 @@ static inline void qinterpolatehiadd16 (long *a, long c, long d, long s)
 		mov ebx, ecx
 		shr ecx, 1
 		jz short skipbegcalc
- begqcalc: lea edi, [edx+esi]
+	begqcalc:
+		lea edi, [edx+esi]
 		and edx, 0xffff0000
 		add dword ptr [eax], edx
 		lea edx, [edi+esi]
@@ -453,10 +581,12 @@ static inline void qinterpolatehiadd16 (long *a, long c, long d, long s)
 		jnz short begqcalc
 		test ebx, 1
 		jz short skipbegqcalc2
-skipbegcalc: and edx, 0xffff0000
+	skipbegcalc:
+		and edx, 0xffff0000
 		add dword ptr [eax], edx
-skipbegqcalc2:
+	skipbegqcalc2:
 	}
+	#endif
 }
 
 	//NOTE: font is stored vertically first! (like .ART files)
@@ -2653,10 +2783,41 @@ void calcalldir () //Refresh all .dir's
 typedef struct { char x, y, z0, z1; } cpoint4d;
 static cpoint4d fbuf[FILLBUFSIZ];
 
-#ifdef _MSC_VER
-static inline long bsf (long a) { _asm bsf eax, a }
-static inline long bsr (long a) { _asm bsr eax, a }
-#endif
+static inline long bsf (long a)
+{
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"bsf %%eax, %1"
+		".att_syntax prefix\n"
+		: 
+		: "g" (a)
+		:
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	_asm bsf eax, a
+	#endif
+
+}
+static inline long bsr (long a)
+{
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"bsr %%eax, %1"
+		".att_syntax prefix\n"
+		: 
+		: "g" (a)
+		:
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	_asm bsr eax, a
+	#endif
+}
 
 long dntil0 (long xy, long z)
 {
