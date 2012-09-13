@@ -1,23 +1,13 @@
-#if 0 //To compile, type: "nmake slab6.c"
-slab6.exe:   slab6.obj winmain.obj s6.obj slab6.res
-	link     slab6.obj winmain.obj s6.obj slab6.res ddraw.lib dinput.lib dxguid.lib user32.lib gdi32.lib comdlg32.lib /nologo /opt:nowin98
-slab6.obj:   slab6.cpp ../include/sysmain.h ; cl /c /J /TP slab6.cpp     /Ox /G6Fy /MD /nologo
-winmain.obj: winmain.cpp                    ; cl /c /J /TP winmain.cpp   /Ox /G6Fy /MD /nologo /DNOSOUND
-s6.obj:      s6.asm                         ; ml /c /coff s6.asm /nologo
-slab6.res:   slab6.rc slab6.ico             ; rc -r slab6.rc
-!if 0
-#endif
-
-#if 0
-
+/***************************************************************************************************
 SLAB6.C by Ken Silverman (http://advsys.net/ken)
 
 License for this code:
 	* No commercial exploitation please
 	* Do not remove my name or credit
 	* You may distribute modified code/executables but please make it clear that it is modified
+***************************************************************************************************/
 
-#endif
+// This file has been modified from Ken Silverman's original release
 
 	//TODO:
 	// L.Enter: Show-through mode
@@ -7832,7 +7822,3 @@ skipdd:;
 	//vx = +xpiv+ipos.x+cx;
 	//vy = +ypiv-ipos.z-cy;
 	//vz = -zpiv-ipos.y-cz;
-
-#if 0
-!endif
-#endif

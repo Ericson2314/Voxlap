@@ -5,7 +5,8 @@
 ;   * Do not remove my name or credit
 ;   * You may distribute modified code/executables but please make it clear that it is modified
 
-.686
+; This file has been modified from Ken Silverman's original release
+
 ifdef __WASM__
 include xmm.inc ;To compile with   Watcom  assembler: >wasm s6
 else
