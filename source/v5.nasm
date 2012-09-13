@@ -129,8 +129,8 @@ kv6bytesperline dd 0
 
 SEGMENT	.text
 
-GLOBAL v5_asm_dep_unlock ;Data Execution Prevention unlock (works under XP2 SP2)
-v5_asm_dep_unlock:
+GLOBAL dep_protect_start ;Data Execution Prevention unlock (works under XP2 SP2)
+dep_protect_start:
 	ret
 
 ALIGN 16

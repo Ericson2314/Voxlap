@@ -1726,6 +1726,11 @@ void fpuinit (long a)
 		: : "a" (a) : "memory","cc");
 }
 
+void code_rwx_unlock ( void * dep_protect_start, void * dep_protect_end)
+{
+	size_t floorptr = (size_t)dep_protect_start & -sysconf(_SC_PAGE_SIZE);
+	mprotect((void *)floorptr, ((size_t)dep_protect_end - (size_t)floorptr), PROT_READ|PROT_WRITE);
+}
 
 int main(int argc, char **argv)
 {
