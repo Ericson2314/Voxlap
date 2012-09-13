@@ -82,10 +82,9 @@ Random_Macros          =-D USEV5ASM=$(USEV5ASM)
 # END Toggle Random Macros
 # -----------------------------------
 
-rm                     =rm -f
-
-Phony:                     default
-default:                   $(locBIN)/game$(EXESuf) $(locBIN)/simple$(EXESuf) $(locBIN)/voxed$(EXESuf) $(locBIN)/kwalk$(EXESuf)
+Phony:                        all
+all:                          voxlap slab6
+voxlap:                       $(locBIN)/game$(EXESuf) $(locBIN)/simple$(EXESuf) $(locBIN)/voxed$(EXESuf) $(locBIN)/kwalk$(EXESuf)
 
 # executable ($(EXESuf)) (meta)targets
 game:                      $(locBIN)/game$(EXESuf)
@@ -104,7 +103,7 @@ kwalk:                     $(locBIN)/kwalk$(OBJSuf)
 $(locBIN)/kwalk$(EXESuf):  $(locBIN)/kwalk$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/sdlmain2$(OBJSuf)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS)
 
-slab6.exe:                 $(locBIN)/slab6$(OBJSuf)
+slab6:                     $(locBIN)/slab6$(OBJSuf)
 $(locBIN)/slab6$(EXESuf):  $(locBIN)/slab6$(OBJSuf)  $(locBIN)/s6$(OBJSuf)                     $(locBIN)/kplib$(OBJSuf) $(locBIN)/sdlmain2$(OBJSuf)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS)
 

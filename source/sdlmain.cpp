@@ -18,6 +18,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+	//for code_rwx_unlock only
+#ifndef _WIN32
+	#include <unistd.h>
+	#include <sys/mman.h>
+#endif
+
 #ifndef NOSOUND
 #ifdef USEKZ
 //#define KPLIB_C  //if kplib is compiled as C
@@ -48,7 +54,7 @@ typedef struct __attribute__ ((packed)) tWAVEFORMATEX {
 #endif
 
 #define SYSMAIN
-#undef _WIN32
+//#undef _WIN32
 					//We never want to define C bindings if this is compiled as C++.
 #undef SYSMAIN_C	//Putting this here just in case.
 #include "../include/sysmain.h"
@@ -1727,10 +1733,17 @@ void fpuinit (long a)
 }
 
 void code_rwx_unlock ( void * dep_protect_start, void * dep_protect_end)
+#ifdef _WIN32
+{
+	unsigned long oldprotectcode;
+	VirtualProtect((void *)dep_protect_start, ((size_t)dep_protect_end - (size_t)dep_protect_start), PAGE_EXECUTE_READWRITE, &oldprotectcode);
+}
+#else
 {
 	size_t floorptr = (size_t)dep_protect_start & -sysconf(_SC_PAGE_SIZE);
 	mprotect((void *)floorptr, ((size_t)dep_protect_end - (size_t)floorptr), PROT_READ|PROT_WRITE);
 }
+#endif
 
 int main(int argc, char **argv)
 {
