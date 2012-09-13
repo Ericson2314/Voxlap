@@ -4527,6 +4527,12 @@ static _inline void fpuinit (long a)
 
 #endif
 
+void code_rwx_unlock ( void * dep_protect_start, void * dep_protect_end)
+{
+	unsigned long oldprotectcode;
+	VirtualProtect((void *)dep_protect_start, ((size_t)dep_protect_end - (size_t)dep_protect_start), PAGE_EXECUTE_READWRITE, &oldprotectcode);
+}
+
 int WINAPI WinMain (HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdshow)
 {
 	long i, j, k, inquote, argc;

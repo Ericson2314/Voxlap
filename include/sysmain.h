@@ -105,6 +105,9 @@ extern void setmouseout (void (*)(long, long), long, long);
 	//Timer:
 extern void readklock (double *);
 
+	//code to change memory permissions now moved here because used in slab6 and voxlap
+extern void code_rwx_unlock ( void * dep_protect_start, void * dep_protect_end);
+
 #if defined(SYSMAIN_C) && defined(__cplusplus)
 }
 #endif

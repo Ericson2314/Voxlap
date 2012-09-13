@@ -1401,7 +1401,8 @@ extern void *ztabasm;
 extern short qsum0[4], qsum1[4], qbplbpp[4];
 extern long kv6frameplace, kv6bpl;
 
-void s6_asm_dep_unlock ();
+void dep_protect_start();
+void dep_protect_end();
 void drawboundcubeasm (point4d *, long, long);
 
 char ptfaces16[43][8] =
@@ -6402,7 +6403,7 @@ long initapp (long argc, char **argv)
 	sphk3 = sphk1 - 2*spherad2;
 
 	gotsse = checksse();
-	if (gotsse) s6_asm_dep_unlock();
+	if (gotsse) code_rwx_unlock((void *)dep_protect_start, (void *)dep_protect_end);
 
 	equivecinit(255);
 

@@ -20,16 +20,8 @@ EXTRN _lcol : dword
 CODE SEGMENT PUBLIC USE32 'CODE'
 ASSUME cs:CODE,ds:CODE
 
-PUBLIC _s6_asm_dep_unlock ;Data Execution Prevention unlock (works under XP2 SP2)
-_s6_asm_dep_unlock:
-	EXTRN __imp__VirtualProtect@16:NEAR
-	sub esp, 4
-	push esp
-	push 40h ;PAGE_EXECUTE_READWRITE
-	pushd offset _dep_protect_end - offset _s6_asm_dep_unlock
-	push offset _s6_asm_dep_unlock
-	call dword ptr __imp__VirtualProtect@16
-	add esp, 4
+PUBLIC _dep_protect_start ;Data Execution Prevention unlock (works under XP2 SP2)
+_dep_protect_start:
 	ret
 
 PUBLIC _caddasm, _ztabasm, _qsum0, _qsum1, _qbplbpp, _kv6frameplace, _kv6bpl
@@ -154,6 +146,7 @@ retboundcube:
 	pop ebx
 	ret
 
+PUBLIC _dep_protect_end
 _dep_protect_end:
 CODE ENDS
 END
