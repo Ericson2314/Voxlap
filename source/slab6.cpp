@@ -310,7 +310,7 @@ static inline void fldcw (long fpumode)
 static inline void ftol (float f, long *a)
 {
 	#ifdef __NOASM__
-	a = (long*)&(f);
+	*a = (long) f;
 	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -1482,7 +1482,7 @@ char ptfaces16[43][8] =
 static inline void movps (point4d *dest, point4d *src)
 {
 	#ifdef __NOASM__
-	
+	*dest = *src;
 	#else
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -1510,7 +1510,7 @@ static inline void movps (point4d *dest, point4d *src)
 static inline void intss (point4d *dest, long src)
 {
 	#ifdef __NOASM__
-	
+	dest->x = dest->y = dest->z = dest->z2 = (float)src;
 	#else
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -1540,7 +1540,10 @@ static inline void intss (point4d *dest, long src)
 static inline void addps (point4d *sum, point4d *a, point4d *b)
 {
 	#ifdef __NOASM__
-	
+	sum->x  =  a->x  +  b->x;
+	sum->y  =  a->y  +  b->y;
+	sum->z  =  a->z  +  b->z;
+	sum->z2 =  a->z2 +  b->z2;
 	#else
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -1571,7 +1574,10 @@ static inline void addps (point4d *sum, point4d *a, point4d *b)
 static inline void mulps (point4d *sum, point4d *a, point4d *b)
 {
 	#ifdef __NOASM__
-	
+	sum->x  =  a->x  *  b->x;
+	sum->y  =  a->y  *  b->y;
+	sum->z  =  a->z  *  b->z;
+	sum->z2 =  a->z2 *  b->z2;
 	#else
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -1602,7 +1608,10 @@ static inline void mulps (point4d *sum, point4d *a, point4d *b)
 static inline void subps (point4d *sum, point4d *a, point4d *b)
 {
 	#ifdef __NOASM__
-	
+	sum->x  =  a->x  -  b->x;
+	sum->y  =  a->y  -  b->y;
+	sum->z  =  a->z  -  b->z;
+	sum->z2 =  a->z2 -  b->z2;
 	#else
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
