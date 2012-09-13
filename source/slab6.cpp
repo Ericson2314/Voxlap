@@ -241,6 +241,9 @@ static long keyrepeat (long scancode)
 //³ 11 = 0         (c) ³ 11 = 64-bit    (3) ³
 //ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
 
+long fpumode;
+long fstcw ();
+
 #if (OPTIMIZEFOR == 6)
 
 	//Better for Pentium Pros (with Fastvid)
@@ -365,62 +368,13 @@ static inline void fldcw (long fpumode)
 
 static inline void ftol (float f, long *a)
 {
-	#ifdef NOASM
 	*a = (long) f;
-	#else
-	#ifdef __GNUC__ //gcc inline asm
-	__asm__ __volatile__
-	(
-		".intel_syntax prefix\n"
-		"fistp	dword ptr [%[a]]\n"
-		".att_syntax prefix\n"
-		: 
-		: [f]  "t" (f), [a] "r" (a)
-		:
-	);
-	#endif
-	#ifdef _MSC_VER //msvc inline asm
-	_asm
-	{
-		mov	eax, a
-		fld	f
-		fistp	dword ptr [eax]
-	}
-	#endif
-	#endif
 }
 
 static inline void fcossin (float a, float *c, float *s)
 {
-	#ifdef NOASM
 	*c = cosf(a);
 	*s = sinf(a);
-	#else
-	#ifdef __GNUC__ //gcc inline asm
-	__asm__ __volatile__
-	(
-		".intel_syntax noprefix\n"
-		"fld	DWORD PTR a\n"
-		"fsincos\n"
-		"mov	eax, c\n"
-		"fstp	DWORD PTR [eax]\n"
-		"mov	eax, s\n"
-		"fstp	DWORD PTR [eax]\n"
-		".att_syntax prefix\n"
-	);
-	#endif
-	#ifdef _MSC_VER //msvc inline asm
-	_asm
-	{
-		fld a
-		fsincos
-		mov	eax, c
-		fstp	dword ptr [eax]
-		mov	eax, s
-		fstp	dword ptr [eax]
-	}
-	#endif
-	#endif
 }
 
 #define LOGFSQSIZ 10
@@ -1603,162 +1557,36 @@ char ptfaces16[43][8] =
 
 static inline void movps (point4d *dest, point4d *src)
 {
-	#ifdef NOASM
 	*dest = *src;
-	#else
-	#ifdef __GNUC__ //gcc inline asm
-	__asm__ __volatile__
-	(
-		".intel_syntax prefix\n"
-		"movaps	[%[dest]], %[src]\n"
-		".att_syntax prefix\n"
-		:
-		: [src] "x" (*src), [dest] "p" (dest)
-		:
-	);
-	#endif
-	#ifdef _MSC_VER //msvc inline asm
-	_asm
-	{
-		mov	eax, src
-		movaps	xmm7, [eax]
-		mov	eax, dest
-		movaps	[eax], xmm7
-	}
-	#endif
-	#endif
 }
 
 static inline void intss (point4d *dest, long src)
 {
-	#ifdef NOASM
 	dest->x = dest->y = dest->z = dest->z2 = (float)src;
-	#else
-	#ifdef __GNUC__ //gcc inline asm
-	__asm__ __volatile__
-	(
-		".intel_syntax prefix\n"
-		"cvtsi2ss	%%xmm7, %[src]\n"
-		"shufps	%%xmm7, %%xmm7, 0\n"
-		"movaps	[%[dest]], %%xmm7\n"
-		".att_syntax prefix\n"
-		:
-		: [src] "x" (src), [dest] "p" (dest)
-		: "xmm7"
-	);
-	#endif
-	#ifdef _MSC_VER //msvc inline asm
-	_asm
-	{
-		mov	eax, dest
-		cvtsi2ss	xmm7, src
-		shufps	xmm7, xmm7, 0
-		movaps	[eax], xmm7
-	}
-	#endif
-	#endif
 }
 
 static inline void addps (point4d *sum, point4d *a, point4d *b)
 {
-	#ifdef NOASM
 	sum->x  =  a->x  +  b->x;
 	sum->y  =  a->y  +  b->y;
 	sum->z  =  a->z  +  b->z;
 	sum->z2 =  a->z2 +  b->z2;
-	#else
-	#ifdef __GNUC__ //gcc inline asm
-	__asm__ __volatile__
-	(
-		".intel_syntax prefix\n"
-		"addps	%[a], [%[b]]\n"
-		"movaps	[%[sum]], %[a]\n"
-		".att_syntax prefix\n"
-		:
-		: [a] "x" (*a), [b] "p" (b), [sum] "p" (sum)
-		:
-	);
-	#endif
-	#ifdef _MSC_VER //msvc inline asm
-	_asm
-	{
-		mov	eax, a
-		movaps	xmm7, [eax]
-		mov	eax, b
-		addps	xmm7, [eax]
-		mov	eax, sum
-		movaps	[eax], xmm7
-	}
-	#endif
-	#endif
 }
 
 static inline void mulps (point4d *sum, point4d *a, point4d *b)
 {
-	#ifdef NOASM
 	sum->x  =  a->x  *  b->x;
 	sum->y  =  a->y  *  b->y;
 	sum->z  =  a->z  *  b->z;
 	sum->z2 =  a->z2 *  b->z2;
-	#else
-	#ifdef __GNUC__ //gcc inline asm
-	__asm__ __volatile__
-	(
-		".intel_syntax noprefix\n"
-		"mulps	%[a], [%[b]]\n"
-		"movaps	[%[sum]], %[a]\n"
-		".att_syntax prefix\n"
-		:
-		: [a] "x" (*a), [b] "p" (b), [sum] "p" (sum)
-		:
-	);
-	#endif
-	#ifdef _MSC_VER //msvc inline asm
-	_asm
-	{
-		mov	eax, a
-		movaps	xmm7, [eax]
-		mov	eax, b
-		mulps	xmm7, [eax]
-		mov	eax, sum
-		movaps	[eax], xmm7
-	}
-	#endif
-	#endif
 }
 
 static inline void subps (point4d *sum, point4d *a, point4d *b)
 {
-	#ifdef NOASM
 	sum->x  =  a->x  -  b->x;
 	sum->y  =  a->y  -  b->y;
 	sum->z  =  a->z  -  b->z;
 	sum->z2 =  a->z2 -  b->z2;
-	#else
-	#ifdef __GNUC__ //gcc inline asm
-	__asm__ __volatile__
-	(
-		".intel_syntax noprefix\n"
-		"subps	%[a], [%[b]]\n"
-		"movaps	[%[sum]], %[a]\n"
-		".att_syntax prefix\n"
-		:
-		: [a] "x" (*a), [b] "p" (b), [sum] "p" (sum)
-		:
-	);
-	#endif
-	#ifdef _MSC_VER //msvc inline asm
-	_asm
-	{
-		mov	eax, a
-		movaps	xmm7, [eax]
-		mov	eax, b
-		subps	xmm7, [eax]
-		mov	eax, sum
-		movaps	[eax], xmm7
-	}
-	#endif
-	#endif
 }
 
 static void initboundcubescr (long x, long y, long dabpl, long dacolbits)
