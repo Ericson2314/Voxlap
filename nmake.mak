@@ -97,8 +97,9 @@ EXESuf                 =.exe
 # locLIB                      =$(MAKEDIR)/libraries
 # locBIN                      =$(MAKEDIR)/binaries
 
-Phony:                        default
-default:                      $(locBIN)/game$(EXESuf) $(locBIN)/simple$(EXESuf) $(locBIN)/voxed$(EXESuf) $(locBIN)/kwalk$(EXESuf)
+Phony:                        all
+all:                          voxlap slab6
+voxlap:                       $(locBIN)/game$(EXESuf) $(locBIN)/simple$(EXESuf) $(locBIN)/voxed$(EXESuf) $(locBIN)/kwalk$(EXESuf)
 
 # executable ($(EXESuf)) (meta)targets
 game:                         $(locBIN)/game$(EXESuf)
