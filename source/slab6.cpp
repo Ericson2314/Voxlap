@@ -122,14 +122,8 @@ float mouseymul = .008, lightmul = 32.0;
 long lightadd = 32;
 
 	//Screen pre-calculation variables
-#ifdef __cplusplus
-extern "C" {
-#endif
-tiletype gdd;
-long lcol[256];
-#ifdef __cplusplus
-}
-#endif
+EXTERN_C tiletype gdd;
+EXTERN_C long lcol[256];
 tiletype ogdd = {0,0,0,0};
 
 float hx, hy, hz, hds, sphk1, sphk2, sphk3;
@@ -140,7 +134,7 @@ long backgroundcolrgb18 = 0x18618;
 long curcol = -1, curgamminterp = 1000;
 static char curfilnam[MAX_PATH];
 
-extern long ddrawuseemulation;
+EXTERN_SYSMAIN long ddrawuseemulation;
 
 	//KVX loading variables
 char fipalette[768];
@@ -1573,20 +1567,20 @@ long checksse ()  //Returns 1 if you have >= Pentium III, otherwise 0
 
 typedef struct { float x, y, z, z2; } point4d;
 
+EXTERN_C void *caddasm;
+#define cadd4 ((point4d *)&caddasm)
+EXTERN_C void *ztabasm;
+#define ztab4 ((point4d *)&ztabasm)
+EXTERN_C short qsum0[4], qsum1[4], qbplbpp[4];
+EXTERN_C long kv6frameplace, kv6bpl;
+
+EXTERN_C void dep_protect_start();
+EXTERN_C void dep_protect_end();
+EXTERN_C void drawboundcubeasm (point4d *, long, long);
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-extern void *caddasm;
-#define cadd4 ((point4d *)&caddasm)
-extern void *ztabasm;
-#define ztab4 ((point4d *)&ztabasm)
-extern short qsum0[4], qsum1[4], qbplbpp[4];
-extern long kv6frameplace, kv6bpl;
-
-void dep_protect_start();
-void dep_protect_end();
-void drawboundcubeasm (point4d *, long, long);
 
 char ptfaces16[43][8] =
 {
