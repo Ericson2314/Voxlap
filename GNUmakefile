@@ -91,19 +91,19 @@ game:                      $(locBIN)/game$(EXESuf)
 $(locBIN)/game$(EXESuf):   $(locBIN)/game$(OBJSuf)   $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/sdlmain1$(OBJSuf)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS)
 
-simple:                    $(locBIN)/simple$(OBJSuf)
+simple:                    $(locBIN)/simple$(EXESuf)
 $(locBIN)/simple$(EXESuf): $(locBIN)/simple$(OBJSuf) $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/sdlmain1$(OBJSuf)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS)
 
-voxed:                     $(locBIN)/voxed$(OBJSuf)
+voxed:                     $(locBIN)/voxed$(EXESuf)
 $(locBIN)/voxed$(EXESuf):  $(locBIN)/voxed$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/sdlmain2$(OBJSuf)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS)
 	
-kwalk:                     $(locBIN)/kwalk$(OBJSuf)
+kwalk:                     $(locBIN)/kwalk$(EXESuf)
 $(locBIN)/kwalk$(EXESuf):  $(locBIN)/kwalk$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/sdlmain2$(OBJSuf)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS)
 
-slab6:                     $(locBIN)/slab6$(OBJSuf)
+slab6:                     $(locBIN)/slab6$(EXESuf)
 $(locBIN)/slab6$(EXESuf):  $(locBIN)/slab6$(OBJSuf)  $(locBIN)/s6$(OBJSuf)                     $(locBIN)/kplib$(OBJSuf) $(locBIN)/sdlmain2$(OBJSuf)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS)
 

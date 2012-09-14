@@ -341,11 +341,9 @@ static inline long fstcw ()
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
-		"fstcw %[fpumode]\n"
-		".att_syntax prefix\n"
+		"fstcw %0\n"
 		: 
-		: [fpumode] "p" (&fpumode)
+		: "m" (fpumode)
 		:
 	);
 	#endif
@@ -360,11 +358,9 @@ static inline void fldcw (long fpumode)
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
-		"fldcw %[fpumode]\n"
-		".att_syntax prefix\n"
+		"fldcw %0\n"
 		:
-		: [fpumode] "p" (&fpumode)
+		: "m" (fpumode)
 		:
 	);
 	#endif
@@ -472,7 +468,7 @@ static inline void qinterpolatedown16 (long *a, long c, long d, long s)
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
+		".intel_syntax noprefix\n"
 		"mov	ebx, ecx\n"
 		"shr	ecx, 1\n"
 		"jz short .Lskipbegcalc\n"
@@ -495,7 +491,7 @@ static inline void qinterpolatedown16 (long *a, long c, long d, long s)
 		".att_syntax prefix\n"
 		:
 		: "a" (a), "c" (c), "d" (d), "S" (s)
-		: "ebx" "edi"
+		: "ebx", "edi"
 	);
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
@@ -534,6 +530,7 @@ static inline void qinterpolatehiadd16 (long *a, long c, long d, long s)
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
+		".intel_syntax noprefix\n"
 		"mov	ebx, ecx\n"
 		"shr	ecx, 1\n"
 		"jz	short .Lskipbegcalc\n"
@@ -553,6 +550,7 @@ static inline void qinterpolatehiadd16 (long *a, long c, long d, long s)
 		"and	edx, 0xffff0000\n"
 		"add	dword ptr [eax], edx\n"
 	".Lskipbegqcalc2:\n"
+		".att_syntax prefix\n"
 		:
 		: "a" (a), "c" (c), "d" (d), "S" (s)
 		: "ebx" "edi"
@@ -2788,11 +2786,9 @@ static inline long bsf (long a)
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
-		"bsf %%eax, %1"
-		".att_syntax prefix\n"
+		"bsf %0, %%eax\n"
 		: 
-		: "g" (a)
+		: "m" (a)
 		:
 	);
 	#endif
@@ -2806,11 +2802,9 @@ static inline long bsr (long a)
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
-		"bsr %%eax, %1"
-		".att_syntax prefix\n"
+		"bsr %0, %%eax\n"
 		: 
-		: "g" (a)
+		: "m" (a)
 		:
 	);
 	#endif
@@ -6781,7 +6775,7 @@ void doframe ()
 	if (!inited) { inited = 1; mymenuinit(); }
 
 	readkeyboard();
-	obstatus = bstatus; readmouse(&fmousx,&fmousy,&fmousz,&bstatus);
+	obstatus = bstatus; readmouse(&fmousx,&fmousy,&bstatus); //readmouse(&fmousx,&fmousy,&fmousz,&bstatus); //sdlmain doesn't support 3D readmouse
 	odtotclk = dtotclk; readklock(&dtotclk); fsynctics = dtotclk-odtotclk;
 	clsyncticsms += fsynctics*1000.0; lsyncticsms = ((long)clsyncticsms); clsyncticsms -= lsyncticsms;
 
