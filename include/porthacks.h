@@ -13,7 +13,16 @@
 
 #ifdef __GNUC__
 	// Maps __assume() to __builtin_unreachable()
-	#define __assume(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
+	#define GCC_VERSION (__GNUC__ * 10000 \
+		     + __GNUC_MINOR__ * 100 \
+		     + __GNUC_PATCHLEVEL__)
+
+	#if GCC_VERSION >= 40500
+		#define __assume(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
+	#else
+		#define __assume(cond)
+	#endif
+
 	// Aligns symbol
 	#define __ALIGN(num) __attribute__((align(num)))
 	#define MUST_INLINE __attribute__((always_inline))
@@ -61,22 +70,18 @@ static inline void clearMMX () // inserts opcode emms, used to avoid many compil
 
 /* Originally by Jim Meyering.  */
 /* GPL 2 or later  */
-static int memcasecmp (const void* ptr0, const void* ptr1, size_t n)
+static int memcasecmp (const void * const ptr0, const void * const ptr1, size_t n)
 {
 	size_t i;
-	const char* ch0 = (const char*)(ptr0);
-	const char* ch1 = (const char*)(ptr1);
 	for (i = 0; i < n; i++)
 	{
-		//int Up0 = toupper((unsigned char)(((const char*)(ptr0))[i]));
-		//int Up1 = toupper((unsigned char)(((const char*)(ptr1))[i]));
-		int Up0 = toupper((unsigned char)(ch0[i]));
-		int Up1 = toupper((unsigned char)(ch1[i]));
+		int Up0 = toupper((unsigned char)(((const char* const)ptr0)[i]));
+		int Up1 = toupper((unsigned char)(((const char* const)ptr1)[i]));
 		int diff = (UCHAR_MAX <= INT_MAX ? Up0 - Up1
-			: Up0 < Up1 ? -1 : Up1 < Up0);
+			    : Up0 < Up1 ? -1 : Up1 < Up0);
 		if (diff)
 			return diff;
-		}
+	}
 	return 0;
 }
 
