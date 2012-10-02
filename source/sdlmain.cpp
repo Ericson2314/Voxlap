@@ -5,9 +5,12 @@
 
 // This file has been modified from Ken Silverman's original release
 
-#ifndef __GNUC__
-#error GCC only.
-#endif
+	//Ericson2314's dirty porting tricks
+#include "../include/porthacks.h"
+
+	//min & max failsafe
+#undef max
+#undef min
 
 #ifndef __i386__
 #error i386 targets only.
@@ -40,16 +43,6 @@ typedef struct __attribute__ ((packed)) tWAVEFORMATEX {
 	short cbSize;
 } WAVEFORMATEX;
 #define WAVE_FORMAT_PCM 1
-
-	//min & max failsafe
-#undef max
-#undef min
-#if !defined(MAX)
-#define MAX(a,b) (((a) > (b)) ? (a) : (b))
-#endif
-#if !defined(MIN)
-#define MIN(a,b) (((a) < (b)) ? (a) : (b))
-#endif
 
 #endif
 
@@ -123,15 +116,15 @@ static long getcputype ()
 
 //================== Fast & accurate TIMER FUNCTIONS begins ==================
 
-static Uint64 rdtsc64(void)
+static uint64_t rdtsc64(void)
 {
-	Uint64 q;
+	uint64_t q;
 	__asm__ __volatile__ ("rdtsc" : "=A" (q) : : "cc");
 	return q;
 }
 
-static Uint32 pertimbase;
-static Uint64 rdtimbase, nextimstep;
+static uint32_t pertimbase;
+static uint64_t rdtimbase, nextimstep;
 static double perfrq, klockmul, klockadd;
 
 void initklock ()
@@ -144,10 +137,10 @@ void initklock ()
 
 void readklock (double *tim)
 {
-	Uint64 q = rdtsc64()-rdtimbase;
+	uint64_t q = rdtsc64()-rdtimbase;
 	if (q > nextimstep)
 	{
-		Uint32 p;
+		uint32_t p;
 		double d;
 		p = SDL_GetTicks();
 		d = klockmul; klockmul = ((double)(p-pertimbase))/(((double)q)*perfrq);
@@ -266,7 +259,7 @@ long clearscreen(long fillcolor)
 
 long initdirectdraw(long daxres, long dayres, long dacolbits)
 {
-	Uint32 surfbits;
+	uint32_t surfbits;
 
 #ifndef NOINPUT
 	extern long mouse_acquire;
@@ -1068,10 +1061,10 @@ static void kensoundbreath (long minleng)
 				(*(long *)(rendersnd[j].ssnd-16))--; numrendersnd--;
 				if (j != numrendersnd) rendersnd[j] = rendersnd[numrendersnd];
 			}
-			if (cputype&(1<<23)) __asm__ __volatile__ ("emms" : : : "cc"); //MMX
+			if (cputype&(1<<23)) clearMMX(); //MMX
 		}
 		for(m=0;m<2;m++) if (w[m]) audclipcopy(lptr[m],(short *)w[m],l[m]>>gshiftval);
-		if (cputype&(1<<23)) __asm__ __volatile__ ("emms" : : : "cc"); //MMX
+		if (cputype&(1<<23)) clearMMX(); //MMX
 		//streambuf->Unlock(w[0],l[0],w[1],l[1]);
 	}
 
@@ -1317,7 +1310,7 @@ void playsound (const char *filnam, long volperc, float frqmul, void *pos, long 
 			}
 		}
 	for(m=0;m<2;m++) if (w[m]) audclipcopy(lptr[m],(short *)w[m],l[m]>>gshiftval);
-	if (cputype&(1<<23)) __asm__ __volatile__ ("emms" : : : "cc"); //MMX
+	if (cputype&(1<<23)) clearMMX(); //MMX
 	//streambuf->Unlock(w[0],l[0],w[1],l[1]);
 
 		//Save params to continue playing later (when both L&R channels haven't played through)
@@ -1373,7 +1366,7 @@ void playsoundupdate (void *optr, void *nptr)
 }
 
 //--------------------------------------------------------------------------------------------------
-void sdlmixcallback(void *userdata, Uint8 *stream, int len)
+void sdlmixcallback(void *userdata, uint8_t *stream, int len)
 {
 	long amt;
 	
@@ -1381,13 +1374,13 @@ void sdlmixcallback(void *userdata, Uint8 *stream, int len)
 	
 	// copy over the normal kensound mixing buffer
 	amt = MIN(streambuf->buflen - streambuf->writecur, len);
-	memcpy(stream, &((Uint8*)streambuf->buf)[ streambuf->writecur ], amt);
+	memcpy(stream, &((uint8_t*)streambuf->buf)[ streambuf->writecur ], amt);
 	streambuf->writecur += amt;
 	if (streambuf->writecur == streambuf->buflen) streambuf->writecur = 0;
 	stream += amt;
 	len -= amt;
 	if (len > 0) {
-		memcpy(stream, &((Uint8*)streambuf->buf)[ streambuf->writecur ], len);
+		memcpy(stream, &((uint8_t*)streambuf->buf)[ streambuf->writecur ], len);
 		streambuf->writecur += len;
 	}
 	
@@ -1747,7 +1740,7 @@ void code_rwx_unlock ( void * dep_protect_start, void * dep_protect_end)
 
 int main(int argc, char **argv)
 {
-	Uint32 sdlinitflags;
+	uint32_t sdlinitflags;
 	int i;
 	
 	cputype = getcputype();
