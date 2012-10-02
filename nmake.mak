@@ -44,8 +44,8 @@ LNK                    =link #for Microsfoft Linker
 
 # Flags
 CXXFLAGS               =/Fo$(@R) /c /J $(CXX_MODE) $(GFX_CFLAGS) $(Random_Macros) # for Micrsoft Compiler(cl)
-CXX_Debug              =/MDd /ZI /Fdbinaries\ /GZ /RTCsuc /Od
-CXX_Release            =/MD /Ox
+CXX_Debug              =$(GFX_CXX_Debug) /ZI /Fdbinaries\ /GZ /RTCsuc /Od
+CXX_Release            =$(GFX_CXX_Release) /Ox
 
 LNKFLAGS               =/out:$(@) /SUBSYSTEM:WINDOWS $(LNK_MODE)# for Microsfoft Linker (link)
 LNK_Debug              =/DEBUG
@@ -85,10 +85,16 @@ GFX                    =$(_GFX)
 !IF "$(GFX)"=="win"
 #C_TYPE                 =/TP
 GFX_LIBS               =ddraw.lib dinput.lib dxguid.lib
+
+GFX_CXX_Debug          =/MLd
+GFX_CXX_Release        =/ML
 !ELSE IF "$(GFX)"=="sdl"
 #GFX_CFLAGS             =-D SYSMAIN_C -D KPLIB_C
 #C_TYPE                 =/TC
 GFX_LIBS               =SDL.lib SDLmain.lib
+
+GFX_CXX_Debug          =/MDd
+GFX_CXX_Release        =/MD
 !ENDIF
 
 # END Importing Environment Variables
