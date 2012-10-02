@@ -19,6 +19,9 @@ USEV5ASM         ?=1
 # "nasm" for Netwide Assembler, "jwasm" for Japeth Open-Watcomm Assembler
 AS                =nasm
 
+# "win" for winmain (DirectX), "sdl" for sdlmain (libsdl)
+GFX               =sdl
+
 # C compiler must be able to accept gcc flags
 CC               ?=gcc
 ifeq "$(CC)" "cc"
@@ -37,16 +40,16 @@ nasm_FLAGS        =-o $(@)           # Netwide Assembler (nasm)
 jwasm_FLAGS       =-Fo $(@) -c -8    # Micrsoft Macro Assembler (masm)
 AFLAGS            =$($(AS)_FLAGS) $($(PLATdep)_$(AS)_FLAGS)
 
-CFLAGS            =-o $(@) -funsigned-char -msse -Wattributes $(CC_$(build)) `sdl-config --cflags` $(Random_Macros)
+CFLAGS            =-o $(@) -funsigned-char -march=native -mfpmath=sse -msse -ffast-math $(CC_$(build)) $($(GFX)_CFLAGS) $(Random_Macros)
 CC_Debug          =-ggdb
 CC_Release        =-O3
 
 LDFLAGS           =-o $(@) $($(LNK)_FLAGS)                    $(LD_$(build))
 LD_Debug          =-ggdb
 LD_Release        =-O3
-LDLIBS            =`sdl-config --libs`
+LDLIBS            =$($(GFX)_LDLIBS)
 
-CCX               =$(CC)
+CCX              ?=$(CC)
 CXXFLAGS          =$(CFLAGS)
 
 OBJSuf            =$($(PLATdep)_OBJSuf)
@@ -74,6 +77,15 @@ win_jwasm_FLAGS   =-coff -DWIN32
 # -----------------------------------
 
 # -----------------------------------
+# Graphics Backend
+
+sdl_CFLAGS        =`sdl-config --cflags`
+sdl_LDLIBS        =`sdl-config --libs`
+
+# END Platform
+# -----------------------------------
+
+# -----------------------------------
 # Toggle Random Macros
 ifeq "$(USEV5ASM)" "1"
 if_USEV5ASM            =$(locBIN)/v5$(OBJSuf)
@@ -88,23 +100,23 @@ voxlap:                       $(locBIN)/game$(EXESuf) $(locBIN)/simple$(EXESuf) 
 
 # executable ($(EXESuf)) (meta)targets
 game:                      $(locBIN)/game$(EXESuf)
-$(locBIN)/game$(EXESuf):   $(locBIN)/game$(OBJSuf)   $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/sdlmain1$(OBJSuf)
+$(locBIN)/game$(EXESuf):   $(locBIN)/game$(OBJSuf)   $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main1$(OBJSuf)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS)
 
 simple:                    $(locBIN)/simple$(EXESuf)
-$(locBIN)/simple$(EXESuf): $(locBIN)/simple$(OBJSuf) $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/sdlmain1$(OBJSuf)
+$(locBIN)/simple$(EXESuf): $(locBIN)/simple$(OBJSuf) $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main1$(OBJSuf)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS)
 
 voxed:                     $(locBIN)/voxed$(EXESuf)
-$(locBIN)/voxed$(EXESuf):  $(locBIN)/voxed$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/sdlmain2$(OBJSuf)
+$(locBIN)/voxed$(EXESuf):  $(locBIN)/voxed$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main2$(OBJSuf)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS)
 	
 kwalk:                     $(locBIN)/kwalk$(EXESuf)
-$(locBIN)/kwalk$(EXESuf):  $(locBIN)/kwalk$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/sdlmain2$(OBJSuf)
+$(locBIN)/kwalk$(EXESuf):  $(locBIN)/kwalk$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main2$(OBJSuf)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS)
 
 slab6:                     $(locBIN)/slab6$(EXESuf)
-$(locBIN)/slab6$(EXESuf):  $(locBIN)/slab6$(OBJSuf)  $(locBIN)/s6$(OBJSuf)                                              $(locBIN)/sdlmain2$(OBJSuf)
+$(locBIN)/slab6$(EXESuf):  $(locBIN)/slab6$(OBJSuf)  $(locBIN)/s6$(OBJSuf)                                              $(locBIN)/$(GFX)main2$(OBJSuf)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS)
 
 # binary object ($(OBJSuf)) targets
@@ -119,10 +131,10 @@ $(locBIN)/%$(OBJSuf):  $(locSRC)/%.$(AS)
 	$(AS)  $(AFLAGS)      $<
 
 $(locBIN)/%1$(OBJSuf): $(locSRC)/%.cpp
-	$(CC)  $(CFLAGS)   -c $< -D USEKZ -D ZOOM_TEST
+	$(CXX) $(CXXFLAGS) -c $< -D USEKZ -D ZOOM_TEST
 
 $(locBIN)/%2$(OBJSuf): $(locSRC)/%.cpp
-	$(CC)  $(CFLAGS)   -c $< -D NOSOUND
+	$(CXX) $(CXXFLAGS) -c $< -D NOSOUND
 
 $(locBIN)/%1$(OBJSuf): $(locSRC)/%.c
 	$(CC)  $(CFLAGS)   -c $< -D USEKZ -D ZOOM_TEST

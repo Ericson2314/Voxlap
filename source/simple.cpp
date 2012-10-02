@@ -64,7 +64,7 @@ long initapp (long argc, char **argv)
 	 */
 	xres = 640; yres = 480; colbits = 32; fullscreen = 0;
 
-	/*	
+	/**
 	* Call this before you use any other functions from VOXLAP5.H. I allocate
 	* memory and initialize lookup tables in this function.
 	*/
