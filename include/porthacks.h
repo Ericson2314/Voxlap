@@ -10,7 +10,8 @@
 	// Maps __assume() to __builtin_unreachable()
 	#define __assume(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
 	// Aligns symbol
-	#define __ALIGN(num) __attribute__ ((align(num)))
+	#define __ALIGN(num) __attribute__((align(num)))
+	#define MUST_INLINE __attribute__((always_inline))
 	#define FORCE_NAME(symbol) asm(symbol)
 #endif
 
@@ -20,6 +21,7 @@
 	#ifndef __cplusplus
 		#define inline __inline
 	#endif
+	#define MUST_INLINE __forceinline
 	#define FORCE_NAME(symbol)
 #endif
 

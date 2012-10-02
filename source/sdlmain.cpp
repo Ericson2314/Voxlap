@@ -75,6 +75,7 @@ long cputype = 0; //I think this will work just fine.
 
 static inline long testflag (long c)
 {
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	long a;
 	__asm__ __volatile__ (
 		"pushf\n\tpopl %%eax\n\tmovl %%eax, %%ebx\n\txorl %%ecx, %%eax\n\tpushl %%eax\n\t"
@@ -82,14 +83,52 @@ static inline long testflag (long c)
 		"xorl %%eax, %%eax\n\t0:"
 		: "=a" (a) : "c" (c) : "ebx","cc" );
 	return a;
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	_asm
+	{
+		mov ecx, c
+		pushfd
+		pop eax
+		mov edx, eax
+		xor eax, ecx
+		push eax
+		popfd
+		pushfd
+		pop eax
+		xor eax, edx
+		mov eax, 1
+		jne menostinx
+		xor eax, eax
+		menostinx:
+	}
+	#endif
 }
 
 static inline void cpuid (long a, long *s)
 {
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__ (
 		"cpuid\n\tmovl %%eax, (%%esi)\n\tmovl %%ebx, 4(%%esi)\n\t"
 		"movl %%ecx, 8(%%esi)\n\tmovl %%edx, 12(%%esi)"
 		: "+a" (a) : "S" (s) : "ebx","ecx","edx","memory","cc");
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	_asm
+	{
+		push ebx
+		push esi
+		mov eax, a
+		cpuid
+		mov esi, s
+		mov dword ptr [esi+0], eax
+		mov dword ptr [esi+4], ebx
+		mov dword ptr [esi+8], ecx
+		mov dword ptr [esi+12], edx
+		pop esi
+		pop ebx
+	}
+	#endif
 }
 
 	//Bit numbers of return value:
@@ -116,11 +155,16 @@ static long getcputype ()
 
 //================== Fast & accurate TIMER FUNCTIONS begins ==================
 
-static uint64_t rdtsc64(void)
+static MUST_INLINE uint64_t rdtsc64(void)
 {
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	uint64_t q;
 	__asm__ __volatile__ ("rdtsc" : "=A" (q) : : "cc");
 	return q;
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	_asm rdtsc
+	#endif
 }
 
 static uint32_t pertimbase;
@@ -694,18 +738,50 @@ static void initfilters ()
 	}
 }
 
-#define mulshr16(a,d) \
-	({ long __a=(a), __d=(d); \
-		__asm__ __volatile__ ("imull %%edx; shrdl $16, %%edx, %%eax" \
-		: "+a" (__a), "+d" (__d) : : "cc"); \
-	 __a; })
+static MUST_INLINE long mulshr16 (long a, long d)
+{
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		"imull %%edx"
+		: "+a" (a), "+d" (d)
+		:
+		: "cc"
+	);
+	return d;
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	_asm
+	{
+		mov eax, a
+		imul d
+		shrd eax, edx, 16
+	}
+	#endif
+}
 
 #if 1
-#define mulshr32(a,d) \
-	({ long __a=(a), __d=(d); \
-		__asm__ __volatile__ ("imull %%edx" \
-		: "+a" (__a), "+d" (__d) : : "cc"); \
-	 __d; })
+static MUST_INLINE long mulshr32 (long a, long d)
+{
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		"imull %%edx"
+		: "+a" (a), "+d" (d)
+		:
+		: "cc"
+	);
+	return d;
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	_asm
+	{
+		mov eax, a
+		imul d
+		mov eax, edx
+	}
+	#endif
+}
 #endif
 
 	//   ssnd: source sound
@@ -890,7 +966,7 @@ static void audclipcopy (long *lptr, short *dptr, long nsamp)
 			jnz short begc0
 		}
 #else
-		//Same as above, but does 8-byte aligned writes instead of 4
+		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 		__asm__ __volatile__ (
 			"testl $4, %%edx\n\t"
 			"leal (%%edx,%%ecx,4), %%edx\n\t"
@@ -918,6 +994,42 @@ static void audclipcopy (long *lptr, short *dptr, long nsamp)
 			"3:\n\t"   // endc:
 			: "+a" (lptr), "+d" (dptr), "+c" (nsamp) : : "memory","cc"
 		);
+		#endif
+		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+		_asm //Same as above, but does 8-byte aligned writes instead of 4
+		{
+			mov eax, lptr
+			mov edx, dptr
+			mov ecx, nsamp
+			test edx, 4
+			lea edx, [edx+ecx*4]
+			lea eax, [eax+ecx*8]
+			jz short skipc
+			neg ecx
+			movq mm0, [eax+ecx*8]
+			packssdw mm0, mm0
+			movd [edx+ecx*4], mm0
+			add ecx, 2
+			jg short endc
+			jz short skipd
+			jmp short begc1
+		skipc:
+			neg ecx
+			add ecx, 1
+		begc1:
+			movq mm0, [eax+ecx*8-8]
+			packssdw mm0, [eax+ecx*8]
+			movq [edx+ecx*4-4], mm0
+			add ecx, 2
+			jl short begc1
+			jg short endc
+		skipd:
+			movq mm0, [eax-8]
+			packssdw mm0, mm0
+			movd [edx-4], mm0
+		endc:
+		}
+		#endif
 #endif
 	}
 }
@@ -1717,12 +1829,25 @@ void arg2filename (const char *oarg, const char *ext, char *narg)
 	//01 = reserved  (1)   01 = -inf         (4)
 	//10 = 53-bit    (2)   10 = inf          (8)
 	//11 = 64-bit    (3)   11 = 0            (c)
-static long fpuasm[2] asm("fpuasm");
-void fpuinit (long a)
+static long fpuasm[2] FORCE_NAME("fpuasm");
+static inline void fpuinit (long a)
 {
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__ (
 		"fninit; fstcw fpuasm; andb $240, fpuasm(,1); orb %%al, fpuasm(,1); fldcw fpuasm;"
 		: : "a" (a) : "memory","cc");
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	_asm
+	{
+		mov eax, a
+		fninit
+		fstcw fpuasm
+		and byte ptr fpuasm[1], 0f0h
+		or byte ptr fpuasm[1], al
+		fldcw fpuasm
+	}
+	#endif
 }
 
 void code_rwx_unlock ( void * dep_protect_start, void * dep_protect_end)
