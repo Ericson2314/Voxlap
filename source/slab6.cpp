@@ -430,7 +430,7 @@ void initfsqrtasm ()
 	long i, j;
 	float f, s1, s2;
 
-	s1 = 16777216 / sqrt((float)(1<<LOGFSQSIZ)); s2 = s1*sqrt(0.5);
+	s1 = 16777216 / sqrt((float)(1<<LOGFSQSIZ)); s2 = s1*sqrt((float)0.5);
 	for(i=(1<<(LOGFSQSIZ-1));i<(1<<LOGFSQSIZ);i++)
 	{
 		f = sqrt((float)i); j = (i<<(23-LOGFSQSIZ));
