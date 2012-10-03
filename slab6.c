@@ -1,8 +1,8 @@
 #if 0 //To compile, type: "nmake slab6.c"
-slab6.exe: slab6.obj winmain.obj s6.obj slab6.res
-	link    slab6.obj winmain.obj s6.obj slab6.res ddraw.lib dinput.lib dxguid.lib user32.lib gdi32.lib comdlg32.lib /nologo /opt:nowin98
-slab6.obj:   slab6.c sysmain.h ; cl /c /J /TP slab6.c     /Ox /G6Fy /MD /nologo
-winmain.obj: winmain.cpp       ; cl /c /J /TP winmain.cpp /Ox /G6Fy /MD /nologo /DNOSOUND
+spadeslab.exe: slab6.obj winmain.obj s6.obj slab6.res
+	link    slab6.obj winmain.obj s6.obj slab6.res ddraw.lib dinput.lib dxguid.lib user32.lib gdi32.lib comdlg32.lib /nologo
+slab6.obj:   slab6.c sysmain.h ; cl /c /J /TP slab6.c     /Ox /MD /nologo
+winmain.obj: winmain.cpp       ; cl /c /J /TP winmain.cpp /Ox /MD /nologo /DNOSOUND
 s6.obj:      s6.asm            ; ml /c /coff s6.asm /nologo
 slab6.res:   slab6.rc slab6.ico; rc -r slab6.rc
 !if 0
@@ -11,6 +11,7 @@ slab6.res:   slab6.rc slab6.ico; rc -r slab6.rc
 #if 0
 
 SLAB6.C by Ken Silverman (http://advsys.net/ken)
+SPADES LAB 6 Modifications By Jeremiah Page (http://blockman2d.herokuapp.com)
 
 License for this code:
 	* No commercial exploitation please
@@ -107,18 +108,14 @@ License for this code:
 #define min(a,b) (((a) < (b)) ? (a) : (b))
 #endif
 
-#define MAXXDIM 2048
-#define MAXYDIM 1536
+#define MAXXDIM 4096
+#define MAXYDIM 4096
 #define PI 3.141592653589793
 
-#define MAXXSIZ 256 //Default values
-#define MAXYSIZ 256
+#define MAXXSIZ 512 //Default values
+#define MAXYSIZ 512
 #define BUFZSIZ 256 //(BUFZSIZ&7) MUST == 0
 #define LIMZSIZ 255 //Limited to 255 by: char ylen[?][?]
-//#define MAXXSIZ 1420  //REGFILE.VOX values:
-//#define MAXYSIZ 1024
-//#define BUFZSIZ 8
-//#define LIMZSIZ 8
 
 #define MAXVOXMIPS 5
 #define CULLBYDIR 0   //1:renderboundcube faster, but thin parts get omitted
@@ -149,11 +146,13 @@ float hx, hy, hz, hds, sphk1, sphk2, sphk3;
 long ihx, ihy;
 long ylookup[MAXYDIM+1], lastx[MAXYDIM], slcol[3][256], pag;
 char whitecol, graycol, blackcol, backgroundcol = 0;
-long backgroundcolrgb18 = 0x18618;
+long backgroundcolrgb18 = 0x3366;
 long curcol = -1, curgamminterp = 1000;
 static char curfilnam[MAX_PATH];
 
 extern long ddrawuseemulation;
+
+long cbuffer[MAXXSIZ][MAXYSIZ][LIMZSIZ];
 
 	//KVX loading variables
 char fipalette[768];
@@ -169,12 +168,12 @@ static char palgroup[256], palookup[64][256];
 
 	//SLAB6 voxel file format: (siz = 4+24+xsiz*ysiz+numvoxs*2)
 	//SLAB6 voxel memory format: (siz = 24+4+xsiz*2+xsiz*ysiz+numvoxs*4)
-#define MAXVOXS 1048576  //numvoxs = 993756 for regfile.vox!
-typedef struct { char z, col, vis, dir; } voxtype;
+#define MAXVOXS 66846720  //numvoxs = 993756 for regfile.vox!
+typedef struct { long z, col, vis, dir; } voxtype;
 float xpiv, ypiv, zpiv;
 long numvoxs; //sum of xlens and number of surface voxels
 unsigned short xlen[MAXXSIZ];
-char ylen[MAXXSIZ][MAXYSIZ];
+unsigned short ylen[MAXXSIZ][MAXYSIZ];
 voxtype voxdata[MAXVOXS];
 
 	//2D MODE variables:
@@ -203,7 +202,7 @@ float sx[8], sy[8], spherad2 = .75;
 long ptface[6][4] = {0,2,6,4, 5,7,3,1, 5,4,6,7, 0,1,3,2, 0,4,5,1, 2,3,7,6};
 char pow2char[8] = {1,2,4,8,16,32,64,128};
 char pow2mask[8] = {254,253,251,247,239,223,191,127};
-long drawmode = 2, reflectmode = -1, drawoption = 0;
+long drawmode = 3, reflectmode = -1, drawoption = 0;
 point3d ztab[BUFZSIZ], cadd[8];
 
 	//UNION OF FACES CUBE RENDERING TABLES:
@@ -353,7 +352,7 @@ void initfsqrtasm ()
 	long i, j;
 	float f, s1, s2;
 
-	s1 = 16777216 / sqrt(1<<LOGFSQSIZ); s2 = s1*sqrt(0.5);
+	s1 = 16777216 / sqrt((float)(1<<LOGFSQSIZ)); s2 = s1*sqrt((float)0.5);
 	for(i=(1<<(LOGFSQSIZ-1));i<(1<<LOGFSQSIZ);i++)
 	{
 		f = sqrt((float)i); j = (i<<(23-LOGFSQSIZ));
@@ -653,9 +652,7 @@ static char closestcol[262144];
 void initclosestcolorfast (char *dapal)  //Fast approximate octahedron method
 {
 	long i, j, *clospos, *closend, *closcan;
-
-	if (!(clospos = closend = closcan = (long *)malloc(262144*4)))
-		{ printf("Out of memory!\n"); exit(0); }
+	if (!(clospos = closend = closcan = (long *)malloc(262144*4))){ printf("Out of memory!\n"); exit(0); }
 	memset(closestcol,-1,sizeof(closestcol));
 	for(j=0;j<255;j++)
 	{
@@ -833,7 +830,7 @@ void renderdots ()
 	}
 }
 
-#define HLINMAX 256
+#define HLINMAX 512
 long minx0[HLINMAX], maxx0[HLINMAX];
 long minx1[HLINMAX], maxx1[HLINMAX];
 long minx2[HLINMAX], maxx2[HLINMAX];
@@ -3127,6 +3124,307 @@ void checkpalimito64 (char *dapal)
 	if (i >= 0) { for(i=767;i>=0;i--) dapal[i] = (char)(((unsigned char)dapal[i])>>2); }
 }
 
+long loadvxl (char *filnam)
+{
+	FILE *fil;
+	long i, x, ch, y, j, z;
+	unsigned char *v, *vbuf, *cbuf;
+	voxtype *vptr, *vend;
+
+	zsiz = (long)64;
+	xsiz = (long)512;
+	ysiz = (long)512;
+
+	// LOAD VXL FILE
+
+	fil = fopen(filnam,"rb"); if (!fil) return(-1);
+	i = filelength(_fileno(fil))-ftell(fil);
+	vbuf = (unsigned char *)malloc(i); if (!vbuf) { fclose(fil); return(-1); }
+	fread(vbuf,i,1,fil);
+	fclose(fil);
+
+	xpiv = ((float)xsiz)*0.24;
+	ypiv = ((float)ysiz)*0.5;
+	zpiv = ((float)zsiz)*0.5;
+
+	// CLEAR ENTIRE BOARD SINCE OTHER FORMATS ARE LARGER AND MAY ALREADY BE LOADED
+	for(x=0;x<xsiz;x++)
+	{
+	    for(y=0;y<ysiz;y++)
+	    {
+		j = ((x*MAXYSIZ)+y)*BUFZSIZ;
+		for(z=0;z<zsiz;z++)
+		{
+					setzrange0(j,0,BUFZSIZ);
+		    cbuffer[x][y][z] = -1;
+		}
+	    }
+	}
+
+	// RESET CLOSEST COLORS AND PALETTE.
+
+	clearbufbyte(vbit,sizeof(vbit),0);
+
+	long palnum = 0;
+
+	memset(closestcol,-1,sizeof(closestcol));
+
+	numvoxs = 0;
+
+	v = vbuf;
+	for (y=0; y < 512; ++y)
+	{
+	   for (x=0; x < 512; ++x)
+	   {
+		      j = ((x*MAXYSIZ)+y)*BUFZSIZ;
+	      z = 0;
+	      for(;;)
+	      {
+		 long *color;
+
+		 int i;
+		 int number_4byte_chunks = v[0];
+		 int top_color_start = v[1];
+		 int top_color_end   = v[2]; // inclusive
+		 int bottom_color_start;
+		 int bottom_color_end; // exclusive
+		 int len_top;
+		 int len_bottom;
+
+		 for(i=z; i < top_color_start; i++)
+		 {
+		    setzrange1(j,i,i);
+		 }
+
+		 color = (long *) (v+4);
+
+		 for(z=top_color_start; z <= top_color_end; z++)
+		 {
+		     setzrange0(j,z,z);
+		     ch = *color++;
+		     ch = ((ch>>6)&0x3f000)+((ch>>4)&0xfc0)+((ch>>2)&0x3f);
+		     cbuffer[x][y][z] = ch;
+		     if( palnum<256 && closestcol[ch] == 255 )
+		     {
+			 // GENERATE PALLETE FROM COLORS IN VXL VOXEL COLUMNS
+			 fipalette[palnum*3+0] = ((ch>>12)&63);
+			 fipalette[palnum*3+1] = ((ch>>6)&63);
+			 fipalette[palnum*3+2] = ( ch    &63);
+						 closestcol[ch] = palnum;
+			 palnum++;
+		     }
+
+		 }
+		 len_bottom = top_color_end - top_color_start + 1;
+
+		 if (number_4byte_chunks == 0)
+		 {
+		      v += 4 * (len_bottom + 1);
+		      break;
+		 }
+
+		 len_top = (number_4byte_chunks-1) - len_bottom;
+		 v += v[0]*4;
+		 bottom_color_end   = v[3]; // aka air start
+		 bottom_color_start = bottom_color_end - len_top;
+
+		 for(z=bottom_color_start; z < bottom_color_end; ++z)
+		 {
+		   setzrange0(j,z,z);
+		   ch = *color++;
+		   ch = ((ch>>6)&0x3f000)+((ch>>4)&0xfc0)+((ch>>2)&0x3f);
+		   cbuffer[x][y][z] = ch;
+		   if( palnum<256 && closestcol[ch] == 255 )
+		   {
+		       // GENERATE PALLETE FROM COLORS IN VXL VOXEL COLUMNS
+		       fipalette[palnum*3+0] = ((ch>>12)&63);
+		       fipalette[palnum*3+1] = ((ch>>6)&63);
+		       fipalette[palnum*3+2] = ( ch    &63);
+		       closestcol[ch] = palnum;
+		       palnum++;
+		   }
+		}
+	     }
+	 }
+    }
+
+	for(x=0;x<xsiz;x++)
+			for(y=0;y<ysiz;y++)
+					{ floodfill3dbits(x,y,0L); floodfill3dbits(x,y,zsiz-1); }
+	for(x=0;x<xsiz;x++)
+			for(z=0;z<zsiz;z++)
+					{ floodfill3dbits(x,0L,z); floodfill3dbits(x,ysiz-1,z); }
+	for(y=0;y<ysiz;y++)
+			for(z=0;z<zsiz;z++)
+					{ floodfill3dbits(0L,y,z); floodfill3dbits(xsiz-1,y,z); }
+
+	// RELEASE FILE AND CLEAR BUFFER
+	free(vbuf);
+
+	// INITIATE PALETTE NOW THAT IT'S BEEN GENERATED
+	initclosestcolorfast(fipalette);
+	initpal(fipalette);
+
+	// GENERATE VOXES
+	for(x=0;x<xsiz;x++)
+	{
+		xlen[x] = 0;
+		for(y=0;y<ysiz;y++)
+		{
+			ylen[x][y] = 0;
+			j = ((x*MAXYSIZ)+y)*BUFZSIZ;
+			for(z=0;z<zsiz;z++)
+			{
+				if(cbuffer[x][y][z]!=-1)
+				{
+					voxdata[numvoxs].z = z;
+					voxdata[numvoxs].col = closestcol[cbuffer[x][y][z]];
+					voxdata[numvoxs].vis = getvis(x,y,z);
+					ylen[x][y]++;
+					numvoxs++;
+				}
+			}
+			xlen[x] += ylen[x][y];
+		}
+	}
+
+	// DEBUG
+	//char text[255];
+	//sprintf(text,"Low-High: %d / %d", lowz, highz);
+	//MessageBox(ghwnd,text,prognam,MB_OK);
+
+	return(1);
+}
+char map[MAXXSIZ][MAXYSIZ][LIMZSIZ];
+long color[MAXXSIZ][MAXYSIZ][LIMZSIZ];
+void buffer_vxl_map()
+{
+    long i, j, x, y, z;
+    voxtype *vptr, *vend;
+    vptr = voxdata;
+    for(x=0;x<512;x++)
+    {
+	for(y=0;y<512;y++)
+	{
+	    j = ((x*MAXYSIZ)+y)*BUFZSIZ;
+	    vend = &vptr[ylen[x][y]];
+	    for(i=0;i<BUFZSIZ;i++)
+	    {
+		map[x][y][i]=0;
+		color[x][y][i]=0;
+	    }
+	    for(;vptr<vend;vptr++)
+	    {
+		z = vptr->z;
+		i = ((long)vptr->col)*3;
+		map[x][y][z] = (char) 1;
+				long a = 255&0xFF;
+		long r = (long)fipalette[i]*3.5;
+		long g = (long)fipalette[i+1]*3.5;
+		long b = (long)fipalette[i+2]*3.5;
+			    long argb = (((int)a&0xFF) << 24) | (((int)r&0xFF) << 16) | (((int)g&0xFF) << 8)  | (((int)b&0xFF) << 0);
+		color[x][y][z] = argb;
+	    }
+	}
+    }
+}
+int is_surface(int x, int y, int z)
+{
+   if (map[x][y][z]==0) return 0;
+   if (x   >   0 && map[x-1][y][z]==0) return 1;
+   if (x+1 < 512 && map[x+1][y][z]==0) return 1;
+   if (y   >   0 && map[x][y-1][z]==0) return 1;
+   if (y+1 < 512 && map[x][y+1][z]==0) return 1;
+   if (z   >   0 && map[x][y][z-1]==0) return 1;
+   if (z+1 <  64 && map[x][y][z+1]==0) return 1;
+   return 0;
+}
+void write_color(FILE *f, long color)
+{
+   fputc((char) (color >>  0)&0xFF, f);
+   fputc((char) (color >>  8)&0xFF, f);
+   fputc((char) (color >> 16)&0xFF, f);
+   fputc((char) (color >> 24)&0xFF, f);
+}
+long savevxl (const char *filnam)
+{
+   buffer_vxl_map();
+
+   int i,j,k;
+   int MAP_Z = 64;
+   FILE *f = fopen(filnam, "wb");
+   for (j=0; j < 512; ++j)
+   {
+	 for (i=0; i < 512; ++i)
+	 {
+	    int written_colors = 0;
+	    int backpatch_address = -1;
+	    int previous_bottom_colors = 0;
+	    int current_bottom_colors = 0;
+	    int middle_start = 0;
+	    k = 0;
+
+	    while (k < MAP_Z)
+	    {
+		int z;
+
+		int air_start;
+		int top_colors_start;
+		int top_colors_end;
+		int bottom_colors_start;
+		int bottom_colors_end;
+		int top_colors_len;
+		int bottom_colors_len;
+		int colors;
+
+		air_start = k;
+		while (k < MAP_Z && !map[i][j][k])
+		++k;
+
+		top_colors_start = k;
+		while (k < MAP_Z && is_surface(i,j,k))
+		    ++k;
+
+		top_colors_end = k;
+
+		while (k < MAP_Z && map[i][j][k] && !is_surface(i,j,k))
+		    ++k;
+
+		bottom_colors_start = k;
+
+		z = k;
+		while (z < MAP_Z && is_surface(i,j,z))
+		    ++z;
+
+		if (z == MAP_Z || 0) { }
+		else
+		{
+		    while (is_surface(i,j,k)) { ++k; }
+		}
+
+		bottom_colors_end = k;
+		top_colors_len    = top_colors_end    - top_colors_start;
+		bottom_colors_len = bottom_colors_end - bottom_colors_start;
+		colors = top_colors_len + bottom_colors_len;
+
+		if (k == MAP_Z)
+		 fputc(0,f);
+		else
+		 fputc(colors+1, f);
+		 fputc(top_colors_start, f);
+		 fputc(top_colors_end-1, f);
+		 fputc(air_start, f);
+
+		 for (z=0; z < top_colors_len; ++z)
+		    write_color(f, color[i][j][top_colors_start + z]);
+		 for (z=0; z < bottom_colors_len; ++z)
+		    write_color(f, color[i][j][bottom_colors_start + z]);
+	      }
+	  }
+     }
+     fclose(f);
+     return(1);
+}
 long loadkv6 (char *filnam)
 {
 	long i, j, x, y, z;
@@ -3338,7 +3636,6 @@ long loadkvx (char *filnam)
 					voxdata[numvoxs].z = z;
 					voxdata[numvoxs].col = fgetc(fil);
 					voxdata[numvoxs].vis = getvis(x,y,z);
-					//voxdata[numvoxs].dir = getvdir(x,y,z);
 					ylen[x][y]++; numvoxs++;
 				}
 			} while (i);
@@ -3631,9 +3928,8 @@ static char getkenslogocol (long x, long y, long z)
 	return(58);
 }
 #endif
-static char paldef[24] =
-	{63,63,63,48,48,63,63,48,32,63,32,24,63,24,24,32,32,63,24,63,24,63,32,63};
-static loadefaultkvx ()
+static int paldef[24] = {63,63,63,48,48,63,63,48,32,63,32,24,63,24,24,32,32,63,24,63,24,63,32,63};
+static int loadefaultkvx ()
 {
 	char ch, davis;
 	long i, j, x, y, z;
@@ -3749,7 +4045,7 @@ long convert2palette (char *filnam, long convertcol)
 {
 	FILE *fil;
 	long i, x, y, z, nv;
-	char newpal[768], convbuf[256];
+	char newpal[768], convbuf[256*256*256];
 
 	i = strlen(filnam); if (i < 4) return(0);
 	if (!(fil = fopen(filnam,"rb"))) return(0);
@@ -3780,7 +4076,7 @@ long convert2palette (char *filnam, long convertcol)
 	{
 			//convert all colors from fipalette[768] to newpal[768] here!
 		initclosestcolorfast(newpal);
-		for(i=0;i<256;i++)
+		for(i=0;i<256*256*256;i++)
 		{
 			x = fipalette[i*3  ];
 			y = fipalette[i*3+1];
@@ -5584,12 +5880,14 @@ static long mymenufunc (WPARAM wparam, LPARAM lparam)
 			ddflip2gdi();
 			if (MessageBox(ghwnd,"Start new model?",prognam,MB_OKCANCEL) == IDOK)
 			{
-				loadefaultkvx();
+				//loadefaultkvx();
+								loadvxl("newmap.vxl");
+
 				mymenufunc(RESETZOOMANDPOS,0);
 
 				readklock(&dtotclk);
 
-				strcpy(curfilnam,"default.kv6");
+				strcpy(curfilnam,"newmap.vxl");
 				initpal(fipalette);
 				resetwindowborders();
 				calcalldir();
@@ -5615,15 +5913,16 @@ static long mymenufunc (WPARAM wparam, LPARAM lparam)
 				updatepalette(0,16);
 			}
 
-			if (v = (char *)loadfileselect("LOAD MODEL...","*.KV6;*.KVX;*.VOX\0*.kv6;*.kvx;*.vox\0\0","KV6"))
+			if (v = (char *)loadfileselect("LOAD MODEL...","*.KV6;*.KVX;*.VOX;*.VXL\0*.kv6;*.kvx;*.vox;*.vxl\0\0","KV6"))
 			{
 				ch = v[strlen(v)-3]; i = -1;
-				if ((ch == 'K') || (ch == 'k'))
+				     if ((ch == 'V') || (ch == 'v')) i = loadvxl(v);
+				else if ((ch == 'K') || (ch == 'k'))
 				{
 					ch = v[strlen(v)-1];
 					if ((ch == 'X') || (ch == 'x')) i = loadkvx(v);
-									else if (ch == '6') i = loadkv6(v);
-				} else                             i = loadvox(v);
+					else            if (ch == '6')  i = loadkv6(v);
+				} else                                  i = loadvox(v);
 
 				if (i >= 0)
 				{
@@ -5666,7 +5965,7 @@ static long mymenufunc (WPARAM wparam, LPARAM lparam)
 				updatepalette(0,16);
 			}
 
-			while (v = (char *)savefileselect("SAVE MODEL...","*.KV6\0*.kv6\0*.KVX\0*.kvx\0*.VOX\0*.vox\0\0","KV6"))
+			while (v = (char *)savefileselect("SAVE MODEL...","*.KV6\0*.kv6\0*.KVX\0*.kvx\0*.VOX\0*.vox\0*.VXL\0*.vxl\0\0","KV6"))
 			{
 				strcpy(curfilnam,v);
 
@@ -5674,8 +5973,9 @@ static long mymenufunc (WPARAM wparam, LPARAM lparam)
 					if (curfilnam[i] == '.') j = i+1;
 				if (j <= 1) { sprintf(message,"Invalid filename."); break; }
 
-					  if (!stricmp(&curfilnam[j],"vox")) { savevox(curfilnam); i = 1; }
+				     if (!stricmp(&curfilnam[j],"vox")) { savevox(curfilnam); i = 1; }
 				else if (!stricmp(&curfilnam[j],"kv6")) { savekv6(curfilnam); i = 1; }
+				else if (!stricmp(&curfilnam[j],"vxl")) { savevxl(curfilnam); i = 1; }
 				else if (!stricmp(&curfilnam[j],"kvx"))
 				{
 					switch(getkvxtype((char *)prognam,"Choose .KVX save format:\nSelect 1 mip for smaller files\nSelect 5 mips for Build Engine\n"))
@@ -6257,8 +6557,8 @@ static void mymenuinit ()
 	sptr = menuadd(sptr,"&Render method"         ,MF_POPUP|MF_END  ,0);
 	sptr = menuadd(sptr,"Dots"                   ,0                ,RENDERMETHOD+0);
 	sptr = menuadd(sptr,"Ortho cubes"            ,0                ,RENDERMETHOD+1);
-	sptr = menuadd(sptr,"Cubes (default)"        ,MF_CHECKED       ,RENDERMETHOD+2);
-	sptr = menuadd(sptr,"Bounded cubes"          ,0                ,RENDERMETHOD+3);
+	sptr = menuadd(sptr,"Cubes"                  ,0                ,RENDERMETHOD+2);
+	sptr = menuadd(sptr,"Bounded cubes (default)",MF_CHECKED       ,RENDERMETHOD+3);
 	sptr = menuadd(sptr,"Spheres"                ,0                ,RENDERMETHOD+4);
 	sptr = menuadd(sptr,"Bounded spheres"        ,MF_END           ,RENDERMETHOD+5);
 	sptr = menuadd(sptr,"&Options"               ,MF_POPUP         ,0);
@@ -6339,11 +6639,11 @@ long initapp (long argc, char **argv)
 
 	GetCurrentDirectory(sizeof(tbuf),tbuf);
 	relpathinit(tbuf);
-	prognam = "SLAB6 by Ken Silverman";
+	prognam = "SPADES LAB 6 Mod By Jeremiah Page (SLAB6 By Ken Silverman)";
 
 	peekwindowproc = mypeekwindowproc;
 
-	xres = 800; yres = 600; colbits = 8; fullscreen = 0; argfilindex = -1;
+	xres = 900; yres = 600; colbits = 8; fullscreen = 0; argfilindex = -1;
 	for(i=argc-1;i>0;i--)
 	{
 		if (argv[i][0] != '/') { argfilindex = i; continue; }
@@ -6351,7 +6651,7 @@ long initapp (long argc, char **argv)
 		if (!stricmp(&argv[i][1],"full")) { fullscreen = 1; continue; }
 		if (argv[i][1] == '?')
 		{
-			MessageBox(ghwnd,"SLAB6 [.KVX, .VOX, or .KV6 file] [/XDIMxYDIM] [/win]\n(options can be any order)\nExamples:\n"
+			MessageBox(ghwnd,"SPADES LAB 6 Mod By Jeremiah Page [.KVX, .VXL, .VOX, or .KV6 file] [/XDIMxYDIM] [/win]\n(options can be any order)\nExamples:\n"
 								  ">slab6 duke\n"
 								  ">slab6 worm /512x384\n"
 								  ">slab6 /600x400 wtc /win",prognam,MB_OK);
@@ -6422,20 +6722,22 @@ long initapp (long argc, char **argv)
 		if (!k)
 		{
 			tbuf[j  ] = '.'; tbuf[j+4] = 0;
-						 tbuf[j+1] = 'k'; tbuf[j+2] = 'v'; tbuf[j+3] = 'x'; i = loadkvx(tbuf);
+				  tbuf[j+1] = 'k'; tbuf[j+2] = 'v'; tbuf[j+3] = 'x'; i = loadkvx(tbuf);
 			if (!i) { tbuf[j+1] = 'v'; tbuf[j+2] = 'o'; tbuf[j+3] = 'x'; i = loadvox(tbuf); }
 			if (!i) { tbuf[j+1] = 'k'; tbuf[j+2] = 'v'; tbuf[j+3] = '6'; i = loadkv6(tbuf); }
+			if (!i) { tbuf[j+1] = 'v'; tbuf[j+2] = 'x'; tbuf[j+3] = 'l'; i = loadvxl(tbuf); }
 		}
 		else if (!stricmp(&curfilnam[k],".kvx")) { i = loadkvx(curfilnam); }
 		else if (!stricmp(&curfilnam[k],".vox")) { i = loadvox(curfilnam); }
 		else if (!stricmp(&curfilnam[k],".kv6")) { i = loadkv6(curfilnam); }
+		else if (!stricmp(&curfilnam[k],".vxl")) { i = loadvxl(curfilnam); }
 		if (!i)
 		{
 			MessageBox(ghwnd,"File not found!",prognam,MB_OK);
 			return(-1);
 		}
 	}
-	strcpy(curfilnam,tbuf);
+
 	initpal(fipalette);
 
 	ipos.x = 0; ipos.y = 0; ipos.z = -128;
@@ -6457,6 +6759,12 @@ long initapp (long argc, char **argv)
 	}
 
 	//if (!fullscreen) setacquire(0,1);
+
+		mymenufunc(RENDERMETHOD+3,1);
+		mymenufunc(NORMALSHADING,0);
+
+		loadvxl("newmap.vxl");
+		strcpy(curfilnam,tbuf);
 
 	return(0);
 }
@@ -6689,7 +6997,8 @@ void doframe ()
 	d = frameval[0];
 	for(j=AVERAGEFRAMES-1;j>0;j--) d = max(d,frameval[j]);
 	averagefps = ((averagefps*3.0+d)*.25);
-	print6x8(gdd.x-68,0,closestcol[262143],-1L,"%7.1f FPS",averagefps);
+	print6x8(gdd.x-120,3,closestcol[262143],-1L,"%d VOXES",numvoxs);
+	print6x8(gdd.x-250,3,closestcol[262143],-1L,"%7.1f FPS",averagefps);
 
 	a1 = a2 = a3 = 0;
 	if ((!(bstatus&1)) || (inawindow >= 0))
@@ -7308,12 +7617,13 @@ skipdd:;
 		if (cptr = (char *)myfileselect_input())
 		{
 			ch = cptr[strlen(cptr)-3]; i = -1;
-			if ((ch == 'K') || (ch == 'k'))
+			if ((ch == 'V') || (ch == 'v')) i = loadvxl(cptr);
+			else if ((ch == 'K') || (ch == 'k'))
 			{
 				ch = cptr[strlen(cptr)-1];
 				if ((ch == 'X') || (ch == 'x')) i = loadkvx(cptr);
-								else if (ch == '6') i = loadkv6(cptr);
-			} else                             i = loadvox(cptr);
+				else if (ch == '6') i = loadkv6(cptr);
+			} else  i = loadvox(cptr);
 
 			if (i >= 0)
 			{

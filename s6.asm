@@ -12,7 +12,7 @@ else
 .XMM            ;To compile with Microsoft assembler: >ml /c /coff s6.asm
 endif
 
-BUFZSIZ EQU 256
+BUFZSIZ EQU 512
 
 EXTRN _ptfaces16 : dword
 EXTRN _lcol : dword
@@ -22,15 +22,19 @@ ASSUME cs:CODE,ds:CODE
 
 PUBLIC _s6_asm_dep_unlock ;Data Execution Prevention unlock (works under XP2 SP2)
 _s6_asm_dep_unlock:
-	EXTRN __imp__VirtualProtect@16:NEAR
-	sub esp, 4
-	push esp
-	push 40h ;PAGE_EXECUTE_READWRITE
-	push offset _dep_protect_end - offset _s6_asm_dep_unlock
-	push offset _s6_asm_dep_unlock
-	call dword ptr __imp__VirtualProtect@16
-	add esp, 4
-	ret
+    EXTRN __imp__VirtualProtect@16:NEAR
+     sub esp, 4
+     push dword ptr esp
+     push 40h
+
+	 mov eax, _dep_protect_end
+	 sub eax, _s6_asm_dep_unlock
+	 push eax
+
+	 push offset _s6_asm_dep_unlock
+	 call dword ptr __imp__VirtualProtect@16
+	 add esp, 4
+	 ret
 
 PUBLIC _caddasm, _ztabasm, _qsum0, _qsum1, _qbplbpp, _kv6frameplace, _kv6bpl
 ALIGN 16
@@ -45,9 +49,9 @@ _kv6bpl dd 0
 ALIGN 16
 PUBLIC _drawboundcubeasm       ;Visual C entry point (pass by stack)
 _drawboundcubeasm:
-	mov edx, [esp+4]
-	mov eax, [esp+8]
-	mov ecx, [esp+12]
+	mov edx, DWORD PTR [esp+4]
+	mov eax, DWORD PTR [esp+8]
+	mov ecx, DWORD PTR [esp+12]
 PUBLIC drawboundcubeasm_       ;Watcom C entry point (pass by register)
 drawboundcubeasm_:
 	push ebx   ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
