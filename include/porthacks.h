@@ -67,6 +67,7 @@ static inline void clearMMX () // inserts opcode emms, used to avoid many compil
 #if defined(__GNUC__) && !(defined(__MINGW32__) || defined(__MINGW64__))
 #include <ctype.h>
 #include <limits.h>
+#include <stddef.h>
 
 /* Originally by Jim Meyering.  */
 /* GPL 2 or later  */
