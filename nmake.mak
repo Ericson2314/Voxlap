@@ -109,31 +109,31 @@ Random_Macros          =/DUSEV5ASM=$(USEV5ASM)
 # END Toggle Random Macros
 # -----------------------------------
 
-gameLIBs	           =$(GFX_LIBS) user32.lib gdi32.lib ole32.lib
 simpleLIBs             =$(GFX_LIBS) user32.lib gdi32.lib ole32.lib
-voxedLIBs	           =$(GFX_LIBS) user32.lib gdi32.lib           comdlg32.lib
-kwalkLIBs	           =$(GFX_LIBS) user32.lib gdi32.lib ole32.lib comdlg32.lib
+gameLIBs               =$(GFX_LIBS) user32.lib gdi32.lib ole32.lib
+voxedLIBs              =$(GFX_LIBS) user32.lib gdi32.lib           comdlg32.lib
+kwalkLIBs              =$(GFX_LIBS) user32.lib gdi32.lib ole32.lib comdlg32.lib
 
 OBJSuf                 =.obj
 EXESuf                 =.exe
 
 Phony:                        all
 all:                          voxlap slab6
-voxlap:                       $(locBIN)/game$(EXESuf) $(locBIN)/simple$(EXESuf) $(locBIN)/voxed$(EXESuf) $(locBIN)/kwalk$(EXESuf)
+voxlap:                       $(locBIN)/simple$(EXESuf) $(locBIN)/game$(EXESuf) $(locBIN)/voxed$(EXESuf) $(locBIN)/kwalk$(EXESuf)
 
 # executable ($(EXESuf)) (meta)targets
-game:                         $(locBIN)/game$(EXESuf)
-$(locBIN)/game$(EXESuf):      $(locBIN)/game$(OBJSuf)   $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main1$(OBJSuf)
-	$(LNK) $(LNKFLAGS)        $(locBIN)/game$(OBJSuf)   $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main1$(OBJSuf) $(gameLIBs)
-
 simple:                       $(locBIN)/simple$(EXESuf)
 $(locBIN)/simple$(EXESuf):    $(locBIN)/simple$(OBJSuf) $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main1$(OBJSuf)
 	$(LNK) $(LNKFLAGS)        $(locBIN)/simple$(OBJSuf) $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main1$(OBJSuf) $(simpleLIBs)
 
+game:                         $(locBIN)/game$(EXESuf)
+$(locBIN)/game$(EXESuf):      $(locBIN)/game$(OBJSuf)   $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main1$(OBJSuf)
+	$(LNK) $(LNKFLAGS)        $(locBIN)/game$(OBJSuf)   $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main1$(OBJSuf) $(gameLIBs)
+
 voxed:                        $(locBIN)/voxed$(EXESuf)
 $(locBIN)/voxed$(EXESuf):     $(locBIN)/voxed$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main2$(OBJSuf)
 	$(LNK) $(LNKFLAGS)        $(locBIN)/voxed$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main2$(OBJSuf) $(voxedLIBs)
-	
+
 kwalk:                        $(locBIN)/kwalk$(EXESuf)
 $(locBIN)/kwalk$(EXESuf):     $(locBIN)/kwalk$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main2$(OBJSuf)
 	$(LNK) $(LNKFLAGS)        $(locBIN)/kwalk$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main2$(OBJSuf) $(kwalkLIBs)
@@ -144,16 +144,16 @@ $(locBIN)/slab6$(EXESuf):     $(locBIN)/slab6$(OBJSuf)  $(locBIN)/s6$(OBJSuf) $(
 
 # binary object ($(OBJSuf)) targets
 
-# Primary Objects
-game_o:                            $(locSRC)/game.cpp
-$(locBIN)/game$(OBJSuf):           $(locSRC)/game.cpp   $(locINC)/voxlap5.h $(locINC)/sysmain.h
-	$(CXX) $(CXXFLAGS)             $(locSRC)/game.cpp
-#   used to use /QIfist             
-
+# Primary Object
 simple_o:                          $(locSRC)/simple.cpp
 $(locBIN)/simple$(OBJSuf):         $(locSRC)/simple.cpp $(locINC)/voxlap5.h $(locINC)/sysmain.h
 	$(CXX) $(CXXFLAGS)             $(locSRC)/simple.cpp
-#   used to use /QIfist             
+#   used to use /QIfist
+
+game_o:                            $(locSRC)/game.cpp
+$(locBIN)/game$(OBJSuf):           $(locSRC)/game.cpp   $(locINC)/voxlap5.h $(locINC)/sysmain.h
+	$(CXX) $(CXXFLAGS)             $(locSRC)/game.cpp
+#   used to use /QIfist
 
 voxed_o:                           $(locSRC)/voxed.cpp
 $(locBIN)/voxed$(OBJSuf):          $(locSRC)/voxed.cpp  $(locINC)/voxlap5.h $(locINC)/sysmain.h

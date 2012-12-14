@@ -96,21 +96,21 @@ Random_Macros          =-D USEV5ASM=$(USEV5ASM)
 
 Phony:                        all
 all:                          voxlap slab6
-voxlap:                       $(locBIN)/game$(EXESuf) $(locBIN)/simple$(EXESuf) $(locBIN)/voxed$(EXESuf) $(locBIN)/kwalk$(EXESuf)
+voxlap:                       $(locBIN)/simple$(EXESuf) $(locBIN)/game$(EXESuf) $(locBIN)/voxed$(EXESuf) $(locBIN)/kwalk$(EXESuf)
 
 # executable ($(EXESuf)) (meta)targets
-game:                      $(locBIN)/game$(EXESuf)
-$(locBIN)/game$(EXESuf):   $(locBIN)/game$(OBJSuf)   $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main1$(OBJSuf)
-	$(CC) $(LDFLAGS) $^ $(LDLIBS)
-
 simple:                    $(locBIN)/simple$(EXESuf)
 $(locBIN)/simple$(EXESuf): $(locBIN)/simple$(OBJSuf) $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main1$(OBJSuf)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS)
+
+game:                      $(locBIN)/game$(EXESuf)
+$(locBIN)/game$(EXESuf):   $(locBIN)/game$(OBJSuf)   $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main1$(OBJSuf)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS)
 
 voxed:                     $(locBIN)/voxed$(EXESuf)
 $(locBIN)/voxed$(EXESuf):  $(locBIN)/voxed$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main2$(OBJSuf)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS)
-	
+
 kwalk:                     $(locBIN)/kwalk$(EXESuf)
 $(locBIN)/kwalk$(EXESuf):  $(locBIN)/kwalk$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/$(GFX)main2$(OBJSuf)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS)
