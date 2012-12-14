@@ -61,7 +61,7 @@ typedef struct __attribute__ ((packed)) tWAVEFORMATEX
 #define evalmacro(x) evalmacrox(x)
 #define evalmacrox(x) #x
 
-char *prognam = "WinMain App (by KS/TD)";
+const char *prognam = "WinMain App (by KS/TD)";
 long progresiz = 1;
 
 extern long initapp (long argc, char **argv);
