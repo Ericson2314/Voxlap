@@ -65,7 +65,7 @@ static HANDLE hmutx;
 #pragma warning(disable:4730)
 #pragma warning(disable:4731)
 
-char *prognam = "WinMain App (by KS/TD)";
+const char *prognam = "WinMain App (by KS/TD)";
 long progresiz = 1;
 long progwndflags, progwndx = 0x80000000, progwndy, progwndadd[2];
 #ifndef NOINPUT

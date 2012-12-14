@@ -50,7 +50,7 @@ extern long cputype;
 extern void setacquire (long mouse, long kbd);
 
 	//Program Flow:
-extern char *prognam;
+extern const char *prognam;
 extern long progresiz;
 long initapp (long argc, char **argv);
 void doframe ();
