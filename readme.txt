@@ -43,17 +43,17 @@ Quick Porting Progress Overview :
 3. Compile with GCC/MinGW: ($)
 	* Update makefile for MinGW
 		* Move all program names, directories, and flags to macros
-		* Add Corosponing MinGW macro defs.
+		* Add corresponding MinGW macro defs.
 		* Makefile is now very modular
 	* Convert all C++ to compile as both C and C++
-	  This allows me to compare mscv and gcc versions more dodeirectly, as I the
-	  ABI for C is more consistant between the two toolchains.
+	  This allows me to compare mscv and gcc versions more directly, as I the
+	  ABI for C is more consistent between the two toolchains.
 		# Bug: game in C does not allow weapons to be fired, but that shouldn't
 		  be a voxlap issue.
 	* Convert inline assembly to work with gcc
 	  GCC now supports ".intel_syntax noprefix" making this much easier
 		# make local variables work
-		  for now, with intel syntax GCC treats all lables as global
+		  for now, with intel syntax GCC treats all labels as global
 	* Compiles
 	# Link with ld
 		# Fix Bugs
@@ -63,12 +63,12 @@ Quick Porting Progress Overview :
 Alternative step 2:
 2. Compiler on MSVC with minimal asm ($)
 	$ Compile game without v5.asm (the only external assembly)
-	$ Remove inline asm to simplify toolchain ineroptability.
+	$ Remove inline asm to simplify toolchain interoperability.
 Misc
 	* Heirarchy implemented. (Makefile ready; code needs to be adjusted so bin
 	  and data don't need to be in same folder.)
 	* .c to .cpp (until it all works as true C), accuracy is great.
-	# PreMake? CMake? autobuild?
+	# PreMake? CMake? automake?
 
 
 
@@ -102,14 +102,14 @@ primitive, and I can't test them anyways until v5.asm works.
 Therefore I HAD opted to dispense with assembly code altogether. Voxlap5 (the
 main Voxlap code) is littered with commented out replacement C for various
 assembly routines. Not all of it works as well as the assembly -- I think Ken
-mainly used it as a guide for writing the assembly and didn’t debug it as the
-program evolved -- but it’s certainly better than nothing. As to the external
-assembly, there is a macro that’s supposed to let the program run without it,
-but it leaves in a few missing linkages -- it was probably also ignored as the
-program evolved. For better or worse, the inline assembly and external
-assembly often relies on each other.  On one hand, this means taking out one
-can help get rid of the other. On the other hand, it means it’s very difficult
-to replace the assembly incrementally and debug as you go.
+mainly used it as a guide for writing the assembly and didn’t debug it as
+the program evolved -- but it’s certainly better than nothing. As to the
+external assembly, there is a macro that’s supposed to let the program run
+without it, but it leaves in a few missing linkages -- it was probably also
+ignored as the program evolved. For better or worse, the inline assembly and
+external assembly often relies on each other.  On one hand, this means taking
+out one can help get rid of the other. On the other hand, it means it’s
+very difficult to replace the assembly incrementally and debug as you go.
 
 I learned of another assembly, JWASM, on IRC which is both cross-platform and
 Supports NASM syntax as close as possible. This gave me the opportunity to go
@@ -119,7 +119,7 @@ utilizing the inline assembly that was admittedly still faster than the C. For
 ARM ports it will still have to go but this seems to be the easier solution
 for now. Now my plan is to work along both methods. I don't know whether
 converting or removing inline assembly will get to a finished port faster, so
-i've made a git branch for each method to work on both concurrently.
+I've made a git branch for each method to work on both concurrently.
 
 I was able to quickly fix the few syntax errors that existed, and get a
 working Game.exe with MSVC and JWASM. But JWASM in itself did nothing to
@@ -131,30 +131,49 @@ mangling, and in addition C-derived objects files made by different compilers
 have a better chance of linking correctly (especially on windows). I figured
 this would open up new doors testing.
 
+I now have everything compiling and linking on Windows and Linux, MSVC and
+gcc, and SDL on both platforms. Unfortunately however, when running a gcc
+build on any platform some text is displayed on the screen. When I don't use
+the -ffast-math flag, it will in addition crash due to arithmetic overflows.
+Because this is thus strictly a compiler-caused issue, my guess is there is
+still some mistake in the inline-assembly I converted to C. It is now clear to
+me that in order to get this working, I will have to remove all inline
+assembly. Because in many cases the C is less efficient, I will try to add it
+back in after I have fixed most bugs. But the only way to rigorously cross-
+reference the MSVC and gcc builds/bugs, I must avoid as much compiler-specific
+syntax as I can. I imagine once I reach the point where it is safe to again
+experiment with assembly, asm and no-asm versions will be developed with some
+independence, and the benchmarks will state which branch to focus on.
 
-Library issues :
+
+Library issues:
 
 I can't really dive into this until the former step is complete, but it seems
-that again a good bit of the work is already done. Voxlap itself is a
-surprisingly self-contained beast, primary because it’s a software render so
-it only uses DirectX to copy frame buffers and other trivial stuff. The
-backend it currently uses Winmain, is not Voxlap-Specific, but rather used by
-a couple of Ken’s things (maybe even the build engine).
+that again a good bit of the work is already done.
+
+Voxlap itself is a surprisingly self-contained beast, primary because it’s
+a software render so it only uses DirectX to copy frame buffers and other
+trivial stuff. The backend it currently uses Winmain, is not Voxlap-Specific,
+but rather used by a couple of Ken’s things (maybe even the build engine).
 
 On the flip side, the example game, and probably other games based around
 Voxlap don’t just use voxlap’s header, but also directly use Sysmain.h,
 Winmain’s interface. So to have a genuinely useful Voxlap port, seemingly
 unused features of Sysmain.h must also be ported.
 
-Thankfully, available on Ken’s site is SDLmain, a non-Voxlap-Specific port of
-Winmain. I’m not sure how complete it is, but I’d hope it has the most basic
-stuff that Voxlap itself requires available. As to the example game and other
-programs that use Voxlap, I’m not so hopeful. Some of Sysmain.h’s routines are
-very DirectX specific (like “startdirectdraw”) and even if they are “ported”,
-probably don’t cause some idiosyncrasy that the games are expecting. We’ll see
-once the assembly is dealt with.
+Thankfully, available on Ken’s site is SDLmain, a non-Voxlap-Specific
+port of Winmain. I’m not sure how complete it is, but I’d hope it has
+the most basic stuff that Voxlap itself requires available. The more progress
+I've made, the more I been able to validate the SDLmain basically works as
+advertised. Now that I have the Voxlap building with SDLmain and MSVC, I am
+almost sure it will hardly need modification.
 
-Lastly, SDLmain is GCC only, and Winmain is MSVC only.
+The other example programs besides 'game' use some GDI and other Windows-
+specific APIs not abstracted in Winmain, so I will not focus on porting them
+for the time being. I did recently however add Slab6 to my code base, as it
+shares both Winmain code that later ended up in Voxlap. To fully incorporate
+it I will need to deal with these other windows dependencies, so doing so is
+definitely on the agenda.
 
 ------------------------------------------------------------------------------
 What Next:
@@ -166,9 +185,9 @@ improvements that would not effect existing programs ability to interface with
 Voxlap to much extent.
 
 Voxlap is a library, nothing more, nothing less. As such it should be able to
-be both statically and dynamically linked with another program. Currently, only
-static linking is tested to work, but with a couple trivial changes, dynamic
-linking should be too.
+be both statically and dynamically linked with another program. Currently,
+only static linking is tested to work, but with a couple trivial changes,
+dynamic linking should be too.
 
 Voxlap is C++, but in name only. In practice it contains little-to-none
 Object-Oriented components, and only a few C++ idiosyncrasies prevent it from
@@ -179,24 +198,19 @@ being compiled as C or C++ in order to work in many situations.
 ------------------------------------------------------------------------------
 License:
 
-Based on my concept of a “true port” I should keep the license the same as the
-original: basically attribution + non-commercial only without Ken Silverman’s
-explicit permission. But my inner Free Software evangelist tells me not to. So
-here is the revised license for those wishing to use my modifications to Ken’s
-work:
+Based on my concept of a “true port” I should keep the license the same
+as the original: basically attribution + non-commercial only without Ken
+Silverman’s explicit permission. I previously stated here my work could be
+licensed with the LGPL provided Ken's restrictions are also followed, but I
+now see that is not possible due to the GPL's requirement that commercial
+distribution *must* be permitted.
 
-Option 1: LGPL 2 or later, non-commercial only.
-
-Option 1: LGPL 2 or later, commercial with Ken’s permission.
-
-Option 3: Any other scenario allowed under Ken’s license, with my explicit
-          permission.
-
-I tried to write this to be compatible with Ken’s license, but of course I
-cannot modify his license, so if a conflict arises, ask me for details.
+As before, Ken's licensing restrictions must be obeyed. If  obtains
+permission to use Ken's code under different terms, he or she must also
+contact me and obtain permission if they want to use my modifications.
 
 ------------------------------------------------------------------------------
-Acknolodgements:
+Acknowledgements:
 
 Freenode IRC network: It about as indispensable a resource as exists for
 programming these days. #C and especially #asm in particular for this project.
@@ -237,26 +251,26 @@ need to create your own project if you do so. Here are some hints on setting it
 up to compile Voxlap:
 
    * Be sure to specify these non-default compiler settings:
-        /J   default char type is unsigned
-        /TP  compile all files as .cpp (I incorrectly use .c to save typing :)
+	/J   default char type is unsigned
+	/TP  compile all files as .cpp (I incorrectly use .c to save typing :)
 
    * Add these libraries to your linker settings:
-        ddraw.lib
-        dinput.lib
-        dxguid.lib
+	ddraw.lib
+	dinput.lib
+	dxguid.lib
 
    * To compile V5.ASM, you'll need an assembler. I use MASM. I'm not quite
-        sure how to set this up in the VC environment. To make things easier,
-        I included V5.OBJ. You can add this to your project if you have
-        trouble assembling V5.ASM.
+	sure how to set this up in the VC environment. To make things easier,
+	I included V5.OBJ. You can add this to your project if you have
+	trouble assembling V5.ASM.
 
 To compile with VC Toolkit 2003:
    * Change the linker option: /MD to /ML
-        (see top of GAME.C, SIMPLE.C, VOXED.C, KWALK.C)
+	(see top of GAME.C, SIMPLE.C, VOXED.C, KWALK.C)
 
    * To fix the "MSVCRT.LIB not found" error, in WINMAIN.CPP, change:
       #define USETHREADS 20
-         To:
+	 To:
       #define USETHREADS 0
 
 -Ken S.
@@ -341,11 +355,11 @@ In-game controls:
    `                        Change animation of female character. Try it! :)
    PrintScreen              Capture screen to uncompressed PNG file.
    Ctrl+PrintScreen         Capture panorama to uncompressed PNG file. Slow!
-                               (compatible with KUBE/KUBEGL)
+			       (compatible with KUBE/KUBEGL)
    KP-/+                    Decrease/increase sound volume
    F1                       Play a 3D looping sound (tries to load
-                               "wav/airshoot.wav" but fails since not included
-                               in VOXDATA.ZIP)
+			       "wav/airshoot.wav" but fails since not included
+			       in VOXDATA.ZIP)
    F2                       Stop least recently started looping sound
    KP Enter                 Toggle DirectInput exclusive mouse
    F8                       Change video mode to random settings :)
@@ -355,28 +369,28 @@ In-game commands (press 'T' to enter typing mode):
    /fallcheck               Toggle fall checking
    /sideshademode           Toggle cube face shading
    /faceshade=#,#,#,#,#,#   Specify shade offsets for each of the 6 faces.
-                               Example: /faceshade=0,5,10,15,20,25
+			       Example: /faceshade=0,5,10,15,20,25
    /monst                   Toggle monsters active/inactive.
    /curvy                   Toggle KV6 sprite in front of view (cycles through
-                               all 3 bending/twisting modes) Try it!
+			       all 3 bending/twisting modes) Try it!
    /curvy=[KV6_file]        Toggle and select KV6 sprite in front of view.
-                            Example: /curvy=caco
+			    Example: /curvy=caco
    /curvystp=#              Set stepsize for /curvy mode
    /light                   Add a light source (lightmode 2 only)
    /lightclear              Clear all light sources
    /lightmode=#             Specify lightmode (0=no lighting,1=normal
-                               lighting, 2=point source lighting)
+			       lighting, 2=point source lighting)
    /scandist=#              Set maximum radius to scan for VXL raycasting
    /fogcol=#                Set RGB fogcol. Example: /fogcol=0xff0000 sets fog
-                               color to bright red. /fogcol=-1 to disable
+			       color to bright red. /fogcol=-1 to disable
    /kv6col=#                Set RGB color to blend with all KV6 sprites with
-                               (default:0x808080)
+			       (default:0x808080)
    /anginc=#                Select raycast width (affects framerate/detail
-                               significantly) Default:1, Typical range:1-8
+			       significantly) Default:1, Typical range:1-8
    /vxlmip=#                Select raycast distance where VXL (world map)
-                               MIP-mapping begins. (Default:192)
+			       MIP-mapping begins. (Default:192)
    /kv6mip=#                Select distance where KV6 (sprite) MIP-mapping
-                               begins. (Default:128)
+			       begins. (Default:128)
    /health=#                Set player health (Default:100)
    /numdynamite=#           Set number of dynamite (choose a high number :)
    /numjoystick=#           Set number of joysticks (choose a high number :)
@@ -441,7 +455,7 @@ Release history:
 09/14/2005: Full voxlap source code released. Changes since 11/09/2004:
    * In-line makefile at top of GAME.C now includes VOXLAP5.C and V5.ASM.
    * KPLIB.C updated with Linux support (thanks to JonoF). NOTE: the other
-        files are not Linux-compatible!
+	files are not Linux-compatible!
    * WINMAIN.CPP updated. For sound, link OLE32.LIB instead of DSOUND.LIB
    * VOXLAP5.H: kzaddstack and kzseek now return a value
    * Added GAME.EXE, VOXED.C, KWALK.C, VOXLAP5.C, and V5.ASM to distribution
