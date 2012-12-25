@@ -338,9 +338,9 @@ static long mousex = 0, mousey = 0, gbstatus = 0;
 long mousmoth=0;
 float mousper=0.0;
 
-long readkeyboard () // changed from "void" to "long" to match header & DirectX original. Returned value is never used so it shouldn't matter.
+void readkeyboard ()
 {
-	// all gets done in sdlmsgloop now
+	return; // all gets done in sdlmsgloop now
 }
 
 void readmouse (float *fmousx, float *fmousy, long *bstatus)
@@ -414,7 +414,7 @@ int KSoundBuffer_Release(KSoundBuffer *ksb)
 #define KSBLOCK_FROMWRITECURSOR 1
 #define KSBLOCK_ENTIREBUFFER 2
 int KSoundBuffer_Lock(KSoundBuffer *ksb, long wroffs, long wrlen,
-		void **ptr1, long *len1, void **ptr2, long *len2, long flags)
+		void **ptr1, unsigned long *len1, void **ptr2, unsigned long *len2, long flags)
 {
 	if (!ksb || !ptr1 || !len1 || !ptr2 || !len2) return KS_NOTOK;
 	
@@ -445,7 +445,7 @@ int KSoundBuffer_Lock(KSoundBuffer *ksb, long wroffs, long wrlen,
 	return KS_OK;
 }
 
-int KSoundBuffer_GetCurrentPosition(KSoundBuffer *ksb, long *play, long *write)
+int KSoundBuffer_GetCurrentPosition(KSoundBuffer *ksb, unsigned long *play, unsigned long *write)
 {
 	if (!ksb) return KS_NOTOK;
 	

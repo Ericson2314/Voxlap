@@ -2575,7 +2575,7 @@ initkeyboard_bad:;
 	return(0);
 }
 
-long readkeyboard ()
+void readkeyboard ()
 {
 	HRESULT hr;
 	long i;
@@ -2590,7 +2590,7 @@ long readkeyboard ()
 		IDirectInputDevice_Acquire(gpKeyboard); shkeystatus = 0;
 		hr = IDirectInputDevice_GetDeviceData(gpKeyboard,sizeof(DIDEVICEOBJECTDATA),KbdBuffer,&dwItems,0);
 	}
-	if (hr < 0) return(0);
+	if (hr < 0) return; //return(0);
 	for(i=0;i<(long)dwItems;i++)
 	{
 		lpdidod = &KbdBuffer[i];
@@ -2603,7 +2603,7 @@ long readkeyboard ()
 		if (lpdidod->dwData&128) ext_keystatus[lpdidod->dwOfs] = 1|2;
 								  else ext_keystatus[lpdidod->dwOfs] &= ~1; // preserve bit 2 only
 	}
-	return(dwItems);
+	return; //return(dwItems);
 }
 
 
