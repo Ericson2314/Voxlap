@@ -6,19 +6,14 @@ locBIN                 =$(MAKEDIR)/binaries
 
 # adding local equivalents to environment variables
 INCLUDE                =$(locINC);$(INCLUDE)
-!IFDEF __MSVC__
 LIB                    =$(locLIB);$(LIB)
-!ENDIF
-#PATH                   =$(locBIN);$(PATH)
+#PATH                  =$(locBIN);$(PATH)
 
 # -----------------------------------
 # Importing Environment Variables
 !IFNDEF USEV5ASM
 USEV5ASM               =1
 !ENDIF
-
-GFXdep                 =win
-GFXdep                 =$(_GFXDEP)
 
 AsmName                =masm
 AsmName                =$(_ASMNAME)
@@ -40,50 +35,21 @@ LNK_MODE               =$(LNK_Debug)
 # -----------------------------------
 
 # -----------------------------------
-# GNU Compiler Collection Macros
-!IFDEF __GNUC__
-CXX                    =gcc  #for GNU C++ Compiler
-LNK                    =gcc  #for GNU linker, call through compiler
-LNK_exec               =$(LNK)
-
-# Flags
-CXXFLAGS               =-o $(@) -c -funsigned-char -mwindows $(CXX_MODE) $(GFXCFLAGS) $(Random_Macros) # for GNU C++ Compiler (gcc)
-CMacroPre              =-D # #for GNU C++ Compiler (gcc)
-
-CXX_Debug              =-ggdb
-CXX_Release            =-O3
-
-LNKFLAGS               =-o $(@) $(LNK_MODE) # for GNU linker (ld)
-LNKlibPre              =-l # for GNU linker (ld)
-
-LNK_Debug              =-ggdb
-LNK_Release            =-O3
-
-!ENDIF
-# END GNU Compiler Collection Macros
-# -----------------------------------
-
-# -----------------------------------
 # Micrososft Visual C Macros
-!IFDEF __MSVC__
+
 CXX                    =cl   #for Micrsoft Compiler
 LNK                    =link #for Microsfoft Linker
 LNK_exec               =$(LNK)
 
 # Flags
 CXXFLAGS               =/Fo$(@R) /c /J $(CXX_MODE) $(GFXCFLAGS) $(Random_Macros) # for Micrsoft Compiler(cl)
-CMacroPre              =/D # for Micrsoft Compiler(cl)
-
 CXX_Debug              =/MLd /ZI /GZ /RTCsuc /Od
 CXX_Release            =/Ox
 
 LNKFLAGS               =/out:$(@) $(LNK_MODE) # for Microsfoft Linker (link)
-LNKlibSuf              =.lib
-
 LNK_Debug              =/DEBUG
 LNK_Release            =
 
-!ENDIF
 # END Micrososft Visual C Macros
 # -----------------------------------
 
@@ -114,20 +80,92 @@ AFLAGS                 =/Fo$(@R) /c /coff
 !IF "$(USEV5ASM)"=="1"
 if_USEV5ASM            =$(locBIN)/v5$(OBJSuf)
 !ENDIF
-Random_Macros          =$(CMacroPre)USEV5ASM=$(USEV5ASM)
+Random_Macros          =/DUSEV5ASM=$(USEV5ASM)
 # END Toggle Random Macros
 # -----------------------------------
 
-gameLIBs	           =$(GFXOBJ) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf) $(LNKlibPre)ole32$(LNKlibSuf)
-simpleLIBs             =$(GFXOBJ) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf) $(LNKlibPre)ole32$(LNKlibSuf)
-voxedLIBs	           =$(GFXOBJ) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf) $(LNKlibPre)comdlg32$(LNKlibSuf)
-kwalkLIBs	           =$(GFXOBJ) $(LNKlibPre)user32$(LNKlibSuf) $(LNKlibPre)gdi32$(LNKlibSuf) $(LNKlibPre)ole32$(LNKlibSuf) $(LNKlibPre)comdlg32$(LNKlibSuf)
-
-
+gameLIBs	           =ddraw.lib dinput.lib dxguid.lib $(LNKlibPre)user32.lib $(LNKlibPre)gdi32.lib $(LNKlibPre)ole32.lib
+simpleLIBs             =ddraw.lib dinput.lib dxguid.lib $(LNKlibPre)user32.lib $(LNKlibPre)gdi32.lib $(LNKlibPre)ole32.lib
+voxedLIBs	           =ddraw.lib dinput.lib dxguid.lib $(LNKlibPre)user32.lib $(LNKlibPre)gdi32.lib $(LNKlibPre)comdlg32.lib
+kwalkLIBs	           =ddraw.lib dinput.lib dxguid.lib $(LNKlibPre)user32.lib $(LNKlibPre)gdi32.lib $(LNKlibPre)ole32.lib $(LNKlibPre)comdlg32.lib
 
 OBJSuf                 =.obj
 EXESuf                 =.exe
-rm                     =del /f
 
-# Call Common
-!include common.mak
+# sub-directory macros
+# locSRC                      =$(MAKEDIR)/source
+# locINC                      =$(MAKEDIR)/include
+# locLIB                      =$(MAKEDIR)/libraries
+# locBIN                      =$(MAKEDIR)/binaries
+
+Phony:                        default
+default:                      $(locBIN)/game$(EXESuf) $(locBIN)/simple$(EXESuf) $(locBIN)/voxed$(EXESuf) $(locBIN)/kwalk$(EXESuf)
+
+# executable ($(EXESuf)) (meta)targets
+game:                         $(locBIN)/game$(EXESuf)
+$(locBIN)/game$(EXESuf):      $(locBIN)/game$(OBJSuf)   $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain1$(OBJSuf)
+	$(LNK_exec) $(LNKFLAGS)   $(locBIN)/game$(OBJSuf)   $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain1$(OBJSuf) $(gameLIBs)
+
+simple:                       $(locBIN)/simple$(OBJSuf)
+$(locBIN)/simple$(EXESuf):    $(locBIN)/simple$(OBJSuf) $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain1$(OBJSuf)
+	$(LNK_exec) $(LNKFLAGS)   $(locBIN)/simple$(OBJSuf) $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain1$(OBJSuf) $(simpleLIBs)
+
+voxed:                        $(locBIN)/voxed$(OBJSuf)
+$(locBIN)/voxed$(EXESuf):     $(locBIN)/voxed$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain2$(OBJSuf)
+	$(LNK_exec) $(LNKFLAGS)   $(locBIN)/voxed$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain2$(OBJSuf) $(voxedLIBs)
+	
+kwalk:                        $(locBIN)/kwalk$(OBJSuf)
+$(locBIN)/kwalk$(EXESuf):     $(locBIN)/kwalk$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain2$(OBJSuf)
+	$(LNK_exec) $(LNKFLAGS)   $(locBIN)/kwalk$(OBJSuf)  $(locBIN)/voxlap5$(OBJSuf) $(if_USEV5ASM) $(locBIN)/kplib$(OBJSuf) $(locBIN)/winmain2$(OBJSuf) $(kwalkLIBs)
+
+
+# binary object ($(OBJSuf)) targets
+
+# Primary Objects
+game_o:                            $(locSRC)/game$(OBJSuf)
+$(locBIN)/game$(OBJSuf):           $(locSRC)/game.cpp   $(locINC)/voxlap5.h $(locINC)/sysmain.h
+	$(CXX) $(CXXFLAGS)             $(locSRC)/game.cpp
+#   used to use /QIfist             
+
+simple_o:                          $(locSRC)/simple$(OBJSuf)
+$(locBIN)/simple$(OBJSuf):         $(locSRC)/simple.cpp $(locINC)/voxlap5.h $(locINC)/sysmain.h
+	$(CXX) $(CXXFLAGS)             $(locSRC)/simple.cpp
+#   used to use /QIfist             
+
+voxed_o:                           $(locSRC)/voxed$(OBJSuf)
+$(locBIN)/voxed$(OBJSuf):          $(locSRC)/voxed.cpp  $(locINC)/voxlap5.h $(locINC)/sysmain.h
+	$(CXX) $(CXXFLAGS)             $(locSRC)/voxed.cpp
+
+kwalk_o:                           $(locSRC)/kwalk$(OBJSuf)
+$(locBIN)/kwalk$(OBJSuf):          $(locSRC)/kwalk.cpp  $(locINC)/voxlap5.h $(locINC)/sysmain.h
+	$(CXX) $(CXXFLAGS)             $(locSRC)/kwalk.cpp
+
+# Secondary Objects                 
+voxlap:                            $(locSRC)/voxlap5$(OBJSuf)
+$(locBIN)/voxlap5$(OBJSuf):        $(locSRC)/voxlap5.cpp $(locINC)/voxlap5.h
+	$(CXX) $(CXXFLAGS)             $(locSRC)/voxlap5.cpp
+
+v5:                                $(locBIN)/v5$(OBJSuf)
+$(locBIN)/v5$(OBJSuf):             $(locSRC)/v5.$(AsmName)
+	$(AS)  $(AFLAGS)               $(locSRC)/v5.$(AsmName)
+
+kplib:                             $(locBIN)/kplib$(OBJSuf)
+$(locBIN)/kplib$(OBJSuf):          $(locSRC)/kplib.cpp
+	$(CXX) $(CXXFLAGS)             $(locSRC)/kplib.cpp
+
+main1:                             $(locBIN)/winmain1$(OBJSuf)
+$(locBIN)/winmain1$(OBJSuf):       $(locSRC)/winmain.cpp $(locINC)/sysmain.h
+	$(CXX) $(CXXFLAGS)             $(locSRC)/winmain.cpp /DUSEKZ /DZOOM_TEST
+
+main2:                             $(locBIN)/winmain2$(OBJSuf)
+$(locBIN)/winmain2$(OBJSuf):       $(locSRC)/winmain.cpp $(locINC)/sysmain.h
+	$(CXX) $(CXXFLAGS)             $(locSRC)/winmain.cpp /DNOSOUND
+
+# Clearn Script
+cleanall: clean
+	cd "$(locBIN)"
+	del /f "*"
+clean:
+	cd "$(locBIN)"
+	del /f "*$(OBJSuf)"
+	del /f "*$(EXESuf)"
