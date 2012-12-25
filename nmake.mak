@@ -160,8 +160,8 @@ $(locBIN)/v5$(OBJSuf):             $(locSRC)/v5.$(AsmName)
 	$(AS)  $(AFLAGS)               $(locSRC)/v5.$(AsmName)
 
 s6:
-$(locBIN)/s6$(OBJSuf):             $(locSRC)/s6.asm
-	$(AS)  $(AFLAGS)               $(locSRC)/s6.asm
+$(locBIN)/s6$(OBJSuf):             $(locSRC)/s6.$(AsmName)
+	$(AS)  $(AFLAGS)               $(locSRC)/s6.$(AsmName)
 
 kplib:                             $(locBIN)/kplib$(OBJSuf)
 $(locBIN)/kplib$(OBJSuf):          $(locSRC)/kplib.cpp
