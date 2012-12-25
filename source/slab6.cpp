@@ -82,7 +82,10 @@ License for this code:
 #include <sys\stat.h>
 #include <math.h>
 #include <direct.h>
+//#define SYSMAIN_C //if sysmain is compiled as C
 #include "../include/sysmain.h"
+
+#include "../include/porthacks.h"
 
 #define OPTIMIZEFOR 6
 
@@ -90,12 +93,6 @@ License for this code:
 #include <malloc.h>
 #include <memory.h>
 #include <stdarg.h>
-#if !defined(max)
-#define max(a,b) (((a) > (b)) ? (a) : (b))
-#endif
-#if !defined(min)
-#define min(a,b) (((a) < (b)) ? (a) : (b))
-#endif
 
 #define MAXXDIM 2048
 #define MAXYDIM 1536
@@ -179,7 +176,7 @@ long grabwindow = -1;
 
 	//Copy&paste (2D slice editor)
 long copx0, copy0, copx1, copy1, copshiftmode = 0, copwindow = -1;
-long copbuf[max(MAXXSIZ,BUFZSIZ)][max(MAXYSIZ,BUFZSIZ)];
+long copbuf[MAX(MAXXSIZ,BUFZSIZ)][MAX(MAXYSIZ,BUFZSIZ)];
 
 	//Copy&paste (3D using RMB)
 lpoint3d corn[2];
@@ -237,7 +234,7 @@ static long keyrepeat (long scancode)
 	if (keystatus[scancode] == 1) { i = 1; keystatus[scancode] = 2;/*Avoid multiple hit when fps >= 1000fps*/  }
 	else if (keystatus[scancode] == 255) { i = 1; keystatus[scancode] = 222; }
 	else i = 0;
-	keystatus[scancode] = min(keystatus[scancode]+lsyncticsms,255);
+	keystatus[scancode] = MIN(keystatus[scancode]+lsyncticsms,255);
 	return(i);
 }
 
@@ -252,12 +249,11 @@ static long keyrepeat (long scancode)
 
 long fpumode;
 long fstcw ();
-#ifdef _MSC_VER
 
 #if (OPTIMIZEFOR == 6)
 
 	//Better for Pentium Pros (with Fastvid)
-static _inline void clearbufbyte (void *d, long c, long a)
+static inline void clearbufbyte (void *d, long c, long a)
 {
 	_asm
 	{
@@ -274,7 +270,7 @@ skipit:
 #else
 
 	//Better for Pentiums
-static _inline void clearbufbyte (void *d, long c, long a)
+static inline void clearbufbyte (void *d, long c, long a)
 {
 	_asm
 	{
@@ -299,42 +295,77 @@ skip2:
 
 #endif
 
-static _inline long fstcw ()
+static inline long fstcw ()
 {
 	long fpumode;
 	_asm fstcw fpumode
 	return(fpumode);
 }
 
-static _inline void fldcw (long fpumode)
+static inline void fldcw (long fpumode)
 {
 	_asm fldcw fpumode
 }
 
-static _inline void ftol (float f, long *a)
+static inline void ftol (float f, long *a)
 {
+	#ifdef __NOASM__
+	a = (long*)&(f);
+	#else
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"fistp	dword ptr [%[a]]\n"
+		".att_syntax prefix\n"
+		: 
+		: [f]  "t" (f), [a] "r" (a)
+		:
+	);
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov eax, a
-		fld f
-		fistp dword ptr [eax]
+		mov	eax, a
+		fld	f
+		fistp	dword ptr [eax]
 	}
+	#endif
+	#endif
 }
 
-static _inline void fcossin (float a, float *c, float *s)
+static inline void fcossin (float a, float *c, float *s)
 {
+	#ifdef __NOASM__
+	*c = cos(a);
+	*s = sin(a);
+	#else
+	#if __GNUC__ //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"fld	DWORD PTR a\n\t"
+		"fsincos\n\t"
+		"mov	eax, c\n\t"
+		"fstp	DWORD PTR [eax]\n\t"
+		"mov	eax, s\n\t"
+		"fstp	DWORD PTR [eax]\n\t"
+		".att_syntax prefix\n"
+	);
+	#endif
+	#if _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		fld a
 		fsincos
-		mov eax, c
-		fstp dword ptr [eax]
-		mov eax, s
-		fstp dword ptr [eax]
+		mov	eax, c
+		fstp	dword ptr [eax]
+		mov	eax, s
+		fstp	dword ptr [eax]
 	}
+	#endif
+	#endif
 }
-
-#endif
 
 #define LOGFSQSIZ 10
 long fsqlookup[1<<LOGFSQSIZ];
@@ -370,9 +401,7 @@ void initfrecipasm ()
 #define frecipasm(i,o)\
 	((*(long *)o) = freciplookup[((*(long *)i)&0x007fffff)>>(23-LOGFRECIPSIZ)]-(*(long *)i))
 
-#ifdef _MSC_VER
-
-static _inline void qinterpolatedown16 (long *a, long c, long d, long s)
+static inline void qinterpolatedown16 (long *a, long c, long d, long s)
 {
 	_asm
 	{
@@ -401,7 +430,7 @@ skipbegqcalc2:
 	}
 }
 
-static _inline void qinterpolatehiadd16 (long *a, long c, long d, long s)
+static inline void qinterpolatehiadd16 (long *a, long c, long d, long s)
 {
 	_asm
 	{
@@ -429,8 +458,6 @@ skipbegcalc: and edx, 0xffff0000
 skipbegqcalc2:
 	}
 }
-
-#endif
 
 	//NOTE: font is stored vertically first! (like .ART files)
 static const __int64 font6x8[] = //256 DOS chars, from: DOSAPP.FON (tab blank)
@@ -501,8 +528,8 @@ static void print6x8 (long ox, long y, long fcol, long bcol, const char *fmt, ..
 			for(c=st,x=ox;*c;c++,x+=6)
 			{
 				v = (char *)(((long)*c)*6 + (long)font6x8);
-				ie = min(gdd.x-x,6); cpx = &cp[x];
-				for(i=max(-x,0);i<ie;i++) { if (v[i]&j) cpx[i] = fcol; else if (bcol >= 0) cpx[i] = bcol; }
+				ie = MIN(gdd.x-x,6); cpx = &cp[x];
+				for(i=MAX(-x,0);i<ie;i++) { if (v[i]&j) cpx[i] = fcol; else if (bcol >= 0) cpx[i] = bcol; }
 				if ((*c) == 9) { if (bcol >= 0) for(i=6;i<18;i++) cpx[i] = bcol; x += 2*6; }
 			}
 }
@@ -520,20 +547,41 @@ typedef struct
 } equivectyp;
 static equivectyp equivec;
 
-#ifdef _MSC_VER
-static _inline long dmulshr0 (long a, long d, long s, long t)
+static inline long dmulshr0 (long a, long d, long s, long t)
 {
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"imul	%[d]\n"
+		".att_syntax prefix\n"
+		:    "=a" (a)
+		: [a] "0" (a), [d] "r" (d)
+		:
+	);
+		__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"imul	%[d]\n"
+		".att_syntax prefix\n"
+		:    "=a" (s)
+		: [s] "0" (s), [d] "r" (t)
+		:
+	);
+	return a + s;
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov eax, a
-		imul d
-		mov ecx, eax
-		mov eax, s
-		imul t
-		add eax, ecx
+		mov	eax, a
+		imul	d
+		mov	ecx, eax
+		mov	eax, s
+		imul	t
+		add	eax, ecx
 	}
+	#endif
 }
-#endif
 
 void equiind2vec (long i, float *x, float *y, float *z)
 {
@@ -677,9 +725,9 @@ void renderdots ()
 	ftol( ipos.x+xpiv-.5,&x);
 	ftol(-ipos.z+ypiv-.5,&y);
 	ftol( ipos.y+zpiv-.5,&inz);
-	splitx = min(max(x,0),xsiz);
-	splity = min(max(y,0),ysiz);
-	splity2 = min(max(y,-1),ysiz-1);
+	splitx = MIN(MAX(x,0),xsiz);
+	splity = MIN(MAX(y,0),ysiz);
+	splity2 = MIN(MAX(y,-1),ysiz-1);
 	c.x = -xpiv-ipos.x;
 	c.y = +ypiv-ipos.z;
 	c.z = -zpiv-ipos.y;
@@ -1206,7 +1254,7 @@ void drawcube (float rx, float ry, float rz, char col, char visside)
 				do
 				{
 					sx1 = lastx[sy1]; if (sx1 < 0) sx1 = 0;
-					clearbufbyte((void *)(sx1+j),min(xs>>16,gdd.x)-sx1,dlcol);
+					clearbufbyte((void *)(sx1+j),MIN(xs>>16,gdd.x)-sx1,dlcol);
 					xs += dx; j += gdd.p; sy1++;
 				} while (sy1 < sy2);
 			}
@@ -1232,9 +1280,9 @@ void rendercube ()
 	ftol( ipos.x+xpiv-.5,&x);
 	ftol(-ipos.z+ypiv-.5,&y);
 	ftol( ipos.y+zpiv-.5,&inz);
-	splitx = min(max(x,0),xsiz);
-	splity = min(max(y,0),ysiz);
-	splity2 = min(max(y,-1),ysiz-1);
+	splitx = MIN(MAX(x,0),xsiz);
+	splity = MIN(MAX(y,0),ysiz);
+	splity2 = MIN(MAX(y,-1),ysiz-1);
 	c.x = -xpiv-ipos.x;
 	c.y = +ypiv-ipos.z;
 	c.z = -zpiv-ipos.y;
@@ -1326,9 +1374,18 @@ void rendercube ()
 	fldcw(ofpumode); //restore fpumode to value at beginning of function
 }
 
-#ifdef _MSC_VER
-static _inline long testflag (long c)
+static inline long testflag (long c)
 {
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	long a;
+	__asm__ __volatile__ (
+		"pushf\n\tpopl %%eax\n\tmovl %%eax, %%ebx\n\txorl %%ecx, %%eax\n\tpushl %%eax\n\t"
+		"popf\n\tpushf\n\tpopl %%eax\n\txorl %%ebx, %%eax\n\tmovl $1, %%eax\n\tjne 0f\n\t"
+		"xorl %%eax, %%eax\n\t0:"
+		: "=a" (a) : "c" (c) : "ebx","cc" );
+	return a;
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		mov ecx, c
@@ -1346,10 +1403,18 @@ static _inline long testflag (long c)
 		xor eax, eax
 		menostinx:
 	}
+	#endif
 }
 
-static _inline void cpuid (long a, long *s)
+static inline void cpuid (long a, long *s)
 {
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__ (
+		"cpuid\n\tmovl %%eax, (%%esi)\n\tmovl %%ebx, 4(%%esi)\n\t"
+		"movl %%ecx, 8(%%esi)\n\tmovl %%edx, 12(%%esi)"
+		: "+a" (a) : "S" (s) : "ebx","ecx","edx","memory","cc");
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		push ebx
@@ -1364,8 +1429,8 @@ static _inline void cpuid (long a, long *s)
 		pop esi
 		pop ebx
 	}
+	#endif
 }
-#endif
 
 static long gotsse = 0;
 long checksse ()  //Returns 1 if you have >= Pentium III, otherwise 0
@@ -1414,77 +1479,156 @@ char ptfaces16[43][8] =
 }
 #endif
 
-#ifdef _MSC_VER
-static _inline void movps (point4d *dest, point4d *src)
+static inline void movps (point4d *dest, point4d *src)
 {
+	#ifdef __NOASM__
+	
+	#else
+	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"movaps	[%[dest]], %[src]\n"
+		".att_syntax prefix\n"
+		:
+		: [src] "x" (*src), [dest] "p" (dest)
+		:
+	);
+	#endif
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov edx, dest
-		mov ebx, src
-		movaps xmm7, [ebx]
-		movaps [edx], xmm7
+		mov	eax, src
+		movaps	xmm7, [eax]
+		mov	eax, dest
+		movaps	[eax], xmm7
 	}
+	#endif
+	#endif
 }
 
-static _inline void intss (point4d *dest, long src)
+static inline void intss (point4d *dest, long src)
 {
+	#ifdef __NOASM__
+	
+	#else
+	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"cvtsi2ss	%%xmm7, %[src]\n"
+		"shufps	%%xmm7, %%xmm7, 0\n"
+		"movaps	[%[dest]], %%xmm7\n"
+		".att_syntax prefix\n"
+		:
+		: [src] "x" (src), [dest] "p" (dest)
+		: "xmm7"
+	);
+	#endif
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov edx, dest
-		mov eax, src
-		cvtsi2ss xmm7, eax
-		shufps xmm7, xmm7, 0
-		movaps [edx], xmm7
+		mov	eax, dest
+		cvtsi2ss	xmm7, src
+		shufps	xmm7, xmm7, 0
+		movaps	[eax], xmm7
 	}
+	#endif
+	#endif
 }
 
-static _inline void addps (point4d *sum, point4d *a, point4d *b)
+static inline void addps (point4d *sum, point4d *a, point4d *b)
 {
+	#ifdef __NOASM__
+	
+	#else
+	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"addps	%[a], [%[b]]\n"
+		"movaps	[%[sum]], %[a]\n"
+		".att_syntax prefix\n"
+		:
+		: [a] "x" (*a), [b] "p" (b), [sum] "p" (sum)
+		:
+	);
+	#endif
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov edx, sum
-		mov ebx, a
-		mov ecx, b
-		movaps xmm7, [ebx]
-		movaps xmm1, [ecx]
-		addps xmm7, xmm1
-		movaps [edx], xmm7
+		mov	eax, a
+		movaps	xmm7, [eax]
+		mov	eax, b
+		addps	xmm7, [eax]
+		mov	eax, sum
+		movaps	[eax], xmm7
 	}
+	#endif
+	#endif
 }
 
-static _inline void mulps (point4d *sum, point4d *a, point4d *b)
+static inline void mulps (point4d *sum, point4d *a, point4d *b)
 {
+	#ifdef __NOASM__
+	
+	#else
+	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"mulps	%[a], [%[b]]\n"
+		"movaps	[%[sum]], %[a]\n"
+		".att_syntax prefix\n"
+		:
+		: [a] "x" (*a), [b] "p" (b), [sum] "p" (sum)
+		:
+	);
+	#endif
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov edx, sum
-		mov ebx, a
-		mov ecx, b
-		movaps xmm7, [ebx]
-		movaps xmm1, [ecx]
-		mulps xmm7, xmm1
-		movaps [edx], xmm7
+		mov	eax, a
+		movaps	xmm7, [eax]
+		mov	eax, b
+		mulps	xmm7, [eax]
+		mov	eax, sum
+		movaps	[eax], xmm7
 	}
+	#endif
+	#endif
 }
 
-static _inline void subps (point4d *sum, point4d *a, point4d *b)
+static inline void subps (point4d *sum, point4d *a, point4d *b)
 {
+	#ifdef __NOASM__
+	
+	#else
+	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax noprefix\n"
+		"subps	%[a], [%[b]]\n"
+		"movaps	[%[sum]], %[a]\n"
+		".att_syntax prefix\n"
+		:
+		: [a] "x" (*a), [b] "p" (b), [sum] "p" (sum)
+		:
+	);
+	#endif
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov edx, sum
-		mov ebx, a
-		mov ecx, b
-		movaps xmm7, [ebx]
-		movaps xmm1, [ecx]
-		subps xmm7, xmm1
-		movaps [edx], xmm7
+		mov	eax, a
+		movaps	xmm7, [eax]
+		mov	eax, b
+		subps	xmm7, [eax]
+		mov	eax, sum
+		movaps	[eax], xmm7
 	}
+	#endif
+	#endif
 }
-
-static _inline void emms ()
-{
-	_asm emms
-}
-#endif
 
 static void initboundcubescr (long x, long y, long dabpl, long dacolbits)
 {
@@ -1525,9 +1669,9 @@ void renderboundcubep3 ()
 	ftol( ipos.x+xpiv-.5,&x);
 	ftol(-ipos.z+ypiv-.5,&y);
 	ftol( ipos.y+zpiv-.5,&inz);
-	splitx = min(max(x,0),xsiz);
-	splity = min(max(y,0),ysiz);
-	splity2 = min(max(y,-1),ysiz-1);
+	splitx = MIN(MAX(x,0),xsiz);
+	splity = MIN(MAX(y,0),ysiz);
+	splity2 = MIN(MAX(y,-1),ysiz-1);
 
 		//Ugly hack to avoid hz multiplies!
 	irig4->x = irig.x*hz; irig4->y = irig.y*hz; irig4->z = irig.z*hz; irig4->z2 = irig4->z;
@@ -1647,7 +1791,7 @@ void renderboundcubep3 ()
 			subps(r0,r0,&cadd4[4]);
 		}
 	}
-	emms();
+	clearMMX();
 
 		//Ugly hack to avoid hz multiplies!
 	//irig = oirig;
@@ -1736,9 +1880,9 @@ void renderboundcube ()
 	ftol( ipos.x+xpiv-.5,&x);
 	ftol(-ipos.z+ypiv-.5,&y);
 	ftol( ipos.y+zpiv-.5,&inz);
-	splitx = min(max(x,0),xsiz);
-	splity = min(max(y,0),ysiz);
-	splity2 = min(max(y,-1),ysiz-1);
+	splitx = MIN(MAX(x,0),xsiz);
+	splity = MIN(MAX(y,0),ysiz);
+	splity2 = MIN(MAX(y,-1),ysiz-1);
 	c.x = -xpiv-ipos.x;
 	c.y = +ypiv-ipos.z;
 	c.z = -zpiv-ipos.y;
@@ -1926,7 +2070,7 @@ void drawsphere (float cx, float cy, float cz, char col)
 
 		ftol(nb-t,&sx1); if (sx1 < 0) sx1 = 0;
 		ftol(nb+t,&sx2);
-		clearbufbyte((void *)(sx1+p),min(sx2,gdd.x)-sx1,dlcol);
+		clearbufbyte((void *)(sx1+p),MIN(sx2,gdd.x)-sx1,dlcol);
 		p += gdd.p; if (p == sy2) return;
 
 		isq += isqi; isqi += isqii; nb += nbi;
@@ -1943,9 +2087,9 @@ void rendersphere ()
 	ftol( ipos.x+xpiv-.5,&x);
 	ftol(-ipos.z+ypiv-.5,&y);
 	ftol( ipos.y+zpiv-.5,&inz);
-	splitx = min(max(x,0),xsiz);
-	splity = min(max(y,0),ysiz);
-	splity2 = min(max(y,-1),ysiz-1);
+	splitx = MIN(MAX(x,0),xsiz);
+	splity = MIN(MAX(y,0),ysiz);
+	splity2 = MIN(MAX(y,-1),ysiz-1);
 	c.x = -xpiv-ipos.x;
 	c.y = +ypiv-ipos.z;
 	c.z = -zpiv-ipos.y;
@@ -2069,9 +2213,9 @@ void renderboundsphere ()
 	ftol( ipos.x+xpiv-.5,&x);
 	ftol(-ipos.z+ypiv-.5,&y);
 	ftol( ipos.y+zpiv-.5,&inz);
-	splitx = min(max(x,0),xsiz);
-	splity = min(max(y,0),ysiz);
-	splity2 = min(max(y,-1),ysiz-1);
+	splitx = MIN(MAX(x,0),xsiz);
+	splity = MIN(MAX(y,0),ysiz);
+	splity2 = MIN(MAX(y,-1),ysiz-1);
 	c.x = -xpiv-ipos.x;
 	c.y = +ypiv-ipos.z;
 	c.z = -zpiv-ipos.y;
@@ -2265,7 +2409,7 @@ void updatereflects (float px, float py, float pz)
 
 		ftol(f*lightmul,&j);
 
-		shadeoff[i] = min(max(j+lightadd,0),63);
+		shadeoff[i] = MIN(MAX(j+lightadd,0),63);
 	}
 }
 
@@ -2462,9 +2606,9 @@ void setfaceshademode (long damode)
 			for(i=0;i<256;i++)
 				for(k=64+(j-1)*8;(k>=0)&&(k<128);k+=j-1)
 				{
-					x = min(max((fipalette[i*3  ]*k)>>6,0),63);
-					y = min(max((fipalette[i*3+1]*k)>>6,0),63);
-					z = min(max((fipalette[i*3+2]*k)>>6,0),63);
+					x = MIN(MAX((fipalette[i*3  ]*k)>>6,0),63);
+					y = MIN(MAX((fipalette[i*3+1]*k)>>6,0),63);
+					z = MIN(MAX((fipalette[i*3+2]*k)>>6,0),63);
 					slcol[j][i] = lcol[closestcol[(x<<12)+(y<<6)+z]];
 					if (slcol[j][i] != lcol[i]) break;
 				}
@@ -2501,8 +2645,8 @@ typedef struct { char x, y, z0, z1; } cpoint4d;
 static cpoint4d fbuf[FILLBUFSIZ];
 
 #ifdef _MSC_VER
-static _inline long bsf (long a) { _asm bsf eax, a }
-static _inline long bsr (long a) { _asm bsr eax, a }
+static inline long bsf (long a) { _asm bsf eax, a }
+static inline long bsr (long a) { _asm bsr eax, a }
 #endif
 
 long dntil0 (long xy, long z)
@@ -2823,7 +2967,7 @@ void initpal (char *dapal)
 	{
 		for(i=63;i>=0;i--)
 			for(j=255;j>=0;j--)
-				palookup[i][j] = (j&0xe0)+min(max((j&31)+(i>>1)-24,0),31);
+				palookup[i][j] = (j&0xe0)+MIN(MAX((j&31)+(i>>1)-24,0),31);
 	}
 	else
 	{
@@ -2832,9 +2976,9 @@ void initpal (char *dapal)
 			f = ((float)i-48.0)/48.0 + 1.0;   //range: 0 <= f < 4/3
 			for(j=255;j>=0;j--)
 			{
-				x = min(max(dapal[j*3  ]*f,0),63);
-				y = min(max(dapal[j*3+1]*f,0),63);
-				z = min(max(dapal[j*3+2]*f,0),63);
+				x = MIN(MAX(dapal[j*3  ]*f,0),63);
+				y = MIN(MAX(dapal[j*3+1]*f,0),63);
+				z = MIN(MAX(dapal[j*3+2]*f,0),63);
 				palookup[i][j] = closestcol[(x<<12)+(y<<6)+z];
 			}
 		}
@@ -3411,9 +3555,9 @@ void savekvx (char *filnam, long numips)
 
 						//Get col
 					r = g = b = n = 0; zzz = (z<<m);
-					for(xx=min(xxx+oneupm,xsiz)-1;xx>=xxx;xx--)
-						for(yy=min(yyy+oneupm,ysiz)-1;yy>=yyy;yy--)
-							for(zz=min(zzz+oneupm,zsiz)-1;zz>=zzz;zz--)
+					for(xx=MIN(xxx+oneupm,xsiz)-1;xx>=xxx;xx--)
+						for(yy=MIN(yyy+oneupm,ysiz)-1;yy>=yyy;yy--)
+							for(zz=MIN(zzz+oneupm,zsiz)-1;zz>=zzz;zz--)
 							{
 								vptr = getvptr(xx,yy,zz); if (!vptr) continue;
 								r += (long)fipalette[((long)vptr->col)*3  ];
@@ -4069,9 +4213,9 @@ long getlocalmass (long x, long y, long z, long r)
 		//             ((unsigned long)zz < (unsigned long)zsiz) &&
 		//             ((xx-x)*(xx-x)+(yy-y)*(yy-y)+(zz-z)*(zz-z) < r2))
 		//            { i = (xx*MAXYSIZ+yy)*BUFZSIZ+zz; if (!(vbit[i>>5]&(1<<i))) k++; }
-	x2 = max(x-r+1,0); x3 = min(x+r-1,xsiz-1);
-	y2 = max(y-r+1,0); y3 = min(y+r-1,ysiz-1);
-	z2 = max(z-r+1,0); z3 = min(z+r-1,zsiz-1);
+	x2 = MAX(x-r+1,0); x3 = MIN(x+r-1,xsiz-1);
+	y2 = MAX(y-r+1,0); y3 = MIN(y+r-1,ysiz-1);
+	z2 = MAX(z-r+1,0); z3 = MIN(z+r-1,zsiz-1);
 	daz = daz2 = k = 0;
 	for(xx=x2;xx<=x3;xx++)
 	{
@@ -4085,7 +4229,7 @@ long getlocalmass (long x, long y, long z, long r)
 			while (daz2 <= r1) { daz2 += daz; daz++; daz2 += daz; }
 			while (daz2 >  r1) { daz2 -= daz; daz--; daz2 -= daz; }
 
-			zz = max(z-daz,z2); damsk = (((1<<(min(z+daz,z3)+1-zz))-1)<<(zz&7));
+			zz = MAX(z-daz,z2); damsk = (((1<<(MIN(z+daz,z3)+1-zz))-1)<<(zz&7));
 			k += popcount((~(*(long *)(((long)vbit)+((yy*BUFZSIZ+l+zz)>>3))))&damsk);
 		}
 	}
@@ -4181,9 +4325,9 @@ void voxfindsuck (long hitx, long hity, long hitz, long r, long *ox, long *oy, l
 
 	j = 0x7fffffff; (*ox) = hitx; (*oy) = hity; (*oz) = hitz; r2 = r*r;
 
-	x0 = max(hitx-r,0); x1 = min(hitx+r,xsiz-1);
-	y0 = max(hity-r,0); y1 = min(hity+r,ysiz-1);
-	z0 = max(hitz-r,0); z1 = min(hitz+r,zsiz-1);
+	x0 = MAX(hitx-r,0); x1 = MIN(hitx+r,xsiz-1);
+	y0 = MAX(hity-r,0); y1 = MIN(hity+r,ysiz-1);
+	z0 = MAX(hitz-r,0); z1 = MIN(hitz+r,zsiz-1);
 
 	v0 = voxdata;
 	if ((x0<<1) < xsiz) { for(i=0     ;i< x0;i++) v0 += xlen[i]; }
@@ -4614,7 +4758,7 @@ void myfileselect_start (char *filespec)
 	if (filespec)
 	{
 		if (!menunamecnt) return;
-		myfileselect_newhighlight = menuhighlight = min(max(menuhighlight,0),menunamecnt-1);
+		myfileselect_newhighlight = menuhighlight = MIN(MAX(menuhighlight,0),menunamecnt-1);
 		myfileselectmode = 1;
 	}
 }
@@ -4624,7 +4768,7 @@ void myfileselect_draw ()
 	long i;
 	char tbuf[MAX_PATH+5+1];
 
-	myfileselect_topplc = max(min(myfileselect_newhighlight-(((gdd.y-7)>>3)>>1),menunamecnt-((gdd.y-7)>>3)-1),0);
+	myfileselect_topplc = MAX(MIN(myfileselect_newhighlight-(((gdd.y-7)>>3)>>1),menunamecnt-((gdd.y-7)>>3)-1),0);
 	for(i=0;i<menunamecnt;i++)
 	{
 		if (i == myfileselect_newhighlight) strcpy(tbuf,"--> "); else strcpy(tbuf,"    ");
@@ -4647,10 +4791,10 @@ char *myfileselect_input ()
 	{
 		switch((i>>8)&255)
 		{
-			case 0xc8: case 0xcb: myfileselect_newhighlight = max(myfileselect_newhighlight-1,            0); break;
-			case 0xd0: case 0xcd: myfileselect_newhighlight = min(myfileselect_newhighlight+1,menunamecnt-1); break;
-			case 0xc9: myfileselect_newhighlight = max(myfileselect_newhighlight-((gdd.y-7)>>3),            0); break; //PGUP
-			case 0xd1: myfileselect_newhighlight = min(myfileselect_newhighlight+((gdd.y-7)>>3),menunamecnt-1); break; //PGDN
+			case 0xc8: case 0xcb: myfileselect_newhighlight = MAX(myfileselect_newhighlight-1,            0); break;
+			case 0xd0: case 0xcd: myfileselect_newhighlight = MIN(myfileselect_newhighlight+1,menunamecnt-1); break;
+			case 0xc9: myfileselect_newhighlight = MAX(myfileselect_newhighlight-((gdd.y-7)>>3),            0); break; //PGUP
+			case 0xd1: myfileselect_newhighlight = MIN(myfileselect_newhighlight+((gdd.y-7)>>3),menunamecnt-1); break; //PGDN
 			case 0xc7: myfileselect_newhighlight = 0; break; //Home
 			case 0xcf: myfileselect_newhighlight = menunamecnt-1; break; //End
 			case 0x1c:
@@ -4776,7 +4920,7 @@ void draw2dslice (long w)
 			print6x8(x0+11*6,y0-8,closestcol[0x1f7ff],-1,"%2d",fipalette[curcol*3+2]);
 			print6x8(x0+14*6,y0-8,whitecol           ,-1,"GAMMA:%d.%d",curgamminterp/1000,(curgamminterp/100)%10);
 
-			x1 = min((32<<daz)+x0,gdd.x); x0 = max(x0+24*6,0);
+			x1 = MIN((32<<daz)+x0,gdd.x); x0 = MAX(x0+24*6,0);
 			for(yy=y0-8;yy<y0-1;yy++)
 				if ((unsigned long)yy < gdd.y)
 					for(xx=x0;xx<x1;xx++)
@@ -4826,8 +4970,8 @@ void draw2dslice (long w)
 		}
 	}
 
-	dax0 = max(x0,0); dax1 = min(x1,gdd.x);
-	day0 = max(y0,0); day1 = min(y1,gdd.y);
+	dax0 = MAX(x0,0); dax1 = MIN(x1,gdd.x);
+	day0 = MAX(y0,0); day1 = MIN(y1,gdd.y);
 	dainc = (65536>>daz);
 	by = (day0-y0) * dainc;
 	startx = (dax0-x0) * dainc;
@@ -4848,9 +4992,9 @@ void draw2dslice (long w)
 	print6x8(x0,y0-8,whitecol,-1,"%s",dabuf);
 
 	if ((dax0 >= dax1) || (day0 >= day1)) return;
-	viewx = max(min(viewx,xsiz-1),0);
-	viewy = max(min(viewy,ysiz-1),0);
-	viewz = max(min(viewz,zsiz-1),0);
+	viewx = MAX(MIN(viewx,xsiz-1),0);
+	viewy = MAX(MIN(viewy,ysiz-1),0);
+	viewz = MAX(MIN(viewz,zsiz-1),0);
 
 	switch(w)
 	{
@@ -5098,7 +5242,7 @@ void axisswap3d (long axes)
 						vptr += i; optr[x] += i;
 					}
 
-				for(x=max(xsiz,ysiz)-1;x>=0;x--)
+				for(x=MAX(xsiz,ysiz)-1;x>=0;x--)
 					for(y=x-1;y>=0;y--)
 						{ i = ylen[x][y]; ylen[x][y] = ylen[y][x]; ylen[y][x] = i; }
 
@@ -5109,7 +5253,7 @@ void axisswap3d (long axes)
 					xlen[x] = i;
 				}
 
-				for(x=max(xsiz,ysiz)-1;x>=0;x--)
+				for(x=MAX(xsiz,ysiz)-1;x>=0;x--)
 					for(y=x-1;y>=0;y--)
 						for(z=zsiz-1;z>=0;z--)
 						{
@@ -5160,7 +5304,7 @@ void axisswap3d (long axes)
 				}
 
 				for(x=xsiz-1;x>=0;x--)
-					for(y=max(ysiz,zsiz)-1;y>=0;y--)
+					for(y=MAX(ysiz,zsiz)-1;y>=0;y--)
 						for(z=y-1;z>=0;z--)
 						{
 							i = (x*MAXYSIZ+y)*BUFZSIZ+z;
@@ -5195,9 +5339,9 @@ void boxmove3d (long ax, long ay, long az)
 	char *bylen;
 	voxtype *bvoxdata;
 
-	ox = min(corn[0].x,corn[1].x); nx = max(corn[0].x,corn[1].x);
-	oy = min(corn[0].y,corn[1].y); ny = max(corn[0].y,corn[1].y);
-	oz = min(corn[0].z,corn[1].z); nz = max(corn[0].z,corn[1].z);
+	ox = MIN(corn[0].x,corn[1].x); nx = MAX(corn[0].x,corn[1].x);
+	oy = MIN(corn[0].y,corn[1].y); ny = MAX(corn[0].y,corn[1].y);
+	oz = MIN(corn[0].z,corn[1].z); nz = MAX(corn[0].z,corn[1].z);
 	if (ax > 0) { i = ox; ox = nx; nx = i; }
 	if (ay > 0) { i = oy; oy = ny; ny = i; }
 	if (az > 0) { i = oz; oz = nz; nz = i; }
@@ -5300,9 +5444,9 @@ void boxmove3d (long ax, long ay, long az)
 	}
 
 	for(i=1;i>=0;i--) { corn[i].x += ax; corn[i].y += ay; corn[i].z += az; }
-	ox = min(corn[0].x,corn[1].x); nx = max(corn[0].x,corn[1].x)-ox;
-	oy = min(corn[0].y,corn[1].y); ny = max(corn[0].y,corn[1].y)-oy;
-	oz = min(corn[0].z,corn[1].z); nz = max(corn[0].z,corn[1].z)-oz;
+	ox = MIN(corn[0].x,corn[1].x); nx = MAX(corn[0].x,corn[1].x)-ox;
+	oy = MIN(corn[0].y,corn[1].y); ny = MAX(corn[0].y,corn[1].y)-oy;
+	oz = MIN(corn[0].z,corn[1].z); nz = MAX(corn[0].z,corn[1].z)-oz;
 
 	numvoxs = 0;
 	for(x=0;x<xsiz;x++)
@@ -5736,7 +5880,7 @@ static long mymenufunc (WPARAM wparam, LPARAM lparam)
 			break;
 		case RENDERMETHOD+0: case RENDERMETHOD+1: case RENDERMETHOD+2:
 		case RENDERMETHOD+3: case RENDERMETHOD+4: case RENDERMETHOD+5:
-			drawmode = min(max(LOWORD(wparam)-RENDERMETHOD,0),5);
+			drawmode = MIN(MAX(LOWORD(wparam)-RENDERMETHOD,0),5);
 			switch(drawmode)
 			{
 				case 0: sprintf(message,"RENDER DOTS"); break;
@@ -5873,9 +6017,9 @@ static long mymenufunc (WPARAM wparam, LPARAM lparam)
 
 		case BRIGHTENCOLS:
 			for(i=0;i<numvoxs;i++)
-				voxdata[i].col = closestcol[(min(fipalette[voxdata[i].col*3  ]<<1,63)<<12)+
-													 (min(fipalette[voxdata[i].col*3+1]<<1,63)<< 6)+
-													 (min(fipalette[voxdata[i].col*3+2]<<1,63)    )];
+				voxdata[i].col = closestcol[(MIN(fipalette[voxdata[i].col*3  ]<<1,63)<<12)+
+													 (MIN(fipalette[voxdata[i].col*3+1]<<1,63)<< 6)+
+													 (MIN(fipalette[voxdata[i].col*3+2]<<1,63)    )];
 			break;
 		case DARKENCOLS:
 			for(i=0;i<numvoxs;i++)
@@ -6198,8 +6342,8 @@ static void setmousein (long x, long y)
 {
 	if (!mouseoutstat) return;
 	mouseoutstat = 0;
-	fsearchx = min(max(x,0),gdd.x); searchx = fsearchx;
-	fsearchy = min(max(y,0),gdd.y); searchy = fsearchy;
+	fsearchx = MIN(MAX(x,0),gdd.x); searchx = fsearchx;
+	fsearchy = MIN(MAX(y,0),gdd.y); searchy = fsearchy;
 }
 
 long CALLBACK mypeekwindowproc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -6552,12 +6696,12 @@ void doframe ()
 	if ((vptr) && (!(framecnt&3))) vptr->col ^= 1;
 
 	if (cornmode)
-		rendercubehack(min(corn[0].x,corn[1].x),
-							min(corn[0].y,corn[1].y),
-							min(corn[0].z,corn[1].z),
-							max(corn[0].x,corn[1].x),
-							max(corn[0].y,corn[1].y),
-							max(corn[0].z,corn[1].z));
+		rendercubehack(MIN(corn[0].x,corn[1].x),
+							MIN(corn[0].y,corn[1].y),
+							MIN(corn[0].z,corn[1].z),
+							MAX(corn[0].x,corn[1].x),
+							MAX(corn[0].y,corn[1].y),
+							MAX(corn[0].z,corn[1].z));
 
 	if (edit2dmode)
 	{
@@ -6629,8 +6773,8 @@ void doframe ()
 	}
 
 		//Show copbuf at top-right corner
-	for(y=min(copy1,gdd.y)-1;y>=0;y--)
-		for(x=max(0,copx1-gdd.x);x<copx1;x++)
+	for(y=MIN(copy1,gdd.y)-1;y>=0;y--)
+		for(x=MAX(0,copx1-gdd.x);x<copx1;x++)
 		{
 			if (copbuf[x][y] < 0) ch = blackcol; else ch = copbuf[x][y];
 			*(char *)(ylookup[y]+x+gdd.x-copx1+gdd.f) = ch;
@@ -6678,7 +6822,7 @@ void doframe ()
 	frameval[framecnt&(AVERAGEFRAMES-1)] = 1.0 / (dtotclk-odtotclk); framecnt++;
 		//Print MAX FRAME RATE
 	d = frameval[0];
-	for(j=AVERAGEFRAMES-1;j>0;j--) d = max(d,frameval[j]);
+	for(j=AVERAGEFRAMES-1;j>0;j--) d = MAX(d,frameval[j]);
 	averagefps = ((averagefps*3.0+d)*.25);
 	print6x8(gdd.x-68,0,closestcol[262143],-1L,"%7.1f FPS",averagefps);
 
@@ -6766,9 +6910,9 @@ void doframe ()
 
 	if (cornmode)
 	{
-		ox = min(corn[0].x,corn[1].x); xx = ((ox^corn[0].x^corn[1].x)-ox+1);
-		oy = min(corn[0].y,corn[1].y); yy = ((oy^corn[0].y^corn[1].y)-oy+1);
-		oz = min(corn[0].z,corn[1].z); zz = ((oz^corn[0].z^corn[1].z)-oz+1);
+		ox = MIN(corn[0].x,corn[1].x); xx = ((ox^corn[0].x^corn[1].x)-ox+1);
+		oy = MIN(corn[0].y,corn[1].y); yy = ((oy^corn[0].y^corn[1].y)-oy+1);
+		oz = MIN(corn[0].z,corn[1].z); zz = ((oz^corn[0].z^corn[1].z)-oz+1);
 		ftol( ipos.x+xpiv,&x);
 		ftol(-ipos.z+ypiv,&y);
 		ftol( ipos.y+zpiv,&z);
@@ -6947,10 +7091,10 @@ skipdd:;
 			}
 
 			i = 0;
-			if (keyrepeat(0x47)) { lightmul = min(lightmul*exp(fsynctics),256); i = 1; } //KP7
-			if (keyrepeat(0x4f)) { lightmul = max(lightmul*exp(-fsynctics),1/16); i = 1; } //KP1
-			if (keyrepeat(0x49)) { lightadd = min(lightadd+1,256); i = 1; } //KP9
-			if (keyrepeat(0x51)) { lightadd = max(lightadd-1,-256); i = 1; } //KP3
+			if (keyrepeat(0x47)) { lightmul = MIN(lightmul*exp(fsynctics),256); i = 1; } //KP7
+			if (keyrepeat(0x4f)) { lightmul = MAX(lightmul*exp(-fsynctics),1/16); i = 1; } //KP1
+			if (keyrepeat(0x49)) { lightadd = MIN(lightadd+1,256); i = 1; } //KP9
+			if (keyrepeat(0x51)) { lightadd = MAX(lightadd-1,-256); i = 1; } //KP3
 			if (i)
 			{
 				sprintf(message,"LIGHTMUL = %.1f, LIGHTADD = %d",lightmul,lightadd);
@@ -7040,42 +7184,42 @@ skipdd:;
 				case 0x4b: //KP4
 					if ((inawindow == 3) && (edit2dmode))
 					{
-						fipalette[curcol*3+0] = min(fipalette[curcol*3+0]+1,63);
+						fipalette[curcol*3+0] = MIN(fipalette[curcol*3+0]+1,63);
 						initclosestcolorfast(fipalette); initpal(fipalette);
 					}
 					break;
 				case 0x4c: //KP5
 					if ((inawindow == 3) && (edit2dmode))
 					{
-						fipalette[curcol*3+1] = min(fipalette[curcol*3+1]+1,63);
+						fipalette[curcol*3+1] = MIN(fipalette[curcol*3+1]+1,63);
 						initclosestcolorfast(fipalette); initpal(fipalette);
 					}
 					break;
 				case 0x4d: //KP6
 					if ((inawindow == 3) && (edit2dmode))
 					{
-						fipalette[curcol*3+2] = min(fipalette[curcol*3+2]+1,63);
+						fipalette[curcol*3+2] = MIN(fipalette[curcol*3+2]+1,63);
 						initclosestcolorfast(fipalette); initpal(fipalette);
 					}
 					break;
 				case 0x4f: //KP1
 					if ((inawindow == 3) && (edit2dmode))
 					{
-						fipalette[curcol*3+0] = max(fipalette[curcol*3+0]-1,0);
+						fipalette[curcol*3+0] = MAX(fipalette[curcol*3+0]-1,0);
 						initclosestcolorfast(fipalette); initpal(fipalette);
 					}
 					break;
 				case 0x50: //KP2
 					if ((inawindow == 3) && (edit2dmode))
 					{
-						fipalette[curcol*3+1] = max(fipalette[curcol*3+1]-1,0);
+						fipalette[curcol*3+1] = MAX(fipalette[curcol*3+1]-1,0);
 						initclosestcolorfast(fipalette); initpal(fipalette);
 					}
 					break;
 				case 0x51: //KP3
 					if ((inawindow == 3) && (edit2dmode))
 					{
-						fipalette[curcol*3+2] = max(fipalette[curcol*3+2]-1,0);
+						fipalette[curcol*3+2] = MAX(fipalette[curcol*3+2]-1,0);
 						initclosestcolorfast(fipalette); initpal(fipalette);
 					}
 					break;
@@ -7089,9 +7233,9 @@ skipdd:;
 						edit2dmode ^= 1;
 						if (edit2dmode)
 						{
-							viewx = min(max(hitx,0),xsiz-1);
-							viewy = min(max(hity,0),ysiz-1);
-							viewz = min(max(hitz,0),zsiz-1);
+							viewx = MIN(MAX(hitx,0),xsiz-1);
+							viewy = MIN(MAX(hity,0),ysiz-1);
+							viewz = MIN(MAX(hitz,0),zsiz-1);
 							grabwindow = -1;
 						}
 						else { inawindow = -1; adjustpivotmode = 0; }
@@ -7364,9 +7508,9 @@ skipdd:;
 		{
 			if (!(keystatus[0x2a]|keystatus[0x36]))
 			{
-				i = corn[ corngrab    &1].x+x; corn[ corngrab    &1].x = min(max(i,-1),xsiz);
-				i = corn[(corngrab>>1)&1].y+y; corn[(corngrab>>1)&1].y = min(max(i,-1),ysiz);
-				i = corn[ corngrab>>2   ].z+z; corn[ corngrab>>2   ].z = min(max(i,-1),zsiz);
+				i = corn[ corngrab    &1].x+x; corn[ corngrab    &1].x = MIN(MAX(i,-1),xsiz);
+				i = corn[(corngrab>>1)&1].y+y; corn[(corngrab>>1)&1].y = MIN(MAX(i,-1),ysiz);
+				i = corn[ corngrab>>2   ].z+z; corn[ corngrab>>2   ].z = MIN(MAX(i,-1),zsiz);
 			}
 			else
 			{
@@ -7508,8 +7652,8 @@ skipdd:;
 					case 1: x = xsiz; y = zsiz; break;
 					case 2: x = ysiz; y = zsiz; break;
 				}
-				i = max(-xx,0); j = min(x-xx,copx1); k = min(y-yy,copy1);
-				for(y=max(-yy,0);y<k;y++)
+				i = MAX(-xx,0); j = MIN(x-xx,copx1); k = MIN(y-yy,copy1);
+				for(y=MAX(-yy,0);y<k;y++)
 					for(x=i;x<j;x++)
 					{
 						switch(inawindow)
@@ -7573,7 +7717,7 @@ skipdd:;
 		if (keystatus[0x7]) //6 (swap x&y axes)
 		{
 			keystatus[0x7] = 0;
-			for(y=max(copx1,copy1)-1;y>=0;y--)
+			for(y=MAX(copx1,copy1)-1;y>=0;y--)
 				for(x=y-1;x>=0;x--)
 					{ i = copbuf[x][y]; copbuf[x][y] = copbuf[y][x]; copbuf[y][x] = i; }
 			i = copx1; copx1 = copy1; copy1 = i;
@@ -7646,39 +7790,39 @@ skipdd:;
 		}
 		else if ((inawindow != 3) && (rotatemode == 255))
 		{
-			if (keyrepeat(0xcb)) { fsearchx = searchx = max(searchx-(1<<wz[inawindow]),wx0[inawindow]  ); }
-			if (keyrepeat(0xcd)) { fsearchx = searchx = min(searchx+(1<<wz[inawindow]),wx1[inawindow]-1); }
-			if (keyrepeat(0xc8)) { fsearchy = searchy = max(searchy-(1<<wz[inawindow]),wy0[inawindow]  ); }
-			if (keyrepeat(0xd0)) { fsearchy = searchy = min(searchy+(1<<wz[inawindow]),wy1[inawindow]-1); }
+			if (keyrepeat(0xcb)) { fsearchx = searchx = MAX(searchx-(1<<wz[inawindow]),wx0[inawindow]  ); }
+			if (keyrepeat(0xcd)) { fsearchx = searchx = MIN(searchx+(1<<wz[inawindow]),wx1[inawindow]-1); }
+			if (keyrepeat(0xc8)) { fsearchy = searchy = MAX(searchy-(1<<wz[inawindow]),wy0[inawindow]  ); }
+			if (keyrepeat(0xd0)) { fsearchy = searchy = MIN(searchy+(1<<wz[inawindow]),wy1[inawindow]-1); }
 		}
 
 		fcmousz += fmousz*.016; //Have not tested this constant on actual scollbar!
 		while (fcmousz < -1.0)
 		{
 			fcmousz++;
-			if (inawindow == 0) viewz = max(viewz-1,0);
-			if (inawindow == 1) viewy = max(viewy-1,0);
-			if (inawindow == 2) viewx = max(viewx-1,0);
+			if (inawindow == 0) viewz = MAX(viewz-1,0);
+			if (inawindow == 1) viewy = MAX(viewy-1,0);
+			if (inawindow == 2) viewx = MAX(viewx-1,0);
 		}
 		while (fcmousz > +1.0)
 		{
 			fcmousz--;
-			if (inawindow == 0) viewz = min(viewz+1,zsiz-1);
-			if (inawindow == 1) viewy = min(viewy+1,ysiz-1);
-			if (inawindow == 2) viewx = min(viewx+1,xsiz-1);
+			if (inawindow == 0) viewz = MIN(viewz+1,zsiz-1);
+			if (inawindow == 1) viewy = MIN(viewy+1,ysiz-1);
+			if (inawindow == 2) viewx = MIN(viewx+1,xsiz-1);
 		}
 
 		if (keyrepeat(0xc9)) //PGUP
 		{
-			if (inawindow == 0) viewz = max(viewz-1,0);
-			if (inawindow == 1) viewy = max(viewy-1,0);
-			if (inawindow == 2) viewx = max(viewx-1,0);
+			if (inawindow == 0) viewz = MAX(viewz-1,0);
+			if (inawindow == 1) viewy = MAX(viewy-1,0);
+			if (inawindow == 2) viewx = MAX(viewx-1,0);
 		}
 		if (keyrepeat(0xd1)) //PGDN
 		{
-			if (inawindow == 0) viewz = min(viewz+1,zsiz-1);
-			if (inawindow == 1) viewy = min(viewy+1,ysiz-1);
-			if (inawindow == 2) viewx = min(viewx+1,xsiz-1);
+			if (inawindow == 0) viewz = MIN(viewz+1,zsiz-1);
+			if (inawindow == 1) viewy = MIN(viewy+1,ysiz-1);
+			if (inawindow == 2) viewx = MIN(viewx+1,xsiz-1);
 		}
 		if (keystatus[0xc7]) //Home
 		{
@@ -7739,12 +7883,12 @@ skipdd:;
 	{
 		if (cornmode)
 		{
-			insdelbox3d(min(corn[0].x,corn[1].x),
-							min(corn[0].y,corn[1].y),
-							min(corn[0].z,corn[1].z),
-							max(corn[0].x,corn[1].x)+1,
-							max(corn[0].y,corn[1].y)+1,
-							max(corn[0].z,corn[1].z)+1,1);
+			insdelbox3d(MIN(corn[0].x,corn[1].x),
+							MIN(corn[0].y,corn[1].y),
+							MIN(corn[0].z,corn[1].z),
+							MAX(corn[0].x,corn[1].x)+1,
+							MAX(corn[0].y,corn[1].y)+1,
+							MAX(corn[0].z,corn[1].z)+1,1);
 		}
 		else if (vptr)
 		{
@@ -7766,12 +7910,12 @@ skipdd:;
 	{
 		if (cornmode)
 		{
-			insdelbox3d(min(corn[0].x,corn[1].x),
-							min(corn[0].y,corn[1].y),
-							min(corn[0].z,corn[1].z),
-							max(corn[0].x,corn[1].x)+1,
-							max(corn[0].y,corn[1].y)+1,
-							max(corn[0].z,corn[1].z)+1,0);
+			insdelbox3d(MIN(corn[0].x,corn[1].x),
+							MIN(corn[0].y,corn[1].y),
+							MIN(corn[0].z,corn[1].z),
+							MAX(corn[0].x,corn[1].x)+1,
+							MAX(corn[0].y,corn[1].y)+1,
+							MAX(corn[0].z,corn[1].z)+1,0);
 		}
 		else if (vptr) { deletevoxel(hitx,hity,hitz); vptr = 0; }
 	}
