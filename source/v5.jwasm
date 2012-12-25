@@ -1108,7 +1108,7 @@ skipdrawpix_3dn:
 	inc ecx
 	jnz begstosb_3dn
 ifdef USEZBUFFER
-	add eax, 88888888h;kv6bytesperline
+	add eax, 88888888h ;kv6bytesperline
 bcmod2_3dn:
 endif
 	add edi, 88888888h ;kv6bytesperline
