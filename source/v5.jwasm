@@ -804,8 +804,10 @@ PUBLIC CCALL(qsum0), CCALL(qsum1), CCALL(qbplbpp), CCALL(kv6frameplace), CCALL(k
 
 ALIGN 16
 CCALL(opti4asm) dd 5*4 dup(0)        ;NOTE: this used by ?render
-CCALL(caddasm) dd 8*4 dup(0)
-CCALL(ztabasm) dd (MAXZSIZ+3)*4 dup(0)
+CCALL(caddasm) Label XMMWORD
+dd 8*4 dup(0)
+CCALL(ztabasm) Label XMMWORD
+dd (MAXZSIZ+3)*4 dup(0)
 CCALL(scisdist) dd 40800000h,0,0,0
 CCALL(kv6colmul) dq 256 dup(0)
 CCALL(kv6coladd) dq 0
@@ -841,10 +843,10 @@ CCALL(drawboundcubesse):
 	and ecx, edi
 	jz retboundcube
 
-	movaps xmm7, XMMWORD PTR CCALL(ztabasm)[MAXZSIZ*16]
+	movaps xmm7, CCALL(ztabasm)[MAXZSIZ*16]
 	movzx edi, word ptr [eax+4]
 	shl edi, 4
-	addps xmm7, XMMWORD PTR CCALL(ztabasm)[edi]
+	addps xmm7, CCALL(ztabasm)[edi]
 	movhlps xmm0, xmm7
 	ucomiss xmm0, CCALL(scisdist)
 	jc retboundcube
@@ -853,9 +855,9 @@ CCALL(drawboundcubesse):
 
 	movzx ebx, byte ptr [ecx+1] ;                           Ý
 	movzx edi, byte ptr [ecx+2] ;                           Ý
-	movaps xmm0, XMMWORD PTR CCALL(caddasm)[ebx]  ;xmm0: [ z0, z0, y0, x0]    Û
+	movaps xmm0, CCALL(caddasm)[ebx]  ;xmm0: [ z0, z0, y0, x0]    Û
 	addps xmm0, xmm7            ;                           ÛÛ±
-	movaps xmm1, XMMWORD PTR CCALL(caddasm)[edi]  ;xmm1: [ z1, z1, y1, x1]    Û
+	movaps xmm1, CCALL(caddasm)[edi]  ;xmm1: [ z1, z1, y1, x1]    Û
 	addps xmm1, xmm7            ;                           ÛÛ±
 	movaps xmm6, xmm0           ;xmm6: [ z0, z0, y0, x0]    Û
 	movhlps xmm0, xmm1          ;xmm0: [ z0, z0, z1, z1]    Û
@@ -865,9 +867,9 @@ CCALL(drawboundcubesse):
 
 	movzx ebx, byte ptr [ecx+3] ;                           Ý
 	movzx edi, byte ptr [ecx+4] ;                           Ý
-	movaps xmm2, XMMWORD PTR CCALL(caddasm)[ebx]  ;xmm2: [ z2, z2, y2, x2]    Û
+	movaps xmm2, CCALL(caddasm)[ebx]  ;xmm2: [ z2, z2, y2, x2]    Û
 	addps xmm2, xmm7            ;                           ÛÛ±
-	movaps xmm3, XMMWORD PTR CCALL(caddasm)[edi]  ;xmm3: [ z3, z3, y3, x3]    Û
+	movaps xmm3, CCALL(caddasm)[edi]  ;xmm3: [ z3, z3, y3, x3]    Û
 	addps xmm3, xmm7            ;                           ÛÛ±
 	movaps xmm6, xmm2           ;xmm6: [ z2, z2, y2, x2]    Û
 	movhlps xmm2, xmm3          ;xmm2: [ z2, z2, z3, z3]    Û
@@ -892,9 +894,9 @@ CCALL(drawboundcubesse):
 
 	movzx ebx, byte ptr [ecx+5] ;                           Ý
 	movzx edi, byte ptr [ecx+6] ;                           Ý
-	movaps xmm4, XMMWORD PTR CCALL(caddasm)[ebx]  ;xmm4: [ z4, z4, y4, x4]    Û
+	movaps xmm4, CCALL(caddasm)[ebx]  ;xmm4: [ z4, z4, y4, x4]    Û
 	addps xmm4, xmm7            ;                           ÛÛ±
-	movaps xmm5, XMMWORD PTR CCALL(caddasm)[edi]  ;xmm5: [ z5, z5, y5, x5]    Û
+	movaps xmm5, CCALL(caddasm)[edi]  ;xmm5: [ z5, z5, y5, x5]    Û
 	addps xmm5, xmm7            ;                           ÛÛ±
 	movaps xmm6, xmm4           ;xmm6: [ z4, z4, y4, x4]    Û
 	movhlps xmm4, xmm5          ;xmm4: [ z4, z4, z5, z5]    Û
@@ -938,12 +940,12 @@ bcskip6case:
 	packuswb mm5, mm5
 	movd edi, mm0               ; edi: offs
 
-	lea edi, [edi+edx*4+88888888h] ;_kv6frameplace
+	lea edi, [edi+edx*4+88888888h] ;CCALL(kv6frameplace)
 bcmod0:
 	neg edx
 ifdef USEZBUFFER
 	movhlps xmm0, xmm7
-	lea eax, [edi+88888888h] ;_zbufoff
+	lea eax, [edi+88888888h] ;CCALL(zbufoff)
 bcmod1:
 endif
 boundcubenextline:
@@ -962,7 +964,7 @@ ifdef USEZBUFFER
 	add eax, 88888888h; CCALL(kv6bytesperline)
 bcmod2:
 endif
-	add edi, 88888888h ;_kv6bytesperline
+	add edi, 88888888h ;CCALL(kv6bytesperline)
 bcmod3:
 
 	sub ebx, 65536
@@ -1019,7 +1021,7 @@ CCALL(drawboundcube3dn):
 	movq mm1, qword ptr CCALL(caddasm)[edi]
 	pfadd mm0, mm6              ;mm0: [   y0    x0]
 	pfadd mm1, mm6              ;mm1: [   y1    x1]
-	movd mm5, CCALL(caddasm)[ebx+8]
+	movd mm5, dword ptr CCALL(caddasm)[ebx+8]
 	punpckldq mm5, qword ptr CCALL(caddasm)[edi+8]
 	pfadd mm5, mm7              ;mm5: [   z1    z0]
 	pfrcp mm4, mm5              ;mm4: [ 1/z0  1/z0]
@@ -1037,7 +1039,7 @@ CCALL(drawboundcube3dn):
 	movq mm3, qword ptr CCALL(caddasm)[edi]
 	pfadd mm2, mm6              ;mm2: [   y2    x2]
 	pfadd mm3, mm6              ;mm3: [   y3    x3]
-	movd mm5, CCALL(caddasm)[ebx+8]
+	movd mm5, dword ptr CCALL(caddasm)[ebx+8]
 	punpckldq mm5, qword ptr CCALL(caddasm)[edi+8]
 	pfadd mm5, mm7              ;mm5: [   z3    z2]
 	pfrcp mm4, mm5              ;mm4: [ 1/z2  1/z2]
@@ -1062,7 +1064,7 @@ CCALL(drawboundcube3dn):
 	movq mm3, qword ptr CCALL(caddasm)[edi]
 	pfadd mm2, mm6              ;mm2: [   y4    x4]
 	pfadd mm3, mm6              ;mm3: [   y5    x5]
-	movd mm5, CCALL(caddasm)[ebx+8]
+	movd mm5, dword ptr CCALL(caddasm)[ebx+8]
 	punpckldq mm5, qword ptr CCALL(caddasm)[edi+8]
 	pfadd mm5, mm7              ;mm5: [   z5    z4]
 	pfrcp mm4, mm5              ;mm4: [ 1/z4  1/z4]
@@ -1085,14 +1087,14 @@ bcskip6case_3dn:
 	punpckldq mm0, mm1          ; mm0: [ My, Mx, my, mx]
 
 		;See SCRCLP2D.BAS for a derivation of these 4 lines:
-	paddsw mm0, CCALL(qsum0)          ; mm0: ["+?,"+?,"+?,"+?]    Û
-	pmaxsw mm0, CCALL(qsum1)          ; mm0: [sy1,sx1,sy0,sx0]    Û
+	paddsw mm0, CCALL(qsum0)    ; mm0: ["+?,"+?,"+?,"+?]    Û
+	pmaxsw mm0, CCALL(qsum1)    ; mm0: [sy1,sx1,sy0,sx0]    Û
 	pshufw mm1, mm0, 0eeh       ; mm1: [sy1,sx1,sy1,sx1]    Û
 	psubusw mm1, mm0            ; mm1: [  0,  0, dy, dx]    Ý
 		;kv6frameplace -= ((32767-yres)*bpl + (32767-xres)*4);
 
 	movd edx, mm1               ; edx: [ dy, dx]            Û
-	pmaddwd mm0, CCALL(qbplbpp)       ; mm0: [      ?,   offs]    Û±± (=y*bpl+x*bpp)
+	pmaddwd mm0, CCALL(qbplbpp) ; mm0: [      ?,   offs]    Û±± (=y*bpl+x*bpp)
 	movd ebx, mm1               ; ebx: [ dy, dx]            Ý
 	and edx, 0ffffh             ; ebx: [  0, dx]            Ý
 	jz short retboundcube_3dn   ;                           Ý
@@ -1106,12 +1108,12 @@ bcskip6case_3dn:
 	packuswb mm5, mm5
 	movd edi, mm0               ; edi: offs
 
-	lea edi, [edi+edx*4+88888888h] ;_kv6frameplace
+	lea edi, [edi+edx*4+88888888h] ;CCALL(kv6frameplace)
 bcmod0_3dn:
 	neg edx
 	movd mm1, edx
 ifdef USEZBUFFER
-	lea eax, [edi+88888888h] ;_zbufoff
+	lea eax, [edi+88888888h] ;CCALL(zbufoff)
 bcmod1_3dn:
 endif
 boundcubenextline_3dn:
@@ -1130,10 +1132,10 @@ skipdrawpix_3dn:
 	inc ecx
 	jnz begstosb_3dn
 ifdef USEZBUFFER
-	add eax, 88888888h; CCALL(kv6bytesperline)
+	add eax, 88888888h;CCALL(kv6bytesperline)
 bcmod2_3dn:
 endif
-	add edi, 88888888h ;_kv6bytesperline
+	add edi, 88888888h ;CCALL(kv6bytesperline)
 bcmod3_3dn:
 
 	sub ebx, 65536
