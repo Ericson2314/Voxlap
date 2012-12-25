@@ -87,7 +87,7 @@ extern void umixerbreathe ();
 	//Keyboard:
 extern char keystatus[256];     //bit0=1:down
 extern char ext_keystatus[256]; //bit0=1:down,bit1=1:was down
-extern long readkeyboard ();
+extern void readkeyboard ();
 extern long keyread ();         //similar to kbhit()&getch() combined
 
 	//Mouse:
