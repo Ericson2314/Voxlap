@@ -2,7 +2,7 @@
 CPU P3
 
 %DEFINE USEZBUFFER 1      ;To disable, put ; in front of line
-LVSID EQU 10           ;log2(VSID) - used for mip-mapping index adjustment
+%DEFINE LVSID 10          ;log2(VSID) - used for mip-mapping index adjustment
 %DEFINE	VSID	(1 << LVSID) ;should match VSID in VOXLAP5.H (adjust LVSID, not this)
 %DEFINE	LOGPREC	(8+12)
 
@@ -11,6 +11,9 @@ LVSID EQU 10           ;log2(VSID) - used for mip-mapping index adjustment
 %else
 	%define CCALL(symbol) symbol
 %endif
+
+
+
 
 
 EXTERN CCALL(gi)       ; dword
@@ -62,7 +65,7 @@ CCALL(v5_asm_dep_unlock):
 	push dword CCALL(v5_asm_dep_unlock)
 	call dword __imp__VirtualProtect@16
 	add esp, 4
-	retn
+		ret
 	%else
 		EXTERN mprotect
 		mov  ebp,esp
@@ -208,7 +211,7 @@ CCALL(grouscanasm):
 	movq mm1, [eax+24]
 	mov dword [ce], esp
 
-	mov DWORD [gylookoff], CCALL(gylookup)
+	mov dword [gylookoff], CCALL(gylookup)
 	mov byte [gmipcnt], 0
 
 	mov ebp, [CCALL(gxmax)]
@@ -934,12 +937,12 @@ bcskip6case:
 	packuswb mm5, mm5
 	movd edi, mm0               ; edi: offs
 
-	lea edi, [edi+edx*4+88888888h] ;_kv6frameplace
+	lea edi, [edi+edx*4+88888888h] ;CCALL(kv6frameplace)
 bcmod0:
 	neg edx
 %ifdef USEZBUFFER
 	movhlps xmm0, xmm7
-	lea eax, [edi+88888888h] ;_zbufoff
+	lea eax, [edi+88888888h] ;CCALL(zbufoff)
 bcmod1:
 %endif
 boundcubenextline:
@@ -958,7 +961,7 @@ skipdrawpix:
 	add eax, 88888888h; CCALL(kv6bytesperline)
 bcmod2:
 %endif
-	add edi, 88888888h ;_kv6bytesperline
+	add edi, 88888888h ;CCALL(kv6bytesperline)
 bcmod3:
 
 	sub ebx, 65536
@@ -1015,8 +1018,8 @@ CCALL(drawboundcube3dn):
 	movq mm1, qword [CCALL(caddasm)+edi]
 	pfadd mm0, mm6              ;mm0: [   y0    x0]
 	pfadd mm1, mm6              ;mm1: [   y1    x1]
-	movd mm5,  [CCALL(caddasm)+ebx+8] ; _MANUAL FIX_ Remove DWORD prefix from operand 2
-	punpckldq mm5,  [CCALL(caddasm)+edi+8] ; _MANUAL FIX_ Remove DWORD prefix from operand 2
+	movd mm5, dword [CCALL(caddasm)+ebx+8]
+	punpckldq mm5, [CCALL(caddasm)+edi+8]
 	pfadd mm5, mm7              ;mm5: [   z1    z0]
 	pfrcp mm4, mm5              ;mm4: [ 1/z0  1/z0]
 	punpckhdq mm5, mm5          ;mm5: [   z1    z1]
@@ -1033,8 +1036,8 @@ CCALL(drawboundcube3dn):
 	movq mm3, qword [CCALL(caddasm)+edi]
 	pfadd mm2, mm6              ;mm2: [   y2    x2]
 	pfadd mm3, mm6              ;mm3: [   y3    x3]
-	movd mm5, [CCALL(caddasm)+ebx+8] ; _MANUAL FIX_ Remove DWORD prefix from operand 2
-	punpckldq mm5, [CCALL(caddasm)+edi+8] ; _MANUAL FIX_ Remove DWORD prefix from operand 2
+	movd mm5, dword [CCALL(caddasm)+ebx+8]
+	punpckldq mm5, [CCALL(caddasm)+edi+8]
 	pfadd mm5, mm7              ;mm5: [   z3    z2]
 	pfrcp mm4, mm5              ;mm4: [ 1/z2  1/z2]
 	punpckhdq mm5, mm5          ;mm5: [   z3    z3]
@@ -1058,8 +1061,8 @@ CCALL(drawboundcube3dn):
 	movq mm3, qword [CCALL(caddasm)+edi]
 	pfadd mm2, mm6              ;mm2: [   y4    x4]
 	pfadd mm3, mm6              ;mm3: [   y5    x5]
-	movd mm5, [CCALL(caddasm)+ebx+8] ; _MANUAL FIX_ Remove DWORD prefix from operand 2
-	punpckldq mm5, [CCALL(caddasm)+edi+8] ; _MANUAL FIX_ Remove DWORD prefix from operand 2
+	movd mm5, dword [CCALL(caddasm)+ebx+8]
+	punpckldq mm5, [CCALL(caddasm)+edi+8]
 	pfadd mm5, mm7              ;mm5: [   z5    z4]
 	pfrcp mm4, mm5              ;mm4: [ 1/z4  1/z4]
 	punpckhdq mm5, mm5          ;mm5: [   z5    z5]
@@ -1102,12 +1105,12 @@ bcskip6case_3dn:
 	packuswb mm5, mm5
 	movd edi, mm0               ; edi: offs
 
-	lea edi, [edi+edx*4+88888888h] ;_kv6frameplace
+	lea edi, [edi+edx*4+88888888h] ;CCALL(kv6frameplace)
 bcmod0_3dn:
 	neg edx
 	movd mm1, edx
 %ifdef USEZBUFFER
-	lea eax, [edi+88888888h] ;_zbufoff
+	lea eax, [edi+88888888h] ;CCALL(zbufoff)
 bcmod1_3dn:
 %endif
 boundcubenextline_3dn:
@@ -1129,7 +1132,7 @@ skipdrawpix_3dn:
 	add eax, 88888888h; CCALL(kv6bytesperline)
 bcmod2_3dn:
 %endif
-	add edi, 88888888h ;_kv6bytesperline
+	add edi, 88888888h ;CCALL(kv6bytesperline)
 bcmod3_3dn:
 
 	sub ebx, 65536
