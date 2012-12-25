@@ -63,7 +63,7 @@ AFLAGS                 =-Fo$(@R) -c -coff -8 -DWIN32
 # Netwide Assembler (nasm)
 !IF "$(AsmName)"=="nasm"
 AS                     =nasm
-AFLAGS                 =-o $(@) -f win32 -DWIN32
+AFLAGS                 =-o $(@) -f win32 -DWIN32 --prefix _
 !ENDIF
 
 # Micrsoft Macro Assembler (masm)

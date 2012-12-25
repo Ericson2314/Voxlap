@@ -67,7 +67,7 @@ posix_jwasm_FLAGS =-elf
 win_OBJSuf        =.obj
 win_EXESuf        =.exe
 
-win_nasm_FLAGS    =-f win -DWIN32
+win_nasm_FLAGS    =-f win -DWIN32 --prefix _
 win_jwasm_FLAGS   =-coff -DWIN32
 
 # END Platform

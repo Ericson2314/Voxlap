@@ -1,106 +1,72 @@
 ;CPU 686
 CPU P3
 
+
 %DEFINE USEZBUFFER 1      ;To disable, put ; in front of line
 %DEFINE LVSID 10          ;log2(VSID) - used for mip-mapping index adjustment
 %DEFINE	VSID	(1 << LVSID) ;should match VSID in VOXLAP5.H (adjust LVSID, not this)
 %DEFINE	LOGPREC	(8+12)
 
-%ifdef WIN32
-	%define CCALL(symbol) _ %+ symbol
-%else
-	%define CCALL(symbol) symbol
-%endif
+SEGMENT	.data
 
+EXTERN gi       ; dword
+EXTERN gpixy    ; dword
+EXTERN gixy     ; dword      ;long[2]
+EXTERN gpz      ; dword      ;long[2]
+EXTERN gdz      ; dword      ;long[2]
+EXTERN gxmip    ; dword
+EXTERN gxmax    ; dword
+EXTERN gcsub    ; dword      ;long[4]
+EXTERN gylookup ; dword      ;long[256+4+128+4+...]
+EXTERN gmipnum  ; dword
+;EXTERN cf       ; dword      ;{ long i0,i1,z0,z1,cx0,cy0,cx1,cy1; }[128]
 
+EXTERN sptr     ; dword
 
-
-
-EXTERN CCALL(gi)       ; dword
-EXTERN CCALL(gpixy)    ; dword
-EXTERN CCALL(gixy)     ; dword      ;long[2]
-EXTERN CCALL(gpz)      ; dword      ;long[2]
-EXTERN CCALL(gdz)      ; dword      ;long[2]
-EXTERN CCALL(gxmip)    ; dword
-EXTERN CCALL(gxmax)    ; dword
-EXTERN CCALL(gcsub)    ; dword      ;long[4]
-EXTERN CCALL(gylookup) ; dword      ;long[256+4+128+4+...]
-EXTERN CCALL(gmipnum)  ; dword
-;EXTERN CCALL(cf)       ; dword      ;{ long i0,i1,z0,z1,cx0,cy0,cx1,cy1; }[128]
-
-EXTERN CCALL(sptr)     ; dword
-
-EXTERN CCALL(skyoff)   ; dword      ;Memory offset to start of longitude line
-EXTERN CCALL(skyxsiz)  ; dword      ;Size of longitude line
-EXTERN CCALL(skylat)   ; dword      ;long[CCALL(skyxsiz)] : latitude's unit dir. vector
+EXTERN skyoff   ; dword      ;Memory offset to start of longitude line
+EXTERN skyxsiz  ; dword      ;Size of longitude line
+EXTERN skylat   ; dword      ;long[skyxsiz] : latitude's unit dir. vector
 
 ;How to declare C-ASM shared variables in the ASM code:
 ;ASM:                    C:
-;   GLOBAL CCALL(xr0)        extern void *xr0;
+;   GLOBAL xr0        extern void *xr0;
 ;   ALIGN 16                #define lxr0 ((long *)&xr0)
-;   CCALL(xr0): dd 0,0,0,0   #define fxr0 ((float *)&xr0)
-;   Use: CCALL(xr0)          Use: lxr0[0-3]  or:  fxr0[0-3]
+;   xr0: dd 0,0,0,0   #define fxr0 ((float *)&xr0)
+;   Use: xr0          Use: lxr0[0-3]  or:  fxr0[0-3]
 
-;EXTERN CCALL(reax); dword
-;EXTERN CCALL(rebx); dword
-;EXTERN CCALL(recx); dword
-;EXTERN CCALL(redx); dword
-;EXTERN CCALL(resi); dword
-;EXTERN CCALL(redi); dword
-;EXTERN CCALL(rebp); dword
-;EXTERN CCALL(resp); dword
-;EXTERN CCALL(remm); dword  ;long[16]
+;EXTERN reax; dword
+;EXTERN rebx; dword
+;EXTERN recx; dword
+;EXTERN redx; dword
+;EXTERN resi; dword
+;EXTERN redi; dword
+;EXTERN rebp; dword
+;EXTERN resp; dword
+;EXTERN remm; dword  ;long[16]
 
-SEGMENT	.text	PUBLIC	USE32	CLASS=CODE
-
-
-GLOBAL CCALL(v5_asm_dep_unlock) ;Data Execution Prevention unlock (works under XP2 SP2)
-CCALL(v5_asm_dep_unlock):
-	%ifdef WIN32
-	EXTERN __imp__VirtualProtect@16 ; near
-	sub esp, 4
-	push dword esp
-	push dword 40h ;PAGE_EXECUTE_READWRITE ; _MANUAL FIX_ word to dword
-	push dword CCALL(v5_asm_dep_unlock)-CCALL(dep_protect_end)
-	push dword CCALL(v5_asm_dep_unlock)
-	call dword __imp__VirtualProtect@16
-	add esp, 4
-		ret
-	%else
-		EXTERN mprotect
-		mov  ebp,esp
-		sub  esp,18h
-		movd [esp+8], 7h
-		movd [esp+4], CCALL(dep_protect_end)-CCALL(v5_asm_dep_unlock)
-		movd [esp],   CCALL(v5_asm_dep_unlock)
-		call dword mprotect
-		leave
-		ret
-	%endif
-
-GLOBAL	CCALL(cfasm), CCALL(skycast)
+GLOBAL	cfasm, skycast
 ALIGN 16
-CCALL(cfasm) times 256*32 db 0
+cfasm times 256*32 db 0
 w8bmask0 dq 000ff00ff00ff00ffh
 w8bmask1 dq 000f000f000f000f0h
 w8bmask2 dq 000e000e000e000e0h
 ;gyadd dq ((-1) SHL (LOGPREC-16))
 mmask dq 0ffff0000ffff0000h
-CCALL(skycast) dq 0
+skycast dq 0
 gylookoff dd 0
 ngxmax dd 0
 ce dd 0
 espbak dd 0
 
-gylut  dd CCALL(gylookup)
-		 dd CCALL(gylookup)+(4*1+256)*4
-		 dd CCALL(gylookup)+(4*2+384)*4
-		 dd CCALL(gylookup)+(4*3+448)*4
-		 dd CCALL(gylookup)+(4*4+480)*4
-		 dd CCALL(gylookup)+(4*5+496)*4
-		 dd CCALL(gylookup)+(4*6+504)*4
-		 dd CCALL(gylookup)+(4*7+508)*4
-		 dd CCALL(gylookup)+(4*8+510)*4
+gylut  dd gylookup
+		 dd gylookup+(4*1+256)*4
+		 dd gylookup+(4*2+384)*4
+		 dd gylookup+(4*3+448)*4
+		 dd gylookup+(4*4+480)*4
+		 dd gylookup+(4*5+496)*4
+		 dd gylookup+(4*6+504)*4
+		 dd gylookup+(4*7+508)*4
+		 dd gylookup+(4*8+510)*4
 
 gxmipk dd ((1 << (LVSID-0))-1)*2
 		 dd ((1 << (LVSID-1))-1)*2
@@ -122,23 +88,76 @@ gymipk dd ((1 << (LVSID-0))-1) << (LVSID+2)
 		 dd ((1 << (LVSID-7))-1) << (LVSID-5)
 		 dd ((1 << (LVSID-8))-1) << (LVSID-6)
 
-gamipk dd CCALL(sptr)
-		 dd CCALL(sptr)+(VSID*VSID)*4
-		 dd CCALL(sptr)+(VSID*VSID + (VSID*VSID >> 2))*4
-		 dd CCALL(sptr)+(VSID*VSID + (VSID*VSID >> 2) + (VSID*VSID >> 4))*4
-		 dd CCALL(sptr)+(VSID*VSID + (VSID*VSID >> 2) + (VSID*VSID >> 4) + (VSID*VSID >> 6))*4
-		 dd CCALL(sptr)+(VSID*VSID + (VSID*VSID >> 2) + (VSID*VSID >> 4) + (VSID*VSID >> 6) + (VSID*VSID >> 8))*4
-		 dd CCALL(sptr)+(VSID*VSID + (VSID*VSID >> 2) + (VSID*VSID >> 4) + (VSID*VSID >> 6) + (VSID*VSID >> 8) + (VSID*VSID >> 10))*4
-		 dd CCALL(sptr)+(VSID*VSID + (VSID*VSID >> 2) + (VSID*VSID >> 4) + (VSID*VSID >> 6) + (VSID*VSID >> 8) + (VSID*VSID >> 10) + (VSID*VSID >> 12))*4
-		 dd CCALL(sptr)+(VSID*VSID + (VSID*VSID >> 2) + (VSID*VSID >> 4) + (VSID*VSID >> 6) + (VSID*VSID >> 8) + (VSID*VSID >> 10) + (VSID*VSID >> 12) + (VSID*VSID >> 14))*4
+gamipk dd sptr
+		 dd sptr+(VSID*VSID)*4
+		 dd sptr+(VSID*VSID + (VSID*VSID >> 2))*4
+		 dd sptr+(VSID*VSID + (VSID*VSID >> 2) + (VSID*VSID >> 4))*4
+		 dd sptr+(VSID*VSID + (VSID*VSID >> 2) + (VSID*VSID >> 4) + (VSID*VSID >> 6))*4
+		 dd sptr+(VSID*VSID + (VSID*VSID >> 2) + (VSID*VSID >> 4) + (VSID*VSID >> 6) + (VSID*VSID >> 8))*4
+		 dd sptr+(VSID*VSID + (VSID*VSID >> 2) + (VSID*VSID >> 4) + (VSID*VSID >> 6) + (VSID*VSID >> 8) + (VSID*VSID >> 10))*4
+		 dd sptr+(VSID*VSID + (VSID*VSID >> 2) + (VSID*VSID >> 4) + (VSID*VSID >> 6) + (VSID*VSID >> 8) + (VSID*VSID >> 10) + (VSID*VSID >> 12))*4
+		 dd sptr+(VSID*VSID + (VSID*VSID >> 2) + (VSID*VSID >> 4) + (VSID*VSID >> 6) + (VSID*VSID >> 8) + (VSID*VSID >> 10) + (VSID*VSID >> 12) + (VSID*VSID >> 14))*4
 
 gmipcnt db 0
+
+%DEFINE MAXZSIZ 1024 ;WARNING: THIS IS BAD SINCE KV6 format supports up to 65535!
+
+%ifdef USEZBUFFER
+EXTERN zbufoff         ; dword
+%endif
+EXTERN ptfaces16       ; dword
+
+GLOBAL	opti4asm, caddasm, ztabasm, scisdist, kv6colmul, kv6coladd
+GLOBAL	qsum0, qsum1, qbplbpp, kv6frameplace, kv6bytesperline
+
+ALIGN 16
+opti4asm times	5*4	dd 0        ;NOTE: this used by ?render
+caddasm times	8*4	dd 0
+ztabasm times	(MAXZSIZ+3*4)	dd 0
+scisdist dd 40800000h,0,0,0
+kv6colmul times 256 dq 0 ; _MANUAL FIX_ proper "times" syntax. OLD: kv6colmul dq 256 dup(0)
+kv6coladd dq 0
+qsum0 dq 0   ;[8000h-hy,8000h-hx,8000h-hy,8000h-hx]
+qsum1 dq 0   ;[8000h-fy,8000h-fx,8000h-fy,8000h-fx]
+qbplbpp dq 0 ;[0,0,bpl,bpp]
+kv6frameplace dd 0
+kv6bytesperline dd 0
+
+
+;----------------------------------------------------------------------------
+
+SEGMENT	.text
+
+GLOBAL v5_asm_dep_unlock ;Data Execution Prevention unlock (works under XP2 SP2)
+v5_asm_dep_unlock:
+	%ifdef WIN32
+		EXTERN _imp__VirtualProtect@16 ; near
+		sub esp, 4
+		push dword esp
+		push dword 40h ;PAGE_EXECUTE_READWRITE ; _MANUAL FIX_ word to dword
+		push dword v5_asm_dep_unlock-dep_protect_end
+		push dword v5_asm_dep_unlock
+		call dword _imp__VirtualProtect@16
+		add esp, 4
+		ret
+	%else
+		EXTERN mprotect
+		mov  ebp,esp
+		sub  esp,18h
+		movd [esp+8], 7h
+		movd [esp+4], dep_protect_end-v5_asm_dep_unlock
+		movd [esp],   v5_asm_dep_unlock
+		call dword mprotect
+		leave
+		ret
+	%endif
+
 ALIGN 16
 
 	;THE INNER LOOP:
 	;#ifdef CPU <= PENTIUM II
 	;
-	;   movd mm3, CCALL(gylookup)[ecx*4] ;mm3: [ 0   0   0  -gy]
+	;   movd mm3, gylookup[ecx*4] ;mm3: [ 0   0   0  -gy]
 	;   por mm3, mm6               ;mm3: [ogx  0   gx -gy]
 	;      or:
 	;   paddd mm3, gyadd           ;where: gyadd: dq ((-1) SHL (LOGPREC-16))
@@ -153,7 +172,7 @@ ALIGN 16
 	;   test eax, eax
 	;   j ?
 	;   ...
-	;   paddd mm0, CCALL(gi)
+	;   paddd mm0, gi
 	;
 	;#else
 	;      ;Do this only when gx/ogx changes
@@ -162,7 +181,7 @@ ALIGN 16
 	;   pshufw mm3, mm3, 0e8h            ;mm3: [ gx ogx ogx  0 ]
 	;
 	;      ;Do this only when ecx/edx changes
-	;   pinsrw mm3, CCALL(gylookup)[ecx*2], 0 ;mm3: [ 0   0  ogx -gy]
+	;   pinsrw mm3, gylookup[ecx*2], 0 ;mm3: [ 0   0  ogx -gy]
 	;      or:
 	;   paddd mm3, gyadd                ;where: gyadd: dq (1 SHL LOGPREC)
 	;
@@ -174,7 +193,7 @@ ALIGN 16
 	;   test eax, eax
 	;   j ?
 	;   ...
-	;   paddd mm0, CCALL(gi)
+	;   paddd mm0, gi
 	;
 	;#endif
 
@@ -188,8 +207,9 @@ ALIGN 16
 	;edi: [..v[]..]     mm5: [??????? coltemp]
 	;ebp: [...bakj]     mm6: [gx. 0.. ogx 0..]
 	;esp: [..c->..]     mm7: [     temp      ]
-GLOBAL	CCALL(grouscanasm) ;Visual C entry point (passes parameters by stack)
-CCALL(grouscanasm):
+
+GLOBAL	grouscanasm ;Visual C entry point (passes parameters by stack)
+grouscanasm:
 	mov eax, [esp+4]
 	push ebx   ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
 	push esi
@@ -203,35 +223,35 @@ CCALL(grouscanasm):
 		;      2048-4095  c and ce always sit in this range ((esp = c) <= ce)
 		;      4096-6143  This is where memory for cfasm is actually stored!
 		;      6144-8191  (memory never used - this seems unnecessary?)
-	mov esp, CCALL(cfasm)+2048 ; _MANUAL FIX_ "offset" in masm means don't bracket
-	mov eax, CCALL(cfasm)+4096 ; _MANUAL FIX_ "offset" in masm means don't bracket
+	mov esp, cfasm+2048 ; _MANUAL FIX_ "offset" in masm means don't bracket
+	mov eax, cfasm+4096 ; _MANUAL FIX_ "offset" in masm means don't bracket
 	mov ecx, [eax+8]
 	mov edx, [eax+12]
 	movq mm0, [eax+16]
 	movq mm1, [eax+24]
 	mov dword [ce], esp
 
-	mov dword [gylookoff], CCALL(gylookup)
+	mov dword [gylookoff], gylookup
 	mov byte [gmipcnt], 0
 
-	mov ebp, [CCALL(gxmax)]
-	cmp byte [CCALL(gmipnum)], 1
+	mov ebp, [gxmax]
+	cmp byte [gmipnum], 1
 	jle short skipngxmax0
-	cmp ebp, [CCALL(gxmip)]
+	cmp ebp, [gxmip]
 	jle short skipngxmax0
-	mov ebp, [CCALL(gxmip)]
+	mov ebp, [gxmip]
 skipngxmax0:
 	mov [ngxmax], ebp
 
-	mov ebp, [CCALL(gpz)+4]
-	sub ebp, [CCALL(gpz)+0]
+	mov ebp, [gpz+4]
+	sub ebp, [gpz+0]
 	shr ebp, 31
-	movd mm6, DWORD [CCALL(gpz)+ebp*4]        ;update gx in mm6
+	movd mm6, DWORD [gpz+ebp*4]        ;update gx in mm6
 	pand mm6, qword [mmask] ; _MANUAL FIX_ square-bracketed operand 2
-	mov eax, [CCALL(gdz)+ebp*4]
-	add DWORD [CCALL(gpz)+ebp*4], eax
+	mov eax, [gdz+ebp*4]
+	add DWORD [gpz+ebp*4], eax
 
-	mov esi, [CCALL(gpixy)]
+	mov esi, [gpixy]
 	cmp edi, [esi]
 	je drawflor
 	jmp drawceil
@@ -263,7 +283,7 @@ loop1: ;if (dmulrethigh(gylookup[edx*4],c->cx1,c->cy1,ogx) >= 0) jmp endloop1
 	movd eax, mm7
 	test eax, eax              ;if (cy1*ogx ? gy*cx1)
 	jle endloop1
-	psubd mm1, qword [CCALL(gi)]
+	psubd mm1, qword [gi]
 %ifdef USEZBUFFER
 	movntq [ebx], mm5
 	sub ebx, 8
@@ -311,7 +331,7 @@ loop3: ;if (dmulrethigh(gylookup[ecx*4],c->cx0,c->cy0,ogx) < 0) jmp endloop3
 	movd eax, mm7
 	test eax, eax              ;if (cy0*ogx ? gy*cx0)
 	jg endloop3
-	paddd mm0, qword [CCALL(gi)]
+	paddd mm0, qword [gi]
 %ifdef USEZBUFFER
 	movntq [ebx], mm5
 	add ebx, 8
@@ -341,11 +361,11 @@ drawceilloop:
 	movd eax, mm7
 	test eax, eax              ;if (cy0*gx ? gy*cx0)
 	jg drawflor
-	paddd mm0, qword [CCALL(gi)]
+	paddd mm0, qword [gi]
 	mov eax, [esp+2048]
 
 	punpcklbw mm5, [edi-4]
-	psubusb mm5, qword [CCALL(gcsub)+16]
+	psubusb mm5, qword [gcsub+16]
 	pshufw mm2, mm5, 0ffh
 	pmulhuw mm5, mm2
 	psrlw mm5, 7
@@ -375,11 +395,11 @@ drawflorloop:
 	movd eax, mm7
 	test eax, eax              ;if (cy1*gx ? gy*cx1)
 	jle enddrawflor
-	psubd mm1, qword [CCALL(gi)]
+	psubd mm1, qword [gi]
 	mov eax, [esp+4+2048]
 
 	punpcklbw mm5, [edi+4]
-	psubusb mm5, qword [CCALL(gcsub)+24]
+	psubusb mm5, qword [gcsub+24]
 	pshufw mm2, mm5, 0ffh
 	pmulhuw mm5, mm2
 	psrlw mm5, 7
@@ -401,23 +421,23 @@ enddrawflor:
 	mov ebx, esp
 afterdelete:
 	sub esp, 32
-	cmp esp, CCALL(cfasm)+2048 ; _MANUAL FIX_ "offset" in masm means don't bracket
+	cmp esp, cfasm+2048 ; _MANUAL FIX_ "offset" in masm means don't bracket
 	jae skipixy
 
-	movq mm4, qword [CCALL(gcsub)+ebp*8]
-	add esi, [CCALL(gixy)+ebp*4]
-	mov ebp, [CCALL(gpz)+4]
+	movq mm4, qword [gcsub+ebp*8]
+	add esi, [gixy+ebp*4]
+	mov ebp, [gpz+4]
 	mov edi, [esi]
-	sub ebp, [CCALL(gpz)+0]
+	sub ebp, [gpz+0]
 	shr ebp, 31
-	mov eax, [CCALL(gpz)+ebp*4]
+	mov eax, [gpz+ebp*4]
 	movd mm7, eax
 	punpckldq mm6, mm7
 	pand mm6, qword [mmask] ; _MANUAL FIX_ square-bracketed operand 2
 	cmp eax, [ngxmax]
 	ja remiporend
-	add eax, [CCALL(gdz)+ebp*4]
-	mov DWORD [CCALL(gpz)+ebp*4], eax
+	add eax, [gdz+ebp*4]
+	mov DWORD [gpz+ebp*4], eax
 	mov esp, [ce]
 	jmp skipixy2
 
@@ -461,7 +481,7 @@ intoslabloop:
 	movzx eax, byte [edi]
 	jg findslabloop
 
-		;If next slab ALSO intersects, split CCALL(cfasm)!
+		;If next slab ALSO intersects, split cfasm!
 		;if (dmulrethigh(v[v[0]*4+3],c->cx1,c->cy1,ogx) >= 0) jmp drawfwall
 	movzx eax, byte [3+edi+eax*4]
 	movd mm3, dword [ebx+eax*4]      ;mm3: [ 0   0   0  -gy]
@@ -489,7 +509,7 @@ intoslabloop:
 
 		;WARNING: NEW CODE!!!!!!!
 prebegsearchi16:
-	movq mm7, qword [CCALL(gi)]
+	movq mm7, qword [gi]
 	pslld mm7, 4
 	movq mm5, mm1
 	psubd mm5, mm7             ;mm7: [day.... dax....]
@@ -514,7 +534,7 @@ prebegsearchi:
 %else
 	sub edx, 4                   ;col -= 4;
 %endif
-	psubd mm1, qword [CCALL(gi)]     ;dax -= gi[0]; day -= gi[1];
+	psubd mm1, qword [gi]     ;dax -= gi[0]; day -= gi[1];
 begsearchi:
 	pshufw mm7, mm1, 0ddh      ;mm7: [day dax day dax]
 	pmaddwd mm7, mm3           ;mm7: [ 0   0  -decide]
@@ -525,7 +545,7 @@ begsearchi:
 	mov eax, [ce]            ;ce++;
 	add eax, 32
 
-	cmp eax, CCALL(cfasm)+4096 ;VERY BAD!!! - Interrupt would overwrite data! ; _MANUAL FIX_ "offset" in masm means don't bracket
+	cmp eax, cfasm+4096 ;VERY BAD!!! - Interrupt would overwrite data! ; _MANUAL FIX_ "offset" in masm means don't bracket
 	ja retsub                    ;Just in case, return early to prevent lockup.
 
 	mov dword [ce], eax
@@ -547,7 +567,7 @@ skipinsertloop:
 
 	movzx eax, byte [edi]
 	movq mm7, mm1              ;c[1].cx1 = dax; c[1].cy1 = day;
-	paddd mm7, qword [CCALL(gi)]
+	paddd mm7, qword [gi]
 	movzx eax, byte [3+edi+eax*4]
 	mov [esp+32+4+2048], edx        ;c[1].i1 = (long *)col;
 %ifdef USEZBUFFER
@@ -565,25 +585,25 @@ skipinsertloop:
 remiporend:
 	mov al, [gmipcnt]
 	inc al
-	cmp al, byte [CCALL(gmipnum)]
+	cmp al, byte [gmipnum]
 	jge startsky
 	mov [gmipcnt], al
 
-	sub esi, CCALL(sptr)
+	sub esi, sptr
 
 	mov eax, esi
 	shl eax, 29
-	xor eax, [CCALL(gixy)+0]
-	mov eax, [CCALL(gdz)+0]
+	xor eax, [gixy+0]
+	mov eax, [gdz+0]
 	js short skipbladd0
-	add DWORD [CCALL(gpz)+0], eax
+	add DWORD [gpz+0], eax
 skipbladd0:
 	add eax, eax
 	jno short skipremip0
-	mov DWORD [CCALL(gpz)+0], 7fffffffh
+	mov DWORD [gpz+0], 7fffffffh
 	xor eax, eax
 skipremip0:
-	mov DWORD [CCALL(gdz)+0], eax
+	mov DWORD [gdz+0], eax
 
 	mov [ebx+8+2048], ecx ;this is the official place to backup ecx
 
@@ -591,17 +611,17 @@ skipremip0:
 	mov cl, byte [gmipcnt]
 	add cl, 31-1-2-LVSID
 	shl eax, cl
-	xor eax, [CCALL(gixy)+4]
-	mov eax, [CCALL(gdz)+4]
+	xor eax, [gixy+4]
+	mov eax, [gdz+4]
 	js short skipbladd1
-	add DWORD [CCALL(gpz)+4], eax
+	add DWORD [gpz+4], eax
 skipbladd1:
 	add eax, eax
 	jno short skipremip1
-	mov DWORD [CCALL(gpz)+4], 7fffffffh
+	mov DWORD [gpz+4], 7fffffffh
 	xor eax, eax
 skipremip1:
-	mov DWORD [CCALL(gdz)+4], eax
+	mov DWORD [gdz+4], eax
 
 	shr esi, 2
 	mov eax, esi
@@ -615,9 +635,9 @@ skipremip1:
 	mov eax, [gylut+eax*4]
 	mov [gylookoff], eax
 
-	sar DWORD [CCALL(gixy)+4], 1
+	sar DWORD [gixy+4], 1
 
-	mov eax, CCALL(cfasm)+2048 ; _MANUAL FIX_ "offset" in masm means don't bracket
+	mov eax, cfasm+2048 ; _MANUAL FIX_ "offset" in masm means don't bracket
 startremip0:
 	shr dword [eax+8+2048], 1
 	inc dword [eax+12+2048]
@@ -627,14 +647,14 @@ startremip0:
 	jbe short startremip0
 
 	mov eax, [ngxmax]
-	cmp eax, [CCALL(gxmax)]
+	cmp eax, [gxmax]
 	jae short startsky
 	add eax, eax
 	jo skipngxmax1 ;Make sure it doesn't overflow to negative!
-	cmp eax, [CCALL(gxmax)]
+	cmp eax, [gxmax]
 	jl short skipngxmax2
 skipngxmax1:
-	mov eax, [CCALL(gxmax)]
+	mov eax, [gxmax]
 skipngxmax2:
 	mov [ngxmax], eax
 
@@ -645,28 +665,28 @@ skipngxmax2:
 	shr edx, 1
 
 		;this makes grid transition clean
-	mov ebp, [CCALL(gpz)+4]
-	sub ebp, [CCALL(gpz)+0]
+	mov ebp, [gpz+4]
+	sub ebp, [gpz+0]
 	shr ebp, 31
-	mov eax, [CCALL(gpz)+ebp*4]
-	add eax, [CCALL(gdz)+ebp*4]
-	mov DWORD [CCALL(gpz)+ebp*4], eax
+	mov eax, [gpz+ebp*4]
+	add eax, [gdz+ebp*4]
+	mov DWORD [gpz+ebp*4], eax
 	mov edi, [esi]
 
 	mov esp, [ce]
 	jmp skipixy2
 
 startsky:
-	mov esp, [CCALL(cfasm)+2048]
+	mov esp, [cfasm+2048]
 	cmp esp, [ce]
 	ja retsub
-	mov esi, [CCALL(skyoff)]
+	mov esi, [skyoff]
 	test esi, esi
 	jnz short prestartskyloop
 
 ;Sky not loaded, so fill with black ------------------------------------------
 endprebegloop:
-	movq mm5, [CCALL(skycast)] ; _MANUAL FIX_ square-bracketed operand 2
+	movq mm5, [skycast] ; _MANUAL FIX_ square-bracketed operand 2
 	mov eax, [esp+2048]
 	mov ebx, [esp+4+2048]
 	cmp eax, ebx
@@ -692,10 +712,10 @@ endnextloop:
 prestartskyloop:
 	movq qword [ebx+24+2048], mm1 ;Hack to make sure [cy0,cx0] is in memory for sky  ; _MANUAL FIX_ square-bracket now in correct spot. OLD: movq [qword ebx+24+2048],
 
-	mov esi, [CCALL(skyoff)]
-	mov ecx, [CCALL(skylat)]
-	movd mm5, dword [CCALL(skycast)+4]
-	mov edi, [CCALL(skyxsiz)]
+	mov esi, [skyoff]
+	mov ecx, [skylat]
+	movd mm5, dword [skycast+4]
+	mov edi, [skyxsiz]
 startskyloop:
 	mov eax, [esp+2048]
 	mov ebx, [esp+4+2048]
@@ -703,7 +723,7 @@ startskyloop:
 	ja short endskyslab
 	movq mm1, [esp+24+2048]    ;mm1: [cy1.... cx1....]
 preskysearch:
-	psubd mm1, qword [CCALL(gi)]
+	psubd mm1, qword [gi]
 skysearch:
 	pshufw mm7, mm1, 0ddh      ;mm7: [cy1 cx1 cy1 cx1]
 	movd mm3, dword [ecx+edi*4]      ;mm3: [       xvi -yvi]
@@ -745,7 +765,7 @@ predeletez:
 deletez:
 	mov ebx, [ce]
 	sub ebx, 32
-	cmp ebx, [CCALL(cfasm)+2048]
+	cmp ebx, [cfasm+2048]
 	jb retsub          ;nothing to fill - skip remiporend stuff!
 	mov dword [ce], ebx
 
@@ -769,68 +789,44 @@ deleteloop:
 	jmp afterdelete
 
 ;debugret:
-;   mov CCALL(reax), eax
-;   mov CCALL(rebx), ebx
-;   mov CCALL(recx), ecx
-;   mov CCALL(redx), edx
-;   mov CCALL(resi), esi
-;   mov CCALL(redi), edi
-;   mov CCALL(rebp), ebp
-;   mov CCALL(resp), esp
-;   movq CCALL(remm)[0], mm0
-;   movq CCALL(remm)[8], mm1
-;   movq CCALL(remm)[16], mm2
-;   movq CCALL(remm)[24], mm3
-;   movq CCALL(remm)[32], mm4
-;   movq CCALL(remm)[40], mm5
-;   movq CCALL(remm)[48], mm6
-;   movq CCALL(remm)[56], mm7
+;   mov reax, eax
+;   mov rebx, ebx
+;   mov recx, ecx
+;   mov redx, edx
+;   mov resi, esi
+;   mov redi, edi
+;   mov rebp, ebp
+;   mov resp, esp
+;   movq remm[0], mm0
+;   movq remm[8], mm1
+;   movq remm[16], mm2
+;   movq remm[24], mm3
+;   movq remm[32], mm4
+;   movq remm[40], mm5
+;   movq remm[48], mm6
+;   movq remm[56], mm7
 ;   emms
 ;   pop ebp
 ;   ret
 
-;----------------------------------------------------------------------------
 
-MAXZSIZ EQU 1024 ;WARNING: THIS IS BAD SINCE KV6 format supports up to 65535!
-
-%ifdef USEZBUFFER
-EXTERN CCALL(zbufoff)
-%endif
-EXTERN CCALL(ptfaces16)
-
-GLOBAL	CCALL(opti4asm), CCALL(caddasm), CCALL(ztabasm), CCALL(scisdist), CCALL(kv6colmul), CCALL(kv6coladd)
-GLOBAL	CCALL(qsum0), CCALL(qsum1), CCALL(qbplbpp), CCALL(kv6frameplace), CCALL(kv6bytesperline)
-
-ALIGN 16
-CCALL(opti4asm) times	5*4	dd 0        ;NOTE: this used by ?render
-CCALL(caddasm) times	8*4	dd 0
-CCALL(ztabasm) times	(MAXZSIZ+3)*4	dd 0
-CCALL(scisdist) dd 40800000h,0,0,0
-CCALL(kv6colmul) times 256 dq 0 ; _MANUAL FIX_ proper "times" syntax. OLD: CCALL(kv6colmul) dq 256 dup(0)
-CCALL(kv6coladd) dq 0
-CCALL(qsum0) dq 0   ;[8000h-hy,8000h-hx,8000h-hy,8000h-hx]
-CCALL(qsum1) dq 0   ;[8000h-fy,8000h-fx,8000h-fy,8000h-fx]
-CCALL(qbplbpp) dq 0 ;[0,0,bpl,bpp]
-CCALL(kv6frameplace) dd 0
-CCALL(kv6bytesperline) dd 0
-
-GLOBAL	CCALL(drawboundcubesseinit)   ;Visual C entry point (pass by stack)
-CCALL(drawboundcubesseinit):
-	mov eax, [CCALL(kv6frameplace)]
+GLOBAL	drawboundcubesseinit   ;Visual C entry point (pass by stack)
+drawboundcubesseinit:
+	mov eax, [kv6frameplace]
 	mov dword [bcmod0-4], eax
-	mov eax, [CCALL(kv6bytesperline)]
+	mov eax, [kv6bytesperline]
 	mov dword [bcmod3-4], eax
 %ifdef USEZBUFFER
-	;mov eax, CCALL(kv6bytesperline)
+	;mov eax, kv6bytesperline
 	mov dword [bcmod2-4], eax
-	mov eax, [CCALL(zbufoff)]
+	mov eax, [zbufoff]
 	mov dword [bcmod1-4], eax
 %endif
 	retn       ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
 
 ALIGN 16
-GLOBAL	CCALL(drawboundcubesse)       ;Visual C entry point (pass by stack)
-CCALL(drawboundcubesse):
+GLOBAL	drawboundcubesse       ;Visual C entry point (pass by stack)
+drawboundcubesse:
 	mov eax, [esp+4]
 	mov ecx, [esp+8]
 	push ebx   ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
@@ -840,21 +836,21 @@ CCALL(drawboundcubesse):
 	and ecx, edi
 	jz retboundcube
 
-	movaps xmm7, [CCALL(ztabasm)+MAXZSIZ*16] ; _MANUAL FIX_ Remove DWORD prefix from operand 2
+	movaps xmm7, [ztabasm+MAXZSIZ*16] ; _MANUAL FIX_ Remove DWORD prefix from operand 2
 	movzx edi, word [eax+4]
 	shl edi, 4
-	addps xmm7, [CCALL(ztabasm)+edi] ; _MANUAL FIX_ Remove DWORD prefix from operand 2
+	addps xmm7, [ztabasm+edi] ; _MANUAL FIX_ Remove DWORD prefix from operand 2
 	movhlps xmm0, xmm7
-	ucomiss xmm0, [CCALL(scisdist)] ; _MANUAL FIX_ Remove DWORD prefix from operand 2
+	ucomiss xmm0, [scisdist] ; _MANUAL FIX_ Remove DWORD prefix from operand 2
 	jc retboundcube
 
-	lea ecx, [CCALL(ptfaces16)+ecx*8]
+	lea ecx, [ptfaces16+ecx*8]
 
 	movzx ebx, byte [ecx+1] ;                           Ý
 	movzx edi, byte [ecx+2] ;                           Ý
-	movaps xmm0, [CCALL(caddasm)+ebx] ;xmm0: [ z0, z0, y0, x0]    Û ; _MANUAL FIX_ Remove DWORD prefix from operand 2
+	movaps xmm0, [caddasm+ebx] ;xmm0: [ z0, z0, y0, x0]    Û ; _MANUAL FIX_ Remove DWORD prefix from operand 2
 	addps xmm0, xmm7            ;                           ÛÛ±
-	movaps xmm1, [CCALL(caddasm)+edi] ;xmm1: [ z1, z1, y1, x1]    Û ; _MANUAL FIX_ Remove DWORD prefix from operand 2
+	movaps xmm1, [caddasm+edi] ;xmm1: [ z1, z1, y1, x1]    Û ; _MANUAL FIX_ Remove DWORD prefix from operand 2
 	addps xmm1, xmm7            ;                           ÛÛ±
 	movaps xmm6, xmm0           ;xmm6: [ z0, z0, y0, x0]    Û
 	movhlps xmm0, xmm1          ;xmm0: [ z0, z0, z1, z1]    Û
@@ -864,9 +860,9 @@ CCALL(drawboundcubesse):
 
 	movzx ebx, byte [ecx+3] ;                           Ý
 	movzx edi, byte [ecx+4] ;                           Ý
-	movaps xmm2, [CCALL(caddasm)+ebx] ;xmm2: [ z2, z2, y2, x2]    Û ; _MANUAL FIX_ Remove DWORD prefix from operand 2
+	movaps xmm2, [caddasm+ebx] ;xmm2: [ z2, z2, y2, x2]    Û ; _MANUAL FIX_ Remove DWORD prefix from operand 2
 	addps xmm2, xmm7            ;                           ÛÛ±
-	movaps xmm3, [CCALL(caddasm)+edi] ;xmm3: [ z3, z3, y3, x3]    Û ; _MANUAL FIX_ Remove DWORD prefix from operand 2
+	movaps xmm3, [caddasm+edi] ;xmm3: [ z3, z3, y3, x3]    Û ; _MANUAL FIX_ Remove DWORD prefix from operand 2
 	addps xmm3, xmm7            ;                           ÛÛ±
 	movaps xmm6, xmm2           ;xmm6: [ z2, z2, y2, x2]    Û
 	movhlps xmm2, xmm3          ;xmm2: [ z2, z2, z3, z3]    Û
@@ -891,9 +887,9 @@ CCALL(drawboundcubesse):
 
 	movzx ebx, byte [ecx+5] ;                           Ý
 	movzx edi, byte [ecx+6] ;                           Ý
-	movaps xmm4, [CCALL(caddasm)+ebx] ;xmm4: [ z4, z4, y4, x4]    Û ; _MANUAL FIX_ Remove DWORD prefix from operand 2
+	movaps xmm4, [caddasm+ebx] ;xmm4: [ z4, z4, y4, x4]    Û ; _MANUAL FIX_ Remove DWORD prefix from operand 2
 	addps xmm4, xmm7            ;                           ÛÛ±
-	movaps xmm5, [CCALL(caddasm)+edi] ;xmm5: [ z5, z5, y5, x5]    Û ; _MANUAL FIX_ Remove DWORD prefix from operand 2
+	movaps xmm5, [caddasm+edi] ;xmm5: [ z5, z5, y5, x5]    Û ; _MANUAL FIX_ Remove DWORD prefix from operand 2
 	addps xmm5, xmm7            ;                           ÛÛ±
 	movaps xmm6, xmm4           ;xmm6: [ z4, z4, y4, x4]    Û
 	movhlps xmm4, xmm5          ;xmm4: [ z4, z4, z5, z5]    Û
@@ -916,14 +912,14 @@ bcskip6case:
 	punpckldq mm0, mm1          ; mm0: [ My, Mx, my, mx]    Ý
 
 		;See SCRCLP2D.BAS for a derivation of these 4 lines:
-	paddsw mm0, mm6 ;_qsum0     ; mm0: ["+?,"+?,"+?,"+?]    Û
-	pmaxsw mm0, mm7 ;_qsum1     ; mm0: [sy1,sx1,sy0,sx0]    Û
+	paddsw mm0, mm6 ;qsum0     ; mm0: ["+?,"+?,"+?,"+?]    Û
+	pmaxsw mm0, mm7 ;qsum1     ; mm0: [sy1,sx1,sy0,sx0]    Û
 	pshufw mm1, mm0, 0eeh       ; mm1: [sy1,sx1,sy1,sx1]    Û
 	psubusw mm1, mm0            ; mm1: [  0,  0, dy, dx]    Ý
 		;kv6frameplace -= ((32767-yres)*bpl + (32767-xres)*4);
 
 	movd edx, mm1               ; edx: [ dy, dx]            Û
-	pmaddwd mm0, [CCALL(qbplbpp)]     ; mm0: [      ?,   offs]    Û±± (=y*bpl+x*bpp) ; _MANUAL FIX_ OLD: pmaddwd mm0, CCALL(qbplbpp)
+	pmaddwd mm0, [qbplbpp]     ; mm0: [      ?,   offs]    Û±± (=y*bpl+x*bpp) ; _MANUAL FIX_ OLD: pmaddwd mm0, qbplbpp
 	movd ebx, mm1               ; ebx: [ dy, dx]            Ý
 	and edx, 0ffffh             ; ebx: [  0, dx]            Ý
 	jz short retboundcube       ;                           Ý
@@ -932,17 +928,17 @@ bcskip6case:
 
 	movzx edi, byte [eax+7]
 	punpcklbw mm5, [eax]
-	pmulhuw mm5, [CCALL(kv6colmul)+edi*8]
-	paddw mm5, [CCALL(kv6coladd)] ; _MANUAL FIX_ OLD: paddw mm5, CCALL(kv6coladd) 
+	pmulhuw mm5, [kv6colmul+edi*8]
+	paddw mm5, [kv6coladd] ; _MANUAL FIX_ OLD: paddw mm5, kv6coladd 
 	packuswb mm5, mm5
 	movd edi, mm0               ; edi: offs
 
-	lea edi, [edi+edx*4+88888888h] ;CCALL(kv6frameplace)
+	lea edi, [edi+edx*4+88888888h] ;kv6frameplace
 bcmod0:
 	neg edx
 %ifdef USEZBUFFER
 	movhlps xmm0, xmm7
-	lea eax, [edi+88888888h] ;CCALL(zbufoff)
+	lea eax, [edi+88888888h] ;zbufoff
 bcmod1:
 %endif
 boundcubenextline:
@@ -958,10 +954,10 @@ skipdrawpix:
 	inc ecx
 	jnz begstosb
 %ifdef USEZBUFFER
-	add eax, 88888888h; CCALL(kv6bytesperline)
+	add eax, 88888888h; kv6bytesperline
 bcmod2:
 %endif
-	add edi, 88888888h ;CCALL(kv6bytesperline)
+	add edi, 88888888h ;kv6bytesperline
 bcmod3:
 
 	sub ebx, 65536
@@ -972,23 +968,23 @@ retboundcube:
 	pop ebx
 	retn
 
-GLOBAL	CCALL(drawboundcube3dninit)   ;Visual C entry point (pass by stack)
-CCALL(drawboundcube3dninit):
-	mov eax, [CCALL(kv6frameplace)]
+GLOBAL	drawboundcube3dninit   ;Visual C entry point (pass by stack)
+drawboundcube3dninit:
+	mov eax, [kv6frameplace]
 	mov dword [bcmod0_3dn-4], eax
-	mov eax, [CCALL(kv6bytesperline)]
+	mov eax, [kv6bytesperline]
 	mov dword [bcmod3_3dn-4], eax
 %ifdef USEZBUFFER
-	;mov eax, CCALL(kv6bytesperline)
+	;mov eax, kv6bytesperline
 	mov dword [bcmod2_3dn-4], eax
-	mov eax, [CCALL(zbufoff)]
+	mov eax, [zbufoff]
 	mov dword [bcmod1_3dn-4], eax
 %endif
 	retn       ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
 
 ALIGN 16
-GLOBAL	CCALL(drawboundcube3dn)       ;Visual C entry point (pass by stack)
-CCALL(drawboundcube3dn):
+GLOBAL	drawboundcube3dn       ;Visual C entry point (pass by stack)
+drawboundcube3dn:
 	mov eax, [esp+4]
 	mov ecx, [esp+8]
 	push ebx   ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
@@ -998,28 +994,28 @@ CCALL(drawboundcube3dn):
 	and ecx, edi
 	jz retboundcube_3dn
 
-	movq mm6, qword [CCALL(ztabasm)+MAXZSIZ*16]
-	movq mm7, qword [CCALL(ztabasm)+MAXZSIZ*16+8]
+	movq mm6, qword [ztabasm+MAXZSIZ*16]
+	movq mm7, qword [ztabasm+MAXZSIZ*16+8]
 	movzx edi, word [eax+4]
 	shl edi, 4
-	pfadd mm6, qword [CCALL(ztabasm)+edi]
-	pfadd mm7, qword [CCALL(ztabasm)+edi+8]
+	pfadd mm6, qword [ztabasm+edi]
+	pfadd mm7, qword [ztabasm+edi+8]
 	movq mm0, mm7
-	pcmpgtd mm0, qword [CCALL(scisdist)]
+	pcmpgtd mm0, qword [scisdist]
 	movd edx, mm0
 	test edx, edx
 	jz retboundcube_3dn
 
-	lea ecx, [CCALL(ptfaces16)+ecx*8]
+	lea ecx, [ptfaces16+ecx*8]
 
 	movzx ebx, byte [ecx+1]
 	movzx edi, byte [ecx+2]
-	movq mm0, qword [CCALL(caddasm)+ebx]
-	movq mm1, qword [CCALL(caddasm)+edi]
+	movq mm0, qword [caddasm+ebx]
+	movq mm1, qword [caddasm+edi]
 	pfadd mm0, mm6              ;mm0: [   y0    x0]
 	pfadd mm1, mm6              ;mm1: [   y1    x1]
-	movd mm5, dword [CCALL(caddasm)+ebx+8]
-	punpckldq mm5, [CCALL(caddasm)+edi+8]
+	movd mm5, dword [caddasm+ebx+8]
+	punpckldq mm5, [caddasm+edi+8]
 	pfadd mm5, mm7              ;mm5: [   z1    z0]
 	pfrcp mm4, mm5              ;mm4: [ 1/z0  1/z0]
 	punpckhdq mm5, mm5          ;mm5: [   z1    z1]
@@ -1032,12 +1028,12 @@ CCALL(drawboundcube3dn):
 
 	movzx ebx, byte [ecx+3]
 	movzx edi, byte [ecx+4]
-	movq mm2, qword [CCALL(caddasm)+ebx]
-	movq mm3, qword [CCALL(caddasm)+edi]
+	movq mm2, qword [caddasm+ebx]
+	movq mm3, qword [caddasm+edi]
 	pfadd mm2, mm6              ;mm2: [   y2    x2]
 	pfadd mm3, mm6              ;mm3: [   y3    x3]
-	movd mm5, dword [CCALL(caddasm)+ebx+8]
-	punpckldq mm5, [CCALL(caddasm)+edi+8]
+	movd mm5, dword [caddasm+ebx+8]
+	punpckldq mm5, [caddasm+edi+8]
 	pfadd mm5, mm7              ;mm5: [   z3    z2]
 	pfrcp mm4, mm5              ;mm4: [ 1/z2  1/z2]
 	punpckhdq mm5, mm5          ;mm5: [   z3    z3]
@@ -1057,12 +1053,12 @@ CCALL(drawboundcube3dn):
 
 	movzx ebx, byte [ecx+5]
 	movzx edi, byte [ecx+6]
-	movq mm2, qword [CCALL(caddasm)+ebx]
-	movq mm3, qword [CCALL(caddasm)+edi]
+	movq mm2, qword [caddasm+ebx]
+	movq mm3, qword [caddasm+edi]
 	pfadd mm2, mm6              ;mm2: [   y4    x4]
 	pfadd mm3, mm6              ;mm3: [   y5    x5]
-	movd mm5, dword [CCALL(caddasm)+ebx+8]
-	punpckldq mm5, [CCALL(caddasm)+edi+8]
+	movd mm5, dword [caddasm+ebx+8]
+	punpckldq mm5, [caddasm+edi+8]
 	pfadd mm5, mm7              ;mm5: [   z5    z4]
 	pfrcp mm4, mm5              ;mm4: [ 1/z4  1/z4]
 	punpckhdq mm5, mm5          ;mm5: [   z5    z5]
@@ -1084,14 +1080,14 @@ bcskip6case_3dn:
 	punpckldq mm0, mm1          ; mm0: [ My, Mx, my, mx]
 
 		;See SCRCLP2D.BAS for a derivation of these 4 lines:
-	paddsw mm0, [CCALL(qsum0)]        ; mm0: ["+?,"+?,"+?,"+?]    Û ; _MANUAL FIX_ square-bracketed operand 2
-	pmaxsw mm0, [CCALL(qsum1)]        ; mm0: [sy1,sx1,sy0,sx0]    Û ; _MANUAL FIX_ square-bracketed operand 2
+	paddsw mm0, [qsum0]  ; mm0: ["+?,"+?,"+?,"+?]    Û ; _MANUAL FIX_ square-bracketed operand 2
+	pmaxsw mm0, [qsum1]  ; mm0: [sy1,sx1,sy0,sx0]    Û ; _MANUAL FIX_ square-bracketed operand 2
 	pshufw mm1, mm0, 0eeh       ; mm1: [sy1,sx1,sy1,sx1]    Û
 	psubusw mm1, mm0            ; mm1: [  0,  0, dy, dx]    Ý
 		;kv6frameplace -= ((32767-yres)*bpl + (32767-xres)*4);
 
 	movd edx, mm1               ; edx: [ dy, dx]            Û
-	pmaddwd mm0, [CCALL(qbplbpp)]     ; mm0: [      ?,   offs]    Û±± (=y*bpl+x*bpp) ; _MANUAL FIX_ square-bracketed operand 2
+	pmaddwd mm0, [qbplbpp]     ; mm0: [      ?,   offs]    Û±± (=y*bpl+x*bpp) ; _MANUAL FIX_ square-bracketed operand 2
 	movd ebx, mm1               ; ebx: [ dy, dx]            Ý
 	and edx, 0ffffh             ; ebx: [  0, dx]            Ý
 	jz short retboundcube_3dn   ;                           Ý
@@ -1100,17 +1096,17 @@ bcskip6case_3dn:
 
 	movzx edi, byte [eax+7]
 	punpcklbw mm5, [eax]
-	pmulhuw mm5, [CCALL(kv6colmul)+edi*8]
-	paddw mm5, [CCALL(kv6coladd)] ; _MANUAL FIX_ square-bracketed operand 2
+	pmulhuw mm5, [kv6colmul+edi*8]
+	paddw mm5, [kv6coladd] ; _MANUAL FIX_ square-bracketed operand 2
 	packuswb mm5, mm5
 	movd edi, mm0               ; edi: offs
 
-	lea edi, [edi+edx*4+88888888h] ;CCALL(kv6frameplace)
+	lea edi, [edi+edx*4+88888888h] ;kv6frameplace
 bcmod0_3dn:
 	neg edx
 	movd mm1, edx
 %ifdef USEZBUFFER
-	lea eax, [edi+88888888h] ;CCALL(zbufoff)
+	lea eax, [edi+88888888h] ;zbufoff
 bcmod1_3dn:
 %endif
 boundcubenextline_3dn:
@@ -1129,10 +1125,10 @@ skipdrawpix_3dn:
 	inc ecx
 	jnz begstosb_3dn
 %ifdef USEZBUFFER
-	add eax, 88888888h; CCALL(kv6bytesperline)
+	add eax, 88888888h; kv6bytesperline
 bcmod2_3dn:
 %endif
-	add edi, 88888888h ;CCALL(kv6bytesperline)
+	add edi, 88888888h ;kv6bytesperline
 bcmod3_3dn:
 
 	sub ebx, 65536
@@ -1143,6 +1139,5 @@ retboundcube_3dn:
 	pop ebx
 	retn
 
-CCALL(dep_protect_end):
-;.text ENDS
+dep_protect_end:
 ;END
