@@ -6,6 +6,11 @@
  * Compiler Directive Hacks
  **/
 
+#ifdef _M_IX86 //MSVC's way of declaring x86
+	#define __i386__
+#endif
+
+
 #ifdef __GNUC__
 	// Maps __assume() to __builtin_unreachable()
 	#define __assume(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)

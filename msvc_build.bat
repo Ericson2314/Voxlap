@@ -17,6 +17,7 @@ set LIB=/Program Files/Microsoft DirectX SDK (June 2010)/LIB/x86;%LIB%
 set _AsmName=nasm
 
 @rem Random options
+set _GFX=win
 set USEV5ASM=1
 set BUILD=Debug
 

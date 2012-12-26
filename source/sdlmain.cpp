@@ -16,7 +16,7 @@
 #error i386 targets only.
 #endif
 
-#include <SDL.h>
+#include <SDL/SDL.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,7 +33,12 @@
 #include "../include/kplib.h"
 #endif
 
-typedef struct __attribute__ ((packed)) tWAVEFORMATEX {
+#if defined(_MSC_VER) //data definition is built into windows
+typedef struct tWAVEFORMATEX
+#else
+typedef struct __attribute__ ((packed)) tWAVEFORMATEX
+#endif
+{
 	short wFormatTag;
 	short nChannels;
 	long nSamplesPerSec;
@@ -42,6 +47,7 @@ typedef struct __attribute__ ((packed)) tWAVEFORMATEX {
 	short wBitsPerSample;
 	short cbSize;
 } WAVEFORMATEX;
+
 #define WAVE_FORMAT_PCM 1
 
 #endif
@@ -646,8 +652,8 @@ static point3d audiopos, audiostr, audiohei, audiofor;
 static float rsamplerate;
 static long lsnd[SNDSTREAMSIZ>>1], samplerate, numspeakers, bytespersample, oplaycurs = 0;
 static char gshiftval = 0;
-static short coef[NUMCOEF<<LOGCOEFPREC] __attribute__ (( aligned(16) )); //Sound re-scale filter coefficients
-static short coeflopass[NUMCOEF<<LOGCOEFPREC] __attribute__ (( aligned(16) )); //Sound re-scale filter coefficients
+static short __ALIGN(16) coef[NUMCOEF<<LOGCOEFPREC]; //Sound re-scale filter coefficients
+static short __ALIGN(16) coeflopass[NUMCOEF<<LOGCOEFPREC]; //Sound re-scale filter coefficients
 
 	//Same as: stricmp(st0,st1) except: '/' == '\'
 static long filnamcmp (const char *st0, const char *st1)
