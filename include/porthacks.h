@@ -24,7 +24,7 @@
 	#endif
 
 	// Aligns symbol
-	#define __ALIGN(num) __attribute__((align(num)))
+	#define __ALIGN(num) __attribute__((aligned(num)))
 	#define MUST_INLINE __attribute__((always_inline))
 	#define FORCE_NAME(symbol) asm(symbol)
 #endif
