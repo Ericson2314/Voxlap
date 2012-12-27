@@ -650,7 +650,9 @@ static inline long dmulrethigh (long b, long c, long a, long d)
 static inline void copybuf (void *s, void *d, long c)
 {
 	#ifdef __NOASM__
-	
+	int i;
+	for (i = 0;	i < c; i++)
+		((long *)d)[i] = ((long *)s)[i];
 	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -658,7 +660,7 @@ static inline void copybuf (void *s, void *d, long c)
 		".intel_syntax noprefix\n"
 		"rep	movsd\n"
 		".att_syntax prefix\n"
-		: 
+		:
 		: "S" (s), "D" (d), "c" (c)
 		:
 	);
@@ -682,7 +684,9 @@ static inline void copybuf (void *s, void *d, long c)
 static inline void clearbuf (void *d, long c, long a)
 {
 	#ifdef __NOASM__
-	
+	int i;
+	for (i = 0;	i < c; i++)
+		((long *)d)[i] = a;
 	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -10566,7 +10570,7 @@ static inline long dmulshr0 (long a, long d, long s, long t)
 		: [a] "0" (a), [d] "r" (d)
 		:
 	);
-		__asm__ __volatile__
+	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
 		"imul	%[d]\n"
