@@ -108,11 +108,10 @@ typedef struct { float x, y; } point2d;
 #pragma pack(pop)
 
 #if (defined(USEV5ASM) && (USEV5ASM != 0)) //if true
-	EXTERN_C void *cfasm;
+	EXTERN_C cftype cfasm[256];
 	EXTERN_C castdat skycast;
-	#define cf ((cftype *)&cfasm)
 #else
-	cftype cf[256];
+	cftype cfasm[256];
 #endif
 	//Screen related variables:
 static long xres_voxlap, yres_voxlap, bytesperline, frameplace, xres4_voxlap;
@@ -1531,7 +1530,7 @@ void gline (long leng, float x0, float y0, float x1, float y1)
 	if (gdz[1] <= 0) { ftol(gposyfrac[(*(unsigned long *)&vy1)>>31]*fabs(f2)*PREC,&gpz[1]); if (gpz[1] <= 0) gpz[1] = 0x7fffffff; gdz[1] = 0x7fffffff-gpz[1]; } //Hack for divide overflow
 	else ftol(gposyfrac[(*(unsigned long *)&vy1)>>31]*(float)gdz[1],&gpz[1]);
 
-	c = &cf[128];
+	c = &cfasm[128];
 	c->i0 = gscanptr; c->i1 = &gscanptr[leng];
 	c->z0 = gstartz0; c->z1 = gstartz1;
 	if (giforzsgn < 0)
@@ -1628,7 +1627,7 @@ void gline (long leng, float x0, float y0, float x1, float y1)
 	//   for(j=0;j<3;j++)
 	//   {
 	//      sprintf(tempbuf2,"%d i0:%d i1:%d z0:%ld z1:%ld cx0:%08x cy0:%08x cx1:%08x cy1:%08x\n",
-	//         j,(long)cf[j].i0-(long)gscanptr,(long)cf[j].i1-(long)gscanptr,cf[j].z0,cf[j].z1,cf[j].cx0,cf[j].cy0,cf[j].cx1,cf[j].cy1);
+	//         j,(long)cfasm[j].i0-(long)gscanptr,(long)cfasm[j].i1-(long)gscanptr,cfasm[j].z0,cfasm[j].z1,cfasm[j].cx0,cfasm[j].cy0,cfasm[j].cx1,cfasm[j].cy1);
 	//      strcat(tempbuf,tempbuf2);
 	//   }
 	//   evilquit(tempbuf);
@@ -1692,7 +1691,7 @@ drawflor:;
 
 afterdelete:;
 		c--;
-		if (c < &cf[128])
+		if (c < &cfasm[128])
 		{
 			ixy += gixy[j];
 			gpz[j] += gdz[j];
@@ -1709,14 +1708,14 @@ afterdelete:;
 			if (dmulrethigh(gylookup[v[2]+1],c->cx0,c->cy0,ogx) >= 0) break;
 			v += v[0]*4;
 		}
-			//If next slab ALSO intersects, split cf!
+			//If next slab ALSO intersects, split cfasm!
 		gy = gylookup[v[v[0]*4+3]];
 		if (dmulrethigh(gy,c->cx1,c->cy1,ogx) < 0)
 		{
 			col = (long)c->i1; dax = c->cx1; day = c->cy1;
 			while (dmulrethigh(gylookup[v[2]+1],dax,day,ogx) < 0)
 				{ col -= sizeof(castdat); dax -= gi0; day -= gi1; }
-			ce++; if (ce >= &cf[192]) return; //Give it max=64 entries like ASM
+			ce++; if (ce >= &cfasm[192]) return; //Give it max=64 entries like ASM
 			for(c2=ce;c2>c;c2--) c2[0] = c2[-1];
 			c[1].i1 = (castdat *)col; c->i0 = ((castdat *)col)+1;
 			c[1].cx1 = dax; c->cx0 = dax+gi0;
@@ -1727,12 +1726,12 @@ afterdelete:;
 	}
 //------------------------------------------------------------------------
 
-	for(c=ce;c>=&cf[128];c--)
+	for(c=ce;c>=&cfasm[128];c--)
 		while (c->i0 <= c->i1) { c->i0->col = 0; c->i0++; }
 	return;
 
 deletez:;
-	ce--; if (ce < &cf[128]) return;
+	ce--; if (ce < &cfasm[128]) return;
 	for(c2=c;c2<=ce;c2++) c2[0] = c2[1];
 	goto afterdelete;
 #endif
@@ -1858,7 +1857,7 @@ void setflash (float px, float py, float pz, long flashradius, long numang, long
 		if (gdz[1] < 0) { gpz[1] = 0x7fffffff; gdz[1] = 0; } //Hack for divide overflow
 		else ftol(gposyfrac[(*(unsigned long *)&vy)>>31]*(float)gdz[1],&gpz[1]);
 
-		c = ce = &cf[128];
+		c = ce = &cfasm[128];
 		v = vs; c->z0 = sz0; c->z1 = sz1;
 			//Note!  These substitions are used in flashscan:
 			//   c->i0 in flashscan is now: c->cx0
@@ -1933,7 +1932,7 @@ fdrawflor:;
 
 fafterdelete:;
 			c--;
-			if (c < &cf[128])
+			if (c < &cfasm[128])
 			{
 				ixy += gixy[j];
 				gpz[j] += gdz[j];
@@ -1950,13 +1949,13 @@ fafterdelete:;
 				if (dmulrethigh(gylookup[v[2]+1],gfc[c->cx0].x,gfc[c->cx0].y,ogx) >= 0) break;
 				v += v[0]*4;
 			}
-				//If next slab ALSO intersects, split cf!
+				//If next slab ALSO intersects, split cfasm!
 			if (dmulrethigh(gylookup[v[v[0]*4+3]],gfc[c->cx1].x,gfc[c->cx1].y,ogx) < 0)
 			{
 				col = c->cx1;
 				while (dmulrethigh(gylookup[v[2]+1],gfc[col].x,gfc[col].y,ogx) < 0)
 					col--;
-				ce++; if (ce >= &cf[192]) break; //Give it max=64 entries like ASM
+				ce++; if (ce >= &cfasm[192]) break; //Give it max=64 entries like ASM
 				for(c2=ce;c2>c;c2--) c2[0] = c2[-1];
 				c[1].cx1 = col; c->cx0 = col+1;
 				c[1].z1 = c->z0 = v[v[0]*4+3];
@@ -1971,7 +1970,7 @@ fcontinue:;
 	return;
 
 fdeletez:;
-	ce--; if (ce < &cf[128]) goto fcontinue;
+	ce--; if (ce < &cfasm[128]) goto fcontinue;
 	for(c2=c;c2<=ce;c2++) c2[0] = c2[1];
 	goto fafterdelete;
 }
