@@ -393,8 +393,8 @@ static inline void ftol (float f, long *a)
 static inline void fcossin (float a, float *c, float *s)
 {
 	#ifdef __NOASM__
-	*c = cos(a);
-	*s = sin(a);
+	*c = cosf(a);
+	*s = sinf(a);
 	#else
 	#if __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__

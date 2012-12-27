@@ -374,8 +374,8 @@ void botinit ()
 static inline void fcossin (float a, float *c, float *s)
 {
 	#if defined(__NOASM__)
-	*c = cos(a);
-	*s = sin(a);
+	*c = cosf(a);
+	*s = sinf(a);
 	#endif
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__

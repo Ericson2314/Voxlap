@@ -223,8 +223,8 @@ long zbufoff;
 static inline void fcossin (float a, float *c, float *s)
 {
 	#ifdef __NOASM__
-	*c = cos(a);
-	*s = sin(a);
+	*c = cosf(a);
+	*s = cosf(a);
 	#else
 	#if __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -316,7 +316,7 @@ static inline void ftol (float f, long *a)
 static inline void dtol (double d, long *a)
 {
 	#ifdef __NOASM__
-	
+	*a = (long) d;
 	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -343,15 +343,7 @@ static inline void dtol (double d, long *a)
 static inline double dbound (double d, double dmin, double dmax)
 {
 	#ifdef __NOASM__
-	if (d < dmin)
-	{
-		d = dmin;
-	}
-	else
-	{
-		if (d > dmax)
-			d = dmax;
-	}
+	return BOUND(d, dmin, dmax);
 	#else
 	//WARNING: This ASM code requires >= PPRO
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
@@ -569,7 +561,7 @@ static inline long umulshr32 (long a, long d)
 static inline long scale (long a, long d, long c)
 {
 	#ifdef __NOASM__
-	
+	return a * d / c;
 	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
