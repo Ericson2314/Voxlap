@@ -385,7 +385,7 @@ static inline double dbound (double d, double dmin, double dmax)
 static inline long mulshr16 (long a, long d)
 {
 	#ifdef __NOASM__
-	
+	return (long)((((int64_t)a) * ((int64_t)d)) >> 16);
 	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -443,7 +443,7 @@ static inline int64_t mul64 (long a, long d)
 static inline long shldiv16 (long a, long b)
 {
 	#ifdef __NOASM__
-	
+	return (long)((((int64_t)a) << 16) / ((int64_t)d));
 	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__

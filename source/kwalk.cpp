@@ -132,26 +132,65 @@ static inline long scale (long a, long d, long c)
 
 static inline long mulshr16 (long a, long d)
 {
+	#ifdef __NOASM__
+	return (long)((((int64_t)a) * ((int64_t)d)) >> 16);
+	#else
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"imul	%[d]\n"
+		"shrd	%[a], %[d], 16\n"
+		".att_syntax prefix\n"
+		: [a] "=a" (a)
+		:      "0" (a), [d] "r" (d)
+		:
+	);
+	return a;
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov eax, a
-		mov edx, d
-		imul edx
-		shrd eax, edx, 16
+		mov	eax, a
+		mov	edx, d
+		imul	edx
+		shrd	eax, edx, 16
 	}
+	#endif
+	#endif
 }
 
 static inline long shldiv16 (long a, long b)
 {
+	#ifdef __NOASM__
+	return (long)((((int64_t)a) << 16) / ((int64_t)d));
+	#else
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		".intel_syntax prefix\n"
+		"mov	%%edx, %[a]\n"
+		"shl	%[a], 16\n"
+		"sar	%%edx, 16\n"
+		"idiv	%[b]\n" //dword ptr
+		".att_syntax prefix\n"
+		: [a] "=a" (a)
+		:      "0" (a), [b] "r" (b)
+		: "edx"
+	);
+	return a;
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov eax, a
-		mov ebx, b
-		mov edx, eax
-		shl eax, 16
-		sar edx, 16
-		idiv ebx
+		mov	eax, a
+		mov	edx, eax
+		shl	eax, 16
+		sar	edx, 16
+		idiv	b
 	}
+	#endif
+	#endif
 }
 
 //----------------------  WIN file select code begins ------------------------
