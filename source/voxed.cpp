@@ -153,11 +153,6 @@ void *colfunclst[] =
 };
 #define numcolfunc (sizeof(colfunclst)>>2)
 
-	//Ken Silverman knows how to use EMMS
-#if defined(_MSC_VER) && !defined(NOASM)
-	#pragma warning(disable:4799)
-#endif
-
 	//RGB color selection variables
 #define CGRAD 64
 float fcmousx, fcmousy;
