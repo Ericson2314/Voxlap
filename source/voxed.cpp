@@ -11,7 +11,11 @@
 //#define KPLIB_C  //if kplib is compiled as C
 #include "../include/kplib.h"
 
+	//Ericson2314's dirty porting tricks
 #include "../include/porthacks.h"
+
+	//Ken's short, general-purpose to-be-inlined functions mainly consisting of inline assembly are now here
+#include "../include/ksnippits.h"
 
 #define SCISSORDIST 1.0
 #define STEREOMODE 0  //0:no stereo (normal mode), 1:CrystalEyes, 2:Nuvision
@@ -149,25 +153,6 @@ void *colfunclst[] =
 
 #ifdef __WATCOMC__
 
-void ftol (float, long *);
-#pragma aux ftol =\
-	"fistp dword ptr [eax]"\
-	parm [8087][eax]\
-
-void dcossin (double, double *, double *);
-#pragma aux dcossin =\
-	"fsincos"\
-	"fstp qword ptr [eax]"\
-	"fstp qword ptr [ebx]"\
-	parm [8087][eax][ebx]\
-
-void clearbuf (void *, long, long);
-#pragma aux clearbuf =\
-	"rep stosd"\
-	parm [edi][ecx][eax]\
-	modify exact [edi ecx]\
-	value
-
 void mmxcoloradd (long *);
 #pragma aux mmxcoloradd =\
 	".686"\
@@ -188,86 +173,11 @@ void mmxcolorsub (long *);
 	modify exact \
 	value
 
-long mulshr24 (long, long);
-#pragma aux mulshr24 =\
-	"imul edx",\
-	"shrd eax, edx, 24",\
-	parm nomemory [eax][edx]\
-	modify exact [eax edx]\
-	value [eax]
-
-long umulshr32 (long, long);
-#pragma aux umulshr32 =\
-	"mul edx"\
-	parm nomemory [eax][edx]\
-	modify exact [eax edx]\
-	value [edx]
-
-void emms ();
-#pragma aux emms =\
-	".686"\
-	"emms"\
-	parm nomemory []\
-	modify exact []\
-	value
-
-#endif
+#else
 
 #ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	#pragma warning(disable:4799) //I know how to use EMMS
 #endif
-
-static inline void ftol (float f, long *a)
-{
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
-	_asm
-	{
-		"mov eax, a\n"
-		"fld f\n"
-		"fistpl (%eax)\n"
-	}
-	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-	_asm
-	{
-		mov eax, a
-		fld f
-		fistp dword ptr [eax]
-	}
-	#endif
-}
-
-static inline void dcossin (double a, double *c, double *s)
-{
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
-	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-		_asm
-	{
-		fld a
-		fsincos
-		mov eax, c
-		fstp qword ptr [eax]
-		mov eax, s
-		fstp qword ptr [eax]
-	}
-	#endif
-}
-
-static inline void clearbuf (void *d, long c, long a)
-{
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
-	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-	_asm
-	{
-		mov edi, d
-		mov ecx, c
-		mov eax, a
-		rep stosd
-	}
-	#endif
-}
 
 static inline void mmxcoloradd (long *a)
 {
@@ -299,45 +209,8 @@ static inline void mmxcolorsub (long *a)
 	#endif
 }
 
-static inline long mulshr24 (long a, long d)
-{
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
-	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-	_asm
-	{
-		mov eax, a
-		mov edx, d
-		imul edx
-		shrd eax, edx, 24
-	}
-	#endif
-}
+#endif
 
-static inline long umulshr32 (long a, long d)
-{
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
-	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-	_asm
-	{
-		mov eax, a
-		mov edx, d
-		mul edx
-		mov eax, edx
-	}
-	#endif
-}
-
-static inline void emms () // inserts opcode emms, used to avoid many compiler checks
-{
-	#ifdef __GNUC__
-	__asm__ __volatile__ ("emms" : : : "cc");
-	#endif
-	#ifdef _MSC_VER
-	_asm { emms }
-	#endif
-}
 
 	//RGB color selection variables
 #define CGRAD 64
@@ -604,7 +477,7 @@ void drawcolorbar ()
 
 		x = clx[z++];
 	} while (z < clcnt);
-	emms();
+	clearMMX();
 }
 
 static char relpathbase[MAX_PATH];
@@ -1102,7 +975,7 @@ void photonflash (dpoint3d *ipos, long brightness, long numrays)
 				}
 			}
 		}
-		emms();
+		clearMMX();
 	}
 }
 
@@ -4389,7 +4262,7 @@ void doframe ()
 
 				//(*(long *)&v[j<<2]) = colormul(*(long *)&v[j<<2],256-64);
 			}
-			emms();
+			clearMMX();
 		}
 	}
 

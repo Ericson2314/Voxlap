@@ -22,6 +22,7 @@
 //#define KPLIB_C  //if kplib is compiled as C
 #include "../include/kplib.h"
 
+	//Ericson2314's dirty porting tricks
 #include "../include/porthacks.h"
 
 /**

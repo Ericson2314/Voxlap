@@ -2,6 +2,7 @@
  * porthacks.h: Macros-out differences between GCC & VS, and GNUC & MSVC                          *
  **************************************************************************************************/
 
+
 /**
  * Compiler Directive Hacks
  **/
@@ -43,6 +44,18 @@
  * Inline Assembly Syntax Hacks
  **/
 
+#ifdef __WATCOMC__
+
+void clearMMX ();
+#pragma aux emms =\
+	".686"\
+	"emms"\
+	parm nomemory []\
+	modify exact []\
+	value
+
+#else
+
 static inline void clearMMX () // inserts opcode emms, used to avoid many compiler checks
 {
 	#ifdef __GNUC__
@@ -52,6 +65,8 @@ static inline void clearMMX () // inserts opcode emms, used to avoid many compil
 	_asm { emms }
 	#endif
 }
+
+#endif
 
 #ifdef __GNUC__
 	#define DEBUG_BREAK() __asm__ __volatile__ ("int $3\n");

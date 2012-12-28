@@ -12,7 +12,11 @@
 //#define KPLIB_C  //if kplib is compiled as C
 #include "../include/kplib.h"
 
+	//Ericson2314's dirty porting tricks
 #include "../include/porthacks.h"
+
+	//Ken's short, general-purpose to-be-inlined functions mainly consisting of inline assembly are now here
+#include "../include/ksnippits.h"
 
 	//NUMSECRETS:actual num,1:1,2:1,4:2,8:5,16:8,32:14,64:26,128:49,256:87
 	//512:168,1024:293,2048:480,4096:711,8192:931
@@ -371,37 +375,6 @@ void botinit ()
 		}
 }
 
-static inline void fcossin (float a, float *c, float *s)
-{
-	#if defined(__NOASM__)
-	*c = cosf(a);
-	*s = sinf(a);
-	#endif
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
-	__asm__ __volatile__
-	(
-		".intel_syntax noprefix\n"
-		"fld	DWORD PTR a\n\t"
-		"fsincos\n\t"
-		"mov	eax, c\n\t"
-		"fstp	DWORD PTR [eax]\n\t"
-		"mov	eax, s\n\t"
-		"fstp	DWORD PTR [eax]\n\t"
-		".att_syntax prefix\n"
-	);
-	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
-	_asm
-	{
-		fld	a
-		fsincos
-		mov	eax, c
-		fstp	dword ptr [eax]
-		mov	eax, s
-		fstp	dword ptr [eax]
-	}
-	#endif
-}
 
 #define EXTRASLICECOVER 1
 

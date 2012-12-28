@@ -19,7 +19,11 @@
 //#define KPLIB_C  //if kplib is compiled as C
 #include "../include/kplib.h"
 
+	//Ericson2314's dirty porting tricks
 #include "../include/porthacks.h"
+
+	//Ken's short, general-purpose to-be-inlined functions mainly consisting of inline assembly are now here
+#include "../include/ksnippits.h"
 
 long kfatim = -1, okfatim = -1;
 
@@ -94,104 +98,6 @@ seqtyp seq[MAXSEQS]; //32K
 //---------------------------------------------------------------------------
 
 EXTERN_C long zbufoff;
-
-static inline void ftol (float f, long *a)
-{
-	_asm
-	{
-		mov eax, a
-		fld f
-		fistp dword ptr [eax]
-	}
-}
-
-static inline void fcossin (float a, float *c, float *s)
-{
-	_asm
-	{
-		fld a
-		fsincos
-		mov eax, c
-		fstp dword ptr [eax]
-		mov eax, s
-		fstp dword ptr [eax]
-	}
-}
-
-static inline long scale (long a, long d, long c)
-{
-	_asm
-	{
-		mov eax, a
-		mov edx, d
-		mov ecx, c
-		imul edx
-		idiv ecx
-	}
-}
-
-static inline long mulshr16 (long a, long d)
-{
-	#ifdef __NOASM__
-	return (long)((((int64_t)a) * ((int64_t)d)) >> 16);
-	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
-	__asm__ __volatile__
-	(
-		".intel_syntax prefix\n"
-		"imul	%[d]\n"
-		"shrd	%[a], %[d], 16\n"
-		".att_syntax prefix\n"
-		: [a] "=a" (a)
-		:      "0" (a), [d] "r" (d)
-		:
-	);
-	return a;
-	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
-	_asm
-	{
-		mov	eax, a
-		mov	edx, d
-		imul	edx
-		shrd	eax, edx, 16
-	}
-	#endif
-	#endif
-}
-
-static inline long shldiv16 (long a, long b)
-{
-	#ifdef __NOASM__
-	return (long)((((int64_t)a) << 16) / ((int64_t)d));
-	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
-	__asm__ __volatile__
-	(
-		".intel_syntax prefix\n"
-		"mov	%%edx, %[a]\n"
-		"shl	%[a], 16\n"
-		"sar	%%edx, 16\n"
-		"idiv	%[b]\n" //dword ptr
-		".att_syntax prefix\n"
-		: [a] "=a" (a)
-		:      "0" (a), [b] "r" (b)
-		: "edx"
-	);
-	return a;
-	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
-	_asm
-	{
-		mov	eax, a
-		mov	edx, eax
-		shl	eax, 16
-		sar	edx, 16
-		idiv	b
-	}
-	#endif
-	#endif
-}
 
 //----------------------  WIN file select code begins ------------------------
 
