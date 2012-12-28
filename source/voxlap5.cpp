@@ -218,12 +218,6 @@ long zbufoff;
 #define gi1 (((long *)&gi)[1])
 
 
-	//Ken Silverman knows how to use EMMS
-#if defined(_MSC_VER) && !defined(NOASM)
-	#pragma warning(disable:4799)
-#endif
-
-
 	//if (a < 0) return(0); else if (a > b) return(b); else return(a);
 static inline long lbound0 (long a, long b) //b MUST be >= 0
 {
