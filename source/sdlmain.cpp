@@ -8,10 +8,6 @@
 #undef max
 #undef min
 
-#ifndef __i386__
-#error i386 targets only.
-#endif
-
 #include <SDL/SDL.h>
 
 #include <stdio.h>
@@ -24,6 +20,10 @@
 
 	//Ken's short, general-purpose to-be-inlined functions mainly consisting of inline assembly are now here
 #include "../include/ksnippits.h"
+
+#ifndef __i386__
+#error i386 targets only.
+#endif
 
 	//for code_rwx_unlock only
 #ifndef _WIN32
