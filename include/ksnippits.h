@@ -54,14 +54,14 @@ static inline void fcossin (float a, float *c, float *s)
 	#if __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"fld	DWORD PTR a\n\t"
+		".intel_syntax prefix\n"
 		"fsincos\n\t"
-		"mov	eax, c\n\t"
-		"fstp	DWORD PTR [eax]\n\t"
-		"mov	eax, s\n\t"
-		"fstp	DWORD PTR [eax]\n\t"
+		"fstp	DWORD PTR [%[c]]\n\t"
+		"fstp	DWORD PTR [%[s]]\n\t"
 		".att_syntax prefix\n"
+		:
+		: "t" (a), [c] "r" (c), [s] "r" (s)
+		:
 	);
 	#endif
 	#if _MSC_VER //MASM SYNTAX ASSEMBLY
@@ -87,14 +87,14 @@ static inline void dcossin (double a, double *c, double *s)
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"fld	qword ptr a\n"
-		"fsincos\n"
-		"mov	eax, c\n"
-		"fstp	qword ptr [eax]\n"
-		"mov	eax, s\n"
-		"fstp	qword ptr [eax]\n"
+		".intel_syntax prefix\n"
+		"fsincos\n\t"
+		"fstp	QWORD PTR [%[c]]\n\t"
+		"fstp	QWORD PTR [%[s]]\n\t"
 		".att_syntax prefix\n"
+		:
+		: "t" (a), [c] "r" (c), [s] "r" (s)
+		:
 	);
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
@@ -120,10 +120,10 @@ static inline void ftol (float f, long *a)
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
-		"fistp	dword ptr [%[a]]\n"
+		"fstp	DWORD PTR [%[a]]\n\t"
 		".att_syntax prefix\n"
-		: 
-		: [f]  "t" (f), [a] "r" (a)
+		:
+		: "t" (f), [a] "r" (a)
 		:
 	);
 	#endif
@@ -146,11 +146,12 @@ static inline void dtol (double d, long *a)
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"fld	qword ptr d\n"
-		"fistp	dword ptr [eax]\n"
+		".intel_syntax prefix\n"
+		"fstp	QWORD PTR [%[a]]\n\t"
 		".att_syntax prefix\n"
+		:
+		: "t" (d), [a] "r" (a)
+		:
 	);
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
@@ -175,17 +176,15 @@ static inline double dbound (double d, double dmin, double dmax)
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
-		"fld	qword ptr dmin\n"
-		"fld	qword ptr d\n"
-		"fucomi	st, st(1)\n"      //if (d < dmin)
-		"fcmovb	st, st(1)\n"      //    d = dmin;
-		"fld	qword ptr dmax\n"
-		"fxch	st(1)\n"
-		"fucomi	st, st(1)\n"      //if (d > dmax)
-		"fcmovnb	st, st(1)\n"  //    d = dmax;
-		"fstp	qword ptr d\n"
-		"fucompp\n"
+		"fucomi	%[d], %[dmin]\n"      //if (d < dmin)
+		"fcmovb	%[d], %[dmin]\n"      //    d = dmin;
+		"fucomi	%[d], %[dmax]\n"      //if (d > dmax)
+		"fcmovnb	%[d], %[dmax]\n"  //    d = dmax;
+		"fucom	%[dmax]\n"
 		".att_syntax prefix\n"
+		: [d] "=t" (d)
+		:     "0"  (d), [dmin] "f" (dmin), [dmax] "f" (dmax)
+		:
 	);
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
@@ -203,8 +202,8 @@ static inline double dbound (double d, double dmin, double dmax)
 		fucompp
 	}
 	#endif
-	#endif
 	return(d);
+	#endif
 }
 
 static inline long mulshr16 (long a, long d)
@@ -661,7 +660,7 @@ static inline void clearbuf (void *d, long c, long a)
 		".intel_syntax noprefix\n"
 		"rep	stosd\n"
 		".att_syntax prefix\n"
-		: 
+		:
 		: "D" (d), "c" (c), "a" (a)
 		:
 	);
