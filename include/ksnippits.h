@@ -267,6 +267,32 @@ static inline long mulshr24 (long a, long d)
 	#endif
 }
 
+static inline long mulshr32 (long a, long d)
+{
+	#ifdef __NOASM__
+	return (long)((((int64_t)a) * ((int64_t)d)) >> 32);
+	#else
+	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	__asm__ __volatile__
+	(
+		"imull %%edx"
+		: "+a" (a), "+d" (d)
+		:
+		: "cc"
+	);
+	return d;
+	#endif
+	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	_asm
+	{
+		mov eax, a
+		imul d
+		mov eax, edx
+	}
+	#endif
+	#endif
+}
+
 static inline int64_t mul64 (long a, long d)
 {
 	#ifdef __NOASM__
