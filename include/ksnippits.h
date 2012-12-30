@@ -357,7 +357,7 @@ static inline long shldiv16 (long a, long b)
 static inline long isshldiv16safe (long a, long b)
 {
 	#ifdef __NOASM__
-	
+	return ((uint32_t)(((-abs(b)) - ((-abs(a)) >> 14)))) >> 31;
 	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -379,8 +379,8 @@ static inline long isshldiv16safe (long a, long b)
 		"sub	%[b], %[a]\n"
 		"shr	%[b], 31\n"
 		".att_syntax prefix\n"
-		: [a] "=r" (b)
-		:      "r" (a), [b] "0" (b)
+		:               [b] "=r" (b)
+		: [a]  "r" (a),      "0" (b)
 		: "cc"
 	);
 	return b;
