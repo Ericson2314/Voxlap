@@ -4,10 +4,6 @@
  **************************************************************************************************/
 
 // This file has been modified from Ken Silverman's original release
-
-	//Ericson2314's dirty porting tricks
-#include "../include/porthacks.h"
-
 	//min & max failsafe
 #undef max
 #undef min
@@ -20,6 +16,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+	//need this for unused inline function in ksnippits
+#include <math.h>
+
+	//Ericson2314's dirty porting tricks
+#include "../include/porthacks.h"
+
+	//Ken's short, general-purpose to-be-inlined functions mainly consisting of inline assembly are now here
+#include "../include/ksnippits.h"
 
 	//for code_rwx_unlock only
 #ifndef _WIN32
@@ -743,52 +747,6 @@ static void initfilters ()
 		for(j=0;j<NUMCOEF;j++) coeflopass[i*NUMCOEF+j] = (short)(fcoef[j]*f3);
 	}
 }
-
-static MUST_INLINE long mulshr16 (long a, long d)
-{
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
-	__asm__ __volatile__
-	(
-		"imull %%edx"
-		: "+a" (a), "+d" (d)
-		:
-		: "cc"
-	);
-	return d;
-	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
-	_asm
-	{
-		mov eax, a
-		imul d
-		shrd eax, edx, 16
-	}
-	#endif
-}
-
-#if 1
-static MUST_INLINE long mulshr32 (long a, long d)
-{
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
-	__asm__ __volatile__
-	(
-		"imull %%edx"
-		: "+a" (a), "+d" (d)
-		:
-		: "cc"
-	);
-	return d;
-	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
-	_asm
-	{
-		mov eax, a
-		imul d
-		mov eax, edx
-	}
-	#endif
-}
-#endif
 
 	//   ssnd: source sound
 	//  ispos: sub-sample counter
