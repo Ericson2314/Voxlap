@@ -8,7 +8,7 @@
  * Compiler Directive Hacks
  **/
 
-#ifdef _M_IX86 //MSVC's way of declaring x86
+#if defined(_M_IX86) && !defined(__i386) //MSVC's way of declaring x86
 	#define __i386__
 #endif
 
