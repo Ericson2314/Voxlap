@@ -144,7 +144,7 @@ static long xbsox = -17, xbsoy, xbsof;
 static int64_t xbsbuf[25*5+1]; //need few bits before&after for protection
 
 	//Look tables for expandbitstack256:
-static long xbsceil[32] FORCE_NAME("xbsceil"), xbsflor[32] FORCE_NAME("xbsflor"); //disabling mangling for inline asm
+static long xbsceil[32], xbsflor[32]; //disabling mangling for inline asm
 
 	//float detection & falling code variables...
 	//WARNING: VLSTSIZ,FSTKSIZ,FLCHKSIZ can all have bounds errors! :(
@@ -867,57 +867,55 @@ static inline void expandbit256 (void *s, void *d)
 		".intel_syntax noprefix\n"
 		"mov	ecx, 32\n"   //current bit index
 		"xor	edx, edx\n"  //value of current 32-bit bits
-		"jmp	short .Lin2it\n"
-	".Lbegit:\n"
+		"jmp	short 0f\n"
+	"1:\n" //begit
 		"lea	esi, [esi+eax*4]\n"
 		"movzx	eax, byte ptr [esi+3]\n"
 		"sub	eax, ecx\n"                //xor mask [eax] for ceiling begins
-		"jl	short .Lxskpc\n"
-	".Lxdoc:\n"
+		"jl	short 3f\n"
+	"2:\n" //xdoc
 		"mov	[edi], edx\n"
 		"add	edi, 4\n"
 		"mov	edx, -1\n"
 		"add	ecx, 32\n"
 		"sub	eax, 32\n"
-		"jge	short .Lxdoc\n"
-	".Lxskpc:\n"
-		"and	edx, xbsceil[eax*4+128]\n" //~(-1<<eax)// xor mask [eax] for ceiling ends
-		//".att_syntax prefix\n"
-		//"and	0x80($xbsceil,%%eax,4), %%edx\n" //~(-1<<eax)// xor mask [eax] for ceiling ends
-		//".intel_syntax noprefix\n"
+		"jge	short 2b\n"
+	"3:\n" //xskpc
+		".att_syntax prefix\n"
+		"andl	%c[ceil]+0x80(,%%eax,4), %%edx\n" //~(-1<<eax)
+		".intel_syntax noprefix\n"
 		
-	".Lin2it:\n"
+	"0:\n" //in2it
 		"movzx	eax, byte ptr [esi+1]\n"
-		"sub	eax, ecx\n"                //xor mask [eax] for floor begins //WARNING: NAME-MANGLING HARD CODED
-		"jl	short .Lxskpf\n"
-	".Lxdof:\n"
+		"sub	eax, ecx\n"                //xor mask [eax] for floor begins
+		"jl	short 5f\n"
+	"4:\n" //xdof
 		"mov	[edi], edx\n"
 		"add	edi, 4\n"
 		"xor	edx, edx\n"
 		"add	ecx, 32\n"
 		"sub	eax, 32\n"
-		"jge	short .Lxdof\n"
-	".Lxskpf:\n"
-		"or	edx, xbsflor[eax*4+128]\n"   //(-1<<eax)// xor mask [eax] for floor ends //WARNING: NAME-MANGLING HARD CODED
-		//".att_syntax prefix\n"
-		//"or	0x80($xbsflor,%%eax,4), %%edx\n" //(-1<<eax)// xor mask [eax] for floor ends
-		//".intel_syntax noprefix\n"
+		"jge	short 4b\n"
+	"5:\n" //xskpf
+		".att_syntax prefix\n"
+		"orl	%c[floor]+0x80(,%%eax,4), %%edx\n" //(-1<<eax)
+		".intel_syntax noprefix\n"
 		
 		"movzx	eax, byte ptr [esi]\n"
 		"test	eax, eax\n"
-		"jnz	short .Lbegit\n"
+		"jnz	short 1b\n"
 		"sub	ecx, 256\n"              //finish writing buffer to [edi]
-		"jg	short .Lxskpe\n"
-	".Lxdoe:\n"
+		"jg	short 7f\n"
+	"6:\n" //xdoe
 		"mov	[edi], edx\n"
 		"add	edi, 4\n"
 		"mov	edx, -1\n"
 		"add	ecx, 32\n"
-		"jle	short .Lxdoe\n"
-	".Lxskpe:\n"
+		"jle	short 6b\n"
+	"7:\n" //xskpe
 		".att_syntax prefix\n"
 		: 
-		: "S" (s), "D" (d)
+		: "S" (s), "D" (d), [ceil] "p" (xbsceil), [floor] "p" (xbsflor)
 		: "cc", "eax", "ecx", "edx"
 	);
 	#endif
