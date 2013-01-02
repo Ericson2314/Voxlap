@@ -121,26 +121,29 @@ $(locBIN)/slab6$(EXESuf):  $(locBIN)/slab6$(OBJSuf)  $(locBIN)/s6$(OBJSuf)      
 
 # binary object ($(OBJSuf)) targets
 
-$(locBIN)/%$(OBJSuf):  $(locSRC)/%.cpp
+$(locBIN)/%$(OBJSuf):  $(locSRC)/%.cpp   $(locBIN)
 	$(CXX) $(CXXFLAGS) -c $<
 
-$(locBIN)/%$(OBJSuf):  $(locSRC)/%.c
+$(locBIN)/%$(OBJSuf):  $(locSRC)/%.c     $(locBIN)
 	$(CC)  $(CFLAGS)   -c $<
 
-$(locBIN)/%$(OBJSuf):  $(locSRC)/%.$(AS)
+$(locBIN)/%$(OBJSuf):  $(locSRC)/%.$(AS) $(locBIN)
 	$(AS)  $(AFLAGS)      $<
 
-$(locBIN)/%1$(OBJSuf): $(locSRC)/%.cpp
+$(locBIN)/%1$(OBJSuf): $(locSRC)/%.cpp   $(locBIN)
 	$(CXX) $(CXXFLAGS) -c $< -D USEKZ -D ZOOM_TEST
 
-$(locBIN)/%2$(OBJSuf): $(locSRC)/%.cpp
+$(locBIN)/%2$(OBJSuf): $(locSRC)/%.cpp   $(locBIN)
 	$(CXX) $(CXXFLAGS) -c $< -D NOSOUND
 
-$(locBIN)/%1$(OBJSuf): $(locSRC)/%.c
+$(locBIN)/%1$(OBJSuf): $(locSRC)/%.c     $(locBIN)
 	$(CC)  $(CFLAGS)   -c $< -D USEKZ -D ZOOM_TEST
 
-$(locBIN)/%2$(OBJSuf): $(locSRC)/%.c
+$(locBIN)/%2$(OBJSuf): $(locSRC)/%.c     $(locBIN)
 	$(CC)  $(CFLAGS)   -c $< -D NOSOUND
+
+$(locBIN):
+	mkdir -p $(locBIN)
 
 # Clearn Script
 cleanall: clean
