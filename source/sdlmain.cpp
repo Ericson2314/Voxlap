@@ -1797,23 +1797,31 @@ void arg2filename (const char *oarg, const char *ext, char *narg)
 	//01 = reserved  (1)   01 = -inf         (4)
 	//10 = 53-bit    (2)   10 = inf          (8)
 	//11 = 64-bit    (3)   11 = 0            (c)
-static long fpuasm[2] FORCE_NAME("fpuasm");
+static long fpuasm[2];
 static inline void fpuinit (long a)
 {
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
-	__asm__ __volatile__ (
-		"fninit; fstcw fpuasm; andb $240, fpuasm(,1); orb %%al, fpuasm(,1); fldcw fpuasm;"
-		: : "a" (a) : "memory","cc");
+	__asm__ __volatile__
+	(
+		"fninit\n"
+		"fstcww %c[fp]\n"
+		"andb   $240, %c[fp]+1(,1)\n"
+		"orb    %%al, %c[fp]+1(,1)\n"
+		"fldcww %c[fp]\n"
+		:
+		: "a" (a), [fp] "p" (fpuasm)
+		: "cc"
+	);
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
 	_asm
 	{
-		mov eax, a
+		mov	eax, a
 		fninit
-		fstcw fpuasm
-		and byte ptr fpuasm[1], 0f0h
-		or byte ptr fpuasm[1], al
-		fldcw fpuasm
+		fstcw	fpuasm
+		and	byte ptr fpuasm[1], 0f0h
+		or	byte ptr fpuasm[1], al
+		fldcw	fpuasm
 	}
 	#endif
 }
