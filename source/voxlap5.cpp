@@ -10815,7 +10815,7 @@ static inline void addps (point4d *sum, point4d *a, point4d *b)
 	sum->x  =  a->x  +  b->x;
 	sum->y  =  a->y  +  b->y;
 	sum->z  =  a->z  +  b->z;
-	sum->x2 =  a->x2 +  b->x2;
+	sum->z2 =  a->z2 +  b->z2;
 	#else
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -10911,10 +10911,10 @@ static inline void subps (point4d *sum, point4d *a, point4d *b)
 static inline void minps (point4d *sum, point4d *a, point4d *b)
 {
 	#ifdef __NOASM__
-	sum->x  =  MIN(a->x,b->x);
-	sum->y  =  MIN(a->x,b->x);
-	sum->z  =  MIN(a->x,b->x);
-	sum->z2 =  MIN(a->x,b->x);
+	sum->x  =  MIN(a->x,  b->x);
+	sum->y  =  MIN(a->y,  b->y);
+	sum->z  =  MIN(a->z,  b->z);
+	sum->z2 =  MIN(a->z2, b->z2);
 	#else
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -10944,10 +10944,10 @@ static inline void minps (point4d *sum, point4d *a, point4d *b)
 static inline void maxps (point4d *sum, point4d *a, point4d *b)
 {
 	#ifdef __NOASM__
-	sum->x  =  MAX(a->x,b->x);
-	sum->y  =  MAX(a->x,b->x);
-	sum->z  =  MAX(a->x,b->x);
-	sum->z2 =  MAX(a->x,b->x);
+	sum->x  =  MAX(a->x,  b->x);
+	sum->y  =  MAX(a->y,  b->y);
+	sum->z  =  MAX(a->z,  b->z);
+	sum->z2 =  MAX(a->z2, b->z2);
 	#else
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 		__asm__ __volatile__
@@ -10977,7 +10977,7 @@ static inline void maxps (point4d *sum, point4d *a, point4d *b)
 static inline void movps_3dn (point4d *dest, point4d *src)
 {
 	#ifdef __NOASM__
-	
+	*dest = *src;
 	#else
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 		__asm__ __volatile__
@@ -11010,7 +11010,7 @@ static inline void movps_3dn (point4d *dest, point4d *src)
 static inline void intss_3dn (point4d *dest, long src)
 {
 	#ifdef __NOASM__
-	
+	dest->x = dest->y = dest->z = dest->z2 = (float)src;
 	#else
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -11043,7 +11043,10 @@ static inline void intss_3dn (point4d *dest, long src)
 static inline void addps_3dn (point4d *sum, point4d *a, point4d *b)
 {
 	#ifdef __NOASM__
-	
+	sum->x  =  a->x  +  b->x;
+	sum->y  =  a->y  +  b->y;
+	sum->z  =  a->z  +  b->z;
+	sum->z2 =  a->z2 +  b->z2;
 	#else
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -11081,7 +11084,10 @@ static inline void addps_3dn (point4d *sum, point4d *a, point4d *b)
 static inline void mulps_3dn (point4d *sum, point4d *a, point4d *b)
 {
 	#ifdef __NOASM__
-	
+	sum->x  =  a->x  *  b->x;
+	sum->y  =  a->y  *  b->y;
+	sum->z  =  a->z  *  b->z;
+	sum->z2 =  a->z2 *  b->z2;
 	#else
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -11119,7 +11125,10 @@ static inline void mulps_3dn (point4d *sum, point4d *a, point4d *b)
 static inline void subps_3dn (point4d *sum, point4d *a, point4d *b)
 {
 	#ifdef __NOASM__
-	
+	sum->x  =  a->x  -  b->x;
+	sum->y  =  a->y  -  b->y;
+	sum->z  =  a->z  -  b->z;
+	sum->z2 =  a->z2 -  b->z2;
 	#else
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -11157,7 +11166,10 @@ static inline void subps_3dn (point4d *sum, point4d *a, point4d *b)
 static inline void minps_3dn (point4d *sum, point4d *a, point4d *b)
 {
 	#ifdef __NOASM__
-	
+	sum->x  =  MIN(a->x,  b->x);
+	sum->y  =  MIN(a->y,  b->y);
+	sum->z  =  MIN(a->z,  b->z);
+	sum->z2 =  MIN(a->z2, b->z2);
 	#else
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
@@ -11195,7 +11207,10 @@ static inline void minps_3dn (point4d *sum, point4d *a, point4d *b)
 static inline void maxps_3dn (point4d *sum, point4d *a, point4d *b)
 {
 	#ifdef __NOASM__
-	
+	sum->x  =  MAX(a->x,  b->x);
+	sum->y  =  MAX(a->y,  b->y);
+	sum->z  =  MAX(a->z,  b->z);
+	sum->z2 =  MAX(a->z2, b->z2);
 	#else
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
