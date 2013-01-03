@@ -6,17 +6,17 @@
 #include <string.h>
 #include <stdlib.h>
 //#define SYSMAIN_C //if sysmain is compiled as C
-#include "../include/sysmain.h"
+#include "sysmain.h"
 //#define VOXLAP_C  //if voxlap5 is compiled as C
-#include "../include/voxlap5.h"
+#include "voxlap5.h"
 //#define KPLIB_C  //if kplib is compiled as C
-#include "../include/kplib.h"
+#include "kplib.h"
 
 	//Ericson2314's dirty porting tricks
-#include "../include/porthacks.h"
+#include "porthacks.h"
 
 	//Ken's short, general-purpose to-be-inlined functions mainly consisting of inline assembly are now here
-#include "../include/ksnippits.h"
+#include "ksnippits.h"
 
 	//NUMSECRETS:actual num,1:1,2:1,4:2,8:5,16:8,32:14,64:26,128:49,256:87
 	//512:168,1024:293,2048:480,4096:711,8192:931

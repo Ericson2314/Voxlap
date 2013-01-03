@@ -11,10 +11,10 @@
 #include <stdlib.h> //was below system-specific includes before
 
 	//Ericson2314's dirty porting tricks
-#include "../include/porthacks.h"
+#include "porthacks.h"
 
 	//Ken's short, general-purpose to-be-inlined functions mainly consisting of inline assembly are now here
-#include "../include/ksnippits.h"
+#include "ksnippits.h"
 
 	//Basic System Specific Stuff
 #ifndef _WIN32 //Windows (hypothetically 6 64-bit too)
@@ -31,17 +31,17 @@
 
 	//SYSMAIN Preprocessor stuff
 //#define SYSMAIN_C //if sysmain is compiled as C
-#include "../include/sysmain.h"
+#include "sysmain.h"
 
 	//Voxlap Preprocessor stuff
 #define VOXLAP5
 				//We never want to define C bindings if this is compiled as C++.
 #undef VOXLAP_C	//Putting this here just in case.
-#include "../include/voxlap5.h"
+#include "voxlap5.h"
 
 	//KPlib Preprocessor stuff
 //#define KPLIB_C  //if kplib is compiled as C
-#include "../include/kplib.h"
+#include "kplib.h"
 
 #define USEZBUFFER 1                 //Should a Z-Buffer be Used?
 //#define __NOASM__                  //Instructs compiler to use C(++) alternatives

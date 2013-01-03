@@ -83,9 +83,9 @@ License for this code:
 #include <math.h>
 #include <direct.h>
 //#define SYSMAIN_C //if sysmain is compiled as C
-#include "../include/sysmain.h"
+#include "sysmain.h"
 
-#include "../include/porthacks.h"
+#include "porthacks.h"
 
 #define OPTIMIZEFOR 6
 

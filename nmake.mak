@@ -43,7 +43,7 @@ CXX                    =cl   #for Micrsoft Compiler
 LNK                    =link #for Microsfoft Linker
 
 # Flags
-CXXFLAGS               =/Fo$(@R) /fp:fast /arch:SSE2 /c /J $(CXX_MODE) $(GFX_CFLAGS) $(Random_Macros) # for Micrsoft Compiler(cl)
+CXXFLAGS               =/Fo$(@R) /fp:fast /arch:SSE2 /c /J $(CXX_MODE) $(GFX_CFLAGS) $(Random_Macros) /I $(locINC) # for Micrsoft Compiler(cl)
 CXX_Debug              =$(GFX_CXX_Debug) /ZI /Fdbinaries\ /GZ /RTCsuc /Od
 CXX_Release            =$(GFX_CXX_Release) /Ox
 
