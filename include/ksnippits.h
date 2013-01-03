@@ -5,7 +5,7 @@
 #pragma once
 
 	//Ericson2314's dirty porting tricks
-#include "../include/porthacks.h"
+#include "porthacks.h"
 
 #ifdef __WATCOMC__
 

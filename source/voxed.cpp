@@ -5,17 +5,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 //#define SYSMAIN_C //if sysmain is compiled as C
-#include "../include/sysmain.h"
+#include "sysmain.h"
 //#define VOXLAP_C  //if voxlap5 is compiled as C
-#include "../include/voxlap5.h"
+#include "voxlap5.h"
 //#define KPLIB_C  //if kplib is compiled as C
-#include "../include/kplib.h"
+#include "kplib.h"
 
 	//Ericson2314's dirty porting tricks
-#include "../include/porthacks.h"
+#include "porthacks.h"
 
 	//Ken's short, general-purpose to-be-inlined functions mainly consisting of inline assembly are now here
-#include "../include/ksnippits.h"
+#include "ksnippits.h"
 
 #define SCISSORDIST 1.0
 #define STEREOMODE 0  //0:no stereo (normal mode), 1:CrystalEyes, 2:Nuvision

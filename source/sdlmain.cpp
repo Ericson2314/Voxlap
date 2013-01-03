@@ -16,10 +16,10 @@
 #include <math.h>
 
 	//Ericson2314's dirty porting tricks
-#include "../include/porthacks.h"
+#include "porthacks.h"
 
 	//Ken's short, general-purpose to-be-inlined functions mainly consisting of inline assembly are now here
-#include "../include/ksnippits.h"
+#include "ksnippits.h"
 
 #ifndef __i386__
 #error i386 targets only.
@@ -34,7 +34,7 @@
 #ifndef NOSOUND
 #ifdef USEKZ
 //#define KPLIB_C  //if kplib is compiled as C
-#include "../include/kplib.h"
+#include "kplib.h"
 #endif
 
 #if defined(_MSC_VER) //data definition is built into windows
@@ -60,7 +60,7 @@ typedef struct __attribute__ ((packed)) tWAVEFORMATEX
 //#undef _WIN32
 					//We never want to define C bindings if this is compiled as C++.
 #undef SYSMAIN_C	//Putting this here just in case.
-#include "../include/sysmain.h"
+#include "sysmain.h"
 
 #define evalmacro(x) evalmacrox(x)
 #define evalmacrox(x) #x

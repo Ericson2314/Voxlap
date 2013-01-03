@@ -6,7 +6,7 @@
  * Function and variable declarations for winmain.cpp, dosmain.c, or sdlmain.c
  */
 //#define SYSMAIN_C //if sysmain is compiled as C
-#include "../include/sysmain.h"
+#include "sysmain.h"
 
 /**
  * I have all my function and structure declarations in here, so if you
@@ -14,16 +14,16 @@
  * correct parameters.
  */
 //#define VOXLAP_C  //if voxlap5 is compiled as C
-#include "../include/voxlap5.h"
+#include "voxlap5.h"
 
 /**
  * Functions from kplib are now exclusively declared here for consistancy.
  */
 //#define KPLIB_C  //if kplib is compiled as C
-#include "../include/kplib.h"
+#include "kplib.h"
 
 	//Ericson2314's dirty porting tricks
-#include "../include/porthacks.h"
+#include "porthacks.h"
 
 /**
  * The dpoint3d structure is defined in VOXLAP5.H as "double x, y, z".

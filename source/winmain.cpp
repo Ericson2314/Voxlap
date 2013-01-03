@@ -38,7 +38,7 @@ You may use this code for non-commercial purposes as long as credit is maintaine
 #include <stdio.h> //for fopen
 #else
 //#define KPLIB_C  //if kplib is compiled as C
-#include "../include/kplib.h"
+#include "kplib.h"
 #endif
 #define DSOUNDINITCOM 1 //0=Link DSOUND.DLL, 1=Use COM interface to init DSOUND
 #ifndef USEKENSOUND
