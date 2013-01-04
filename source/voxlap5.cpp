@@ -39,6 +39,9 @@
 #undef VOXLAP_C	//Putting this here just in case.
 #include "voxlap5.h"
 
+	//mmxcolor* now defined here
+#include "voxflash.h"
+
 	//KPlib Preprocessor stuff
 //#define KPLIB_C  //if kplib is compiled as C
 #include "kplib.h"
@@ -1245,58 +1248,6 @@ deletez:;
 	for(c2=c;c2<=ce;c2++) c2[0] = c2[1];
 	goto afterdelete;
 #endif
-}
-
-static inline void mmxcoloradd (long *a)
-{
-	#ifdef __NOASM__
-	#endif
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
-	__asm__ __volatile__
-	(
-		".intel_syntax noprefix\n"
-		"psubusb	%[a], flashbrival\n"
-		".att_syntax prefix\n"
-		: [a] "=y" (*a)
-		:      "0" (*a)
-		:
-	);
-	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
-	_asm
-	{
-		mov	eax, a
-		movd	mm0, [eax]
-		psubusb	mm0, flashbrival
-		movd	[eax], mm0
-	}
-	#endif
-}
-
-static inline void mmxcolorsub (long *a)
-{
-	#ifdef __NOASM__
-	#endif
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
-	__asm__ __volatile__
-	(
-		".intel_syntax noprefix\n"
-		"paddusb	%[a], flashbrival\n"
-		".att_syntax prefix\n"
-		: [a] "=y" (*a)
-		:      "0" (*a)
-		:
-	);
-	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
-	_asm
-	{
-		mov	eax, a
-		movd	mm0, [eax]
-		paddusb	mm0, flashbrival
-		movd	[eax], mm0
-	}
-	#endif
 }
 
 static inline void addusb (char *a, long b)
