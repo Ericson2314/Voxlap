@@ -17,6 +17,9 @@
 	//Ken's short, general-purpose to-be-inlined functions mainly consisting of inline assembly are now here
 #include "ksnippits.h"
 
+	//mmxcolor* now defined here
+#include "voxflash.h"
+
 #define SCISSORDIST 1.0
 #define STEREOMODE 0  //0:no stereo (normal mode), 1:CrystalEyes, 2:Nuvision
 #define USETDHELP 0 //0:Ken's notepad style help, 1:Tom's keyboard graphic help
@@ -93,7 +96,6 @@ EXTERN_VOXLAP long backtag, backedup, bacx0, bacy0, bacx1, bacy1;
 extern long gxsizcache, gysizcache;
 extern long cputype;
 EXTERN_C long gmipnum;
-EXTERN_VOXLAP int64_t flashbrival;
 
 	//Sprite data for hanging lights:
 static kv6data *klight;
@@ -151,66 +153,9 @@ void *colfunclst[] =
 };
 #define numcolfunc (sizeof(colfunclst)>>2)
 
-#ifdef __WATCOMC__
-
-void mmxcoloradd (long *);
-#pragma aux mmxcoloradd =\
-	".686"\
-	"movd mm0, [eax]"\
-	"paddusb mm0, flashbrival"\
-	"movd [eax], mm0"\
-	parm nomemory [eax]\
-	modify exact \
-	value
-
-void mmxcolorsub (long *);
-#pragma aux mmxcolorsub =\
-	".686"\
-	"movd mm0, [eax]"\
-	"psubusb mm0, flashbrival"\
-	"movd [eax], mm0"\
-	parm nomemory [eax]\
-	modify exact \
-	value
-
-#else
-
 #ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	#pragma warning(disable:4799) //I know how to use EMMS
 #endif
-
-static inline void mmxcoloradd (long *a)
-{
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
-	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-	_asm
-	{
-		mov eax, a
-		movd mm0, [eax]
-		paddusb mm0, flashbrival
-		movd [eax], mm0
-	}
-	#endif
-}
-
-static inline void mmxcolorsub (long *a)
-{
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
-	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-	_asm
-	{
-		mov eax, a
-		movd mm0, [eax]
-		psubusb mm0, flashbrival
-		movd [eax], mm0
-	}
-	#endif
-}
-
-#endif
-
 
 	//RGB color selection variables
 #define CGRAD 64
