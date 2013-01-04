@@ -46,7 +46,7 @@ static inline void mmxcoloradd (long *a)
 	);
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
-	_asm
+	__asm
 	{
 		mov	eax, a
 		movd	mm0, [eax]
@@ -74,7 +74,7 @@ static inline void mmxcolorsub (long *a)
 	);
 	#endif
 	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
-	_asm
+	__asm
 	{
 		mov	eax, a
 		movd	mm0, [eax]
