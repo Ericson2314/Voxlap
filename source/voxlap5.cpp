@@ -872,51 +872,55 @@ static inline void expandbit256 (void *s, void *d)
 
 	goto in2it;
 
-begit:
-	s += eax * 4;
-	eax = ((uint8_t*)s)[3];
-	if ((eax -= ecx) < 0) goto xskpc;  //xor mask [eax] for ceiling begins
-
-	do
+	while (eax != 0)
 	{
-		*(uint32_t*)d = edx;
-		d += 4;
-		edx = -1;
-		ecx += 32;
+		s += eax * 4;
+		eax = ((uint8_t*)s)[3];
+
+		if ((eax -= ecx) >= 0) //xor mask [eax] for ceiling begins
+		{
+			do
+			{
+				*(uint32_t*)d = edx;
+				d += 4;
+				edx = -1;
+				ecx += 32;
+			}
+			while ((eax -= 32) >= 0);
+		}
+
+		edx &= xbsceil[32+eax];
+		//no jump
+
+	in2it:
+		eax = ((uint8_t*)s)[1];
+
+		if ((eax -= ecx) > 0) //xor mask [eax] for floor begins
+		{
+			do
+			{
+				*(uint32_t*)d = edx;
+				d += 4;
+				edx = 0;
+				ecx += 32;
+			}
+			while ((eax -= 32) >= 0);
+		}
+
+		edx |= xbsflor[32+eax];
+		eax = *(uint8_t*)s;
 	}
-	while ((eax -= 32) >= 0);
 
-xskpc:
-	edx &= xbsceil[32+eax];
-	//no jump
-
-in2it:
-	eax = ((uint8_t*)s)[1];
-	if ((eax -= ecx) <= 0) goto xskpf; //xor mask [eax] for floor begins
-
-	do
+	if ((ecx -= 256) <= 0)
 	{
-		*(uint32_t*)d = edx;
-		d += 4;
-		edx = 0;
-		ecx += 32;
+		do
+		{
+			*(uint32_t*)d = edx;
+			d += 4;
+			edx = -1;
+		}
+		while ((ecx += 32) <= 0);
 	}
-	while ((eax -= 32) >= 0);
-
-xskpf:
-	edx |= xbsflor[32+eax];
-
-	eax = *(uint8_t*)s;
-	if (eax != 0) goto begit;
-	if ((ecx -= 256) > 0) return;
-
-	do
-	{
-		*(uint32_t*)d = edx;
-		d += 4;
-		edx = -1;
-	}
-	while ((ecx += 32) <= 0);
 	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
