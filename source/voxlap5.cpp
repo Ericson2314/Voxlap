@@ -862,8 +862,57 @@ long compilestack (long *uind, long *n0, long *n1, long *n2, long *n3, char *cbu
 	cbuf[onext] = 0;
 	return(n);
 }
+
 static inline void expandbit256 (void *s, void *d)
 {
+	#ifdef __NOASM__
+	int32_t eax;
+	int32_t ecx = 32; //current bit index
+	uint32_t edx = 0; //value of current 32-bit bits
+
+	goto in2it;
+
+begit:
+	s += eax * 4;
+	eax = ((uint8_t*)s)[3];
+	if ((eax -= ecx) < 0) goto xskpc;  //xor mask [eax] for ceiling begins
+
+xdoc:
+	*(uint32_t*)d = edx;
+	d += 4;
+	edx = -1;
+	ecx += 32;
+	if ((eax -= 32) >= 0) goto xdoc;
+
+xskpc:
+	edx &= xbsceil[32+eax];
+	//no jump
+
+in2it:
+	eax = ((uint8_t*)s)[1];
+	if ((eax -= ecx) <= 0) goto xskpf; //xor mask [eax] for floor begins
+
+xdof:
+	*(uint32_t*)d = edx;
+	d += 4;
+	edx = 0;
+	ecx += 32;
+	if ((eax -= 32) >= 0) goto xdof;
+
+xskpf:
+	edx |= xbsflor[32+eax];
+
+	eax = *(uint8_t*)s;
+	if (eax != 0) goto begit;
+	if ((ecx -= 256) > 0) goto xskpe;
+
+xdoe:
+	*(uint32_t*)d = edx;
+	d += 4;
+	edx = -1;
+	if ((ecx += 32) <= 0) goto xdoe;
+xskpe:;
+	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
 	(
@@ -974,6 +1023,7 @@ static inline void expandbit256 (void *s, void *d)
 		pop	edi
 		pop	esi
 	}
+	#endif
 	#endif
 }
 
