@@ -877,12 +877,14 @@ begit:
 	eax = ((uint8_t*)s)[3];
 	if ((eax -= ecx) < 0) goto xskpc;  //xor mask [eax] for ceiling begins
 
-xdoc:
-	*(uint32_t*)d = edx;
-	d += 4;
-	edx = -1;
-	ecx += 32;
-	if ((eax -= 32) >= 0) goto xdoc;
+	do
+	{
+		*(uint32_t*)d = edx;
+		d += 4;
+		edx = -1;
+		ecx += 32;
+	}
+	while ((eax -= 32) >= 0);
 
 xskpc:
 	edx &= xbsceil[32+eax];
@@ -892,26 +894,29 @@ in2it:
 	eax = ((uint8_t*)s)[1];
 	if ((eax -= ecx) <= 0) goto xskpf; //xor mask [eax] for floor begins
 
-xdof:
-	*(uint32_t*)d = edx;
-	d += 4;
-	edx = 0;
-	ecx += 32;
-	if ((eax -= 32) >= 0) goto xdof;
+	do
+	{
+		*(uint32_t*)d = edx;
+		d += 4;
+		edx = 0;
+		ecx += 32;
+	}
+	while ((eax -= 32) >= 0);
 
 xskpf:
 	edx |= xbsflor[32+eax];
 
 	eax = *(uint8_t*)s;
 	if (eax != 0) goto begit;
-	if ((ecx -= 256) > 0) goto xskpe;
+	if ((ecx -= 256) > 0) return;
 
-xdoe:
-	*(uint32_t*)d = edx;
-	d += 4;
-	edx = -1;
-	if ((ecx += 32) <= 0) goto xdoe;
-xskpe:;
+	do
+	{
+		*(uint32_t*)d = edx;
+		d += 4;
+		edx = -1;
+	}
+	while ((ecx += 32) <= 0);
 	#else
 	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
 	__asm__ __volatile__
