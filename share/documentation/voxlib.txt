@@ -1,3 +1,4 @@
+
 							+----------------------------------+
 							| VOXLAP5 engine library reference |
 							+----------------------------------+
@@ -19,7 +20,7 @@ void uninitvoxlap ();
 	//   using parspr().
 	//sxlnam: .SXL filename
 	//vxlnam: pointer to .VXL filename (written by loadsxl)
-	//vxlnam: pointer to .SKY filename (written by loadsxl)
+	//skynam: pointer to .SKY filename (written by loadsxl)
 	//globst: pointer to global user string. You parse this yourself!
 	//        You can edit this in Voxed by pressing F6.
 	//returns: 0: loadsxl failed (file not found or malloc failed)
