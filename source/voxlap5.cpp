@@ -5274,6 +5274,14 @@ unsigned long calcglobalmass ()
 	return(j);
 }
 
+/**
+ * Sticks a default VXL map into memory (puts you inside a brownish box)
+ * This is useful for VOXED when you want to start a new map.
+ * @param ipo default starting camera position
+ * @param ist RIGHT unit vector
+ * @param ihe DOWN unit vector
+ * @param ifo FORWARD unit vector
+ */
 void loadnul (dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo)
 {
 	lpoint3d lp0, lp1;
@@ -5329,6 +5337,12 @@ void loadnul (dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo)
 	updatebbox(0,0,0,VSID,VSID,MAXZDIM,0);
 }
 
+/**
+ * Loads a Comanche format map into memory.
+ * @param filename Should be formatted like this: "C1.DTA"
+ *                 It replaces the first letter with C&D to get both height&color
+ * @return 0:bad, 1:good
+ */
 long loaddta (const char *filename, dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo)
 {
 	long i, j, p, leng, minz = 255, maxz = 0, h[5], longpal[256];
@@ -5426,6 +5440,11 @@ long loaddta (const char *filename, dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe,
 	return(1);
 }
 
+/**
+ * Loads a heightmap from PNG (or TGA) into memory; alpha channel is height.
+ * @param filename Any 1024x1024 PNG or TGA file with alpha channel.
+ * @return 0:bad, 1:good
+ */
 long loadpng (const char *filename, dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo)
 {
 	unsigned long *pngdat, dat[5];
@@ -5563,6 +5582,15 @@ void delslab(long *b2, long y0, long y1);
 long *scum2(long x, long y);
 void scum2finish();
 
+/**
+ * Loads a Quake 3 Arena .BSP format map into memory. First extract the map
+ * from the .PAK file. NOTE: only tested with Q3DM(1,7,17) and Q3TOURNEY
+ * @param filnam .BSP map formatted like this: "Q3DM17.BSP"
+ * @param ipo default starting camera position
+ * @param ist RIGHT unit vector
+ * @param ihe DOWN unit vector
+ * @param ifo FORWARD unit vector
+ */
 void loadbsp (const char *filnam, dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo)
 {
 	FILE *fp;
@@ -5667,6 +5695,15 @@ void loadbsp (const char *filnam, dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, d
 
 //Quake3 .BSP loading code ends ----------------------------------------------
 
+/**
+ * Loads a native Voxlap5 .VXL file into memory.
+ * @param filnam .VXL map formatted like this: "UNTITLED.VXL"
+ * @param ipo default starting camera position
+ * @param ist RIGHT unit vector
+ * @param ihe DOWN unit vector
+ * @param ifo FORWARD unit vector
+ * @return 0:bad, 1:good
+ */
 long loadvxl (const char *lodfilnam, dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo)
 {
 	FILE *fil;
@@ -5712,6 +5749,15 @@ long loadvxl (const char *lodfilnam, dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe
 	return(1);
 }
 
+/**
+ * Saves a native Voxlap5 .VXL file & specified position to disk
+ * @param filnam .VXL map formatted like this: "UNTITLED.VXL"
+ * @param ipo default starting camera position
+ * @param ist RIGHT unit vector
+ * @param ihe DOWN unit vector
+ * @param ifo FORWARD unit vector
+ * @return 0:bad, 1:good
+ */
 long savevxl (const char *savfilnam, dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo)
 {
 	FILE *fil;
@@ -5730,6 +5776,19 @@ long savevxl (const char *savfilnam, dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe
 	return(1);
 }
 
+/**
+ * Loads a sky into memory. Sky must be PNG,JPG,TGA,GIF,BMP,PCX formatted as
+ * a Mercator projection on its side. This means x-coordinate is latitude
+ * and y-coordinate is longitude. Loadsky() can be called at any time.
+ * 
+ * If for some reason you don't want to load a textured sky, you call call
+ * loadsky with these 2 built-in skies:
+ * loadsky("BLACK");  //pitch black
+ * loadsky("BLUE");   //a cool ramp of bright blue to blue to greenish
+ * 
+ * @param skyfilnam the name of the image to load
+ * @return -1:bad, 0:good
+ */
 long loadsky (const char *skyfilnam)
 {
 	long x, y, xoff, yoff;
@@ -9906,6 +9965,17 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 static char *sxlbuf = 0;
 static long sxlparspos, sxlparslen;
 
+/**
+ * Loads and begins parsing of an .SXL file. Always call this first before
+ * using parspr().
+ * @param sxlnam .SXL filename
+ * @param vxlnam pointer to .VXL filename (written by loadsxl)
+ * @param vxlnam pointer to .SKY filename (written by loadsxl)
+ * @param globst pointer to global user string. You parse this yourself!
+ *               You can edit this in Voxed by pressing F6.
+ * @return 0: loadsxl failed (file not found or malloc failed)
+ *         1: loadsxl successful; call parspr()!
+ */
 long loadsxl (const char *sxlnam, char **vxlnam, char **skynam, char **globst)
 {
 	long j, k, m, n;
@@ -9946,6 +10016,18 @@ long loadsxl (const char *sxlnam, char **vxlnam, char **skynam, char **globst)
 	return(1);
 }
 
+/**
+ * If loadsxl returns a 1, then you should call parspr with a while loop
+ * that terminates when the return value is 0.
+ * @param spr pointer to sprite structure (written by parspr) You allocate
+ *            the vx5sprite, & parspr fills in the position&orientation.
+ * @param userst pointer to user string associated with the given sprite.
+ *               You can edit this in Voxed by right-clicking the sprite.
+ * @return pointer to .KV6 filename OR NULL if no more sprites left.
+ *         You must load the .KV6 to memory yourself by doing:
+ *         char *kv6filename = parspr(...)
+ *         if (kv6filename) spr->voxnum = getkv6(kv6filename);
+ */
 char *parspr (vx5sprite *spr, char **userst)
 {
 	float f;
