@@ -346,11 +346,13 @@ void botinit ()
 	float f, g;
 	long i, j, x, y, c;
 	float fsc[4+14] = {.4,.45,.55,.45,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
-	long col[4+14] = {0x80453010,0x80403510,0x80403015,0x80423112,
-							0x80403013,0x80433010,0x80403313,0x80403310,0x80433013,
-							0x80403310,0x80403310,0x80433013,0x80433010,0x80403310,
-							0x80433010,0x80403013,0x80433310,0x80403013,
-							};
+	long col[4+14] =
+	{
+		(long)0x80453010,(long)0x80403510,(long)0x80403015,(long)0x80423112,
+		(long)0x80403013,(long)0x80433010,(long)0x80403313,(long)0x80403310,(long)0x80433013,
+		(long)0x80403310,(long)0x80403310,(long)0x80433013,(long)0x80433010,(long)0x80403310,
+		(long)0x80433010,(long)0x80403013,(long)0x80433310,(long)0x80403013,
+	};
 	long xpos[4+14] = {0,16, 3,20,  8,24, 0, 7,25,19,12,26,10, 3,29,11,18,25};
 	long ypos[4+14] = {0, 5,16,22,  1, 3, 8, 8, 9,13,15,16,12,24,24,28,29,29};
 	long rad[4+14] = {68,51,78,67, 20,21,25,19,22,26,18,24,25,23,25,17,23,25};
@@ -479,7 +481,7 @@ long initmap ()
 		kv6[i] = getkv6(tempnam);
 
 			//Generate all lower mip-maps here:
-		for(tempkv6=kv6[i];tempkv6=genmipkv6(tempkv6););
+		for(tempkv6=kv6[i];(tempkv6=genmipkv6(tempkv6)););
 	}
 
 		//Initialize solid height&color map at bottom of world
@@ -497,7 +499,7 @@ long initmap ()
 
 			//parse (global) userst here
 
-			for(numsprites=0;kv6nam=parspr(&spr[numsprites],&userst);numsprites++)
+			for(numsprites=0;(kv6nam=parspr(&spr[numsprites],&userst));numsprites++)
 			{
 				if (numsprites >= MAXSPRITES) continue; //OOPS! Just to be safe
 
@@ -515,14 +517,14 @@ long initmap ()
 				if (!(spr[numsprites].flags&2)) //generate mips for KV6 in SXL
 				{
 					tempkv6 = spr[numsprites].voxnum;
-					while (tempkv6 = genmipkv6(tempkv6));
+					while ((tempkv6 = genmipkv6(tempkv6)));
 				}
 				else //generate mips for KFA in SXL
 				{
 					for(i=(spr[numsprites].kfaptr->numspr)-1;i>=0;i--)
 					{
 						tempkv6 = spr[numsprites].kfaptr->spr[i].voxnum;
-						while (tempkv6 = genmipkv6(tempkv6));
+						while ((tempkv6 = genmipkv6(tempkv6)));
 					}
 				}
 #endif
@@ -530,7 +532,7 @@ long initmap ()
 				if ((spr[numsprites].voxnum == kv6[CACO]) || (spr[numsprites].voxnum == kv6[WORM]))
 					{ spr[numsprites].owner = 100; continue; }
 				else if (spr[numsprites].voxnum == kv6[DOOR])
-					{ sscanf(userst,"%d %d",&spr[numsprites].tag,&spr[numsprites].owner); continue; }
+					{ sscanf(userst,"%ld %ld",&spr[numsprites].tag,&spr[numsprites].owner); continue; }
 			}
 
 		} else loadnul(&ipos,&istr,&ihei,&ifor);
@@ -988,7 +990,7 @@ void doframe ()
 		//Show health on bottom of screen
 	if (showhealth)
 	{
-		sprintf(tempbuf,"%d",myhealth); j = strlen(tempbuf);
+		sprintf(tempbuf,"%ld",myhealth); j = strlen(tempbuf);
 		if (xres >= 512) l = 16; else l = 15;
 		for(i=0;i<j;i++)
 		{
@@ -1284,13 +1286,13 @@ skipalldraw:;
 
 	if (!typemode)
 	{
-		while (i = keyread()) //Detect 'T' (for typing mode)
+		while ((i = keyread())) //Detect 'T' (for typing mode)
 			if (((i&255) == 'T') || ((i&255) == 't'))
 				{ typemode = 1; typemessage[0] = '_'; typemessage[1] = 0; break; }
 	}
 	if (typemode)
 	{
-		while (i = keyread())
+		while ((i = keyread()))
 		{
 			if (!(i&255)) continue;
 			i &= 255;
@@ -1377,7 +1379,7 @@ skipalldraw:;
 								do {
 									kv6data *tempkv6;
 									for(tempkv6=curvykv6;
-										tempkv6=genmipkv6(tempkv6);
+										(tempkv6=genmipkv6(tempkv6));
 										); //Generate all lower mip-maps here:
 								} while (0);
 								curvyspr.p.x = ipos.x + ifor.x*32;
@@ -1416,7 +1418,7 @@ skipalldraw:;
 			}
 			else
 			{
-				if (j+1 < sizeof(typemessage))
+				if ((j+1) < (long)sizeof(typemessage))
 				{
 					typemessage[j-1] = (char)i;
 					typemessage[j] = '_';
@@ -2032,7 +2034,7 @@ skipalldraw:;
 					}
 					else
 					{
-						if (j = meltsphere(&spr[i],&lp,k))
+						if ((j = meltsphere(&spr[i],&lp,k)))
 						{
 							if (k == 12) playsound(HITWALL,100,1.0,&spr[i].p,KSND_3D);
 									  else playsound(BLOWUP,100,1.0,&spr[i].p,KSND_3D);
@@ -2189,7 +2191,7 @@ skipalldraw:;
 	{
 		keystatus[0x4a] = 0;
 		volpercent = MAX(volpercent-10,0);
-		sprintf(message,"Volume: %d%%",volpercent);
+		sprintf(message,"Volume: %ld%%",volpercent);
 		quitmessagetimeout = messagetimeout = totclk+4000;
 		setvolume(volpercent);
 	}
@@ -2197,7 +2199,7 @@ skipalldraw:;
 	{
 		keystatus[0x4e] = 0;
 		volpercent = MIN(volpercent+10,100);
-		sprintf(message,"Volume: %d%%",volpercent);
+		sprintf(message,"Volume: %ld%%",volpercent);
 		quitmessagetimeout = messagetimeout = totclk+4000;
 		setvolume(volpercent);
 	}
@@ -2233,7 +2235,7 @@ skipalldraw:;
 			i = (rand()%validmodecnt);
 		} while ((validmodelist[i].x > 640) || (validmodelist[i].y > 480) || (validmodelist[i].c != 32));
 		changeres(validmodelist[i].x,validmodelist[i].y,validmodelist[i].c,rand()&1);
-		sprintf(message,"%d x %d x %d (",xres,yres,colbits);
+		sprintf(message,"%ld x %ld x %ld (",xres,yres,colbits);
 		if (!fullscreen) strcat(message,"windowed)");
 						else strcat(message,"fullscreen)");
 		messagetimeout = totclk+4000;
