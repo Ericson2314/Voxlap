@@ -272,7 +272,7 @@ static inline void ucossin (unsigned long a, float *cosin)
 	cosin[1] = usintab[a                 ].x*f+usintab[a                 ].y;
 }
 
-static const long font4x6[] = //256 DOS chars, from Ken's Build SMALLFNT
+static const uint32_t font4x6[] = //256 DOS chars, from Ken's Build SMALLFNT
 {
 	0x000000,0x6f9f60,0x69f960,0xaffe40,0x4efe40,0x6ff6f0,0x66f6f0,0x000000,
 	0xeeaee0,0x000000,0x000000,0x000000,0x000000,0x000000,0x7755c0,0x96f690,
@@ -356,7 +356,7 @@ void print4x6 (long x, long y, long fcol, long bcol, const char *fmt, ...)
 }
 
 	//NOTE: font is stored vertically first! (like .ART files)
-static const int64_t font6x8[] = //256 DOS chars, from: DOSAPP.FON (tab blank)
+static const uint64_t font6x8[] = //256 DOS chars, from: DOSAPP.FON (tab blank)
 {
 	0x3E00000000000000,0x6F6B3E003E455145,0x1C3E7C3E1C003E6B,0x3000183C7E3C1800,
 	0x7E5C180030367F36,0x000018180000185C,0x0000FFFFE7E7FFFF,0xDBDBC3FF00000000,
@@ -630,10 +630,16 @@ long pngcolfunc (lpoint3d *p)
 			ftol(vx5.fpicv.x*fx + vx5.fpicv.y*fy + vx5.fpicv.z*fz,&v);
 			break;
 	}
-	if ((unsigned long)(u-gxsizcache) >= (unsigned long)vx5.xsiz)
-		if (u < 0) gxsizcache = u-(u+1)%vx5.xsiz-vx5.xsiz+1; else gxsizcache = u-(u%vx5.xsiz);
-	if ((unsigned long)(v-gysizcache) >= (unsigned long)vx5.ysiz)
-		if (v < 0) gysizcache = v-(v+1)%vx5.ysiz-vx5.ysiz+1; else gysizcache = v-(v%vx5.ysiz);
+	if (((unsigned long)u-gxsizcache) >= ((unsigned long)vx5.xsiz))
+	{
+		if (u < 0) gxsizcache = u-(u+1)%vx5.xsiz-vx5.xsiz+1;
+		else gxsizcache = u-(u%vx5.xsiz);
+	}
+	if (((unsigned long)v-gysizcache) >= ((unsigned long)vx5.ysiz))
+	{
+		if (v < 0) gysizcache = v-(v+1)%vx5.ysiz-vx5.ysiz+1;
+		else gysizcache = v-(v%vx5.ysiz);
+	}
 	return((vx5.pic[(v-gysizcache)*(vx5.bpl>>2)+(u-gxsizcache)]&0xffffff)|0x80000000);
 }
 
@@ -650,10 +656,16 @@ long hpngcolfunc (point3d *p)
 	ftol(vx5.fpicu.x*fx + vx5.fpicu.y*fy + vx5.fpicu.z*fz,&u);
 	ftol(vx5.fpicv.x*fx + vx5.fpicv.y*fy + vx5.fpicv.z*fz,&v);
 
-	if ((unsigned long)(u-gxsizcache) >= (unsigned long)vx5.xsiz)
-		if (u < 0) gxsizcache = u-(u+1)%vx5.xsiz-vx5.xsiz+1; else gxsizcache = u-(u%vx5.xsiz);
-	if ((unsigned long)(v-gysizcache) >= (unsigned long)vx5.ysiz)
-		if (v < 0) gysizcache = v-(v+1)%vx5.ysiz-vx5.ysiz+1; else gysizcache = v-(v%vx5.ysiz);
+	if (((unsigned long)u-gxsizcache) >= ((unsigned long)vx5.xsiz))
+	{
+		if (u < 0) gxsizcache = u-(u+1)%vx5.xsiz-vx5.xsiz+1;
+		else gxsizcache = u-(u%vx5.xsiz);
+	}
+	if (((unsigned long)v-gysizcache) >= ((unsigned long)vx5.ysiz))
+	{
+		if (v < 0) gysizcache = v-(v+1)%vx5.ysiz-vx5.ysiz+1;
+		else gysizcache = v-(v%vx5.ysiz);
+	}
 	return(vx5.pic[(v-gysizcache)*(vx5.bpl>>2)+(u-gxsizcache)]>>24);
 }
 
@@ -10371,8 +10383,11 @@ void equivecinit (long n)
 
 //EQUIVEC code ends -------------------------------------------------------
 
-static long umulmip[9] = {0,4294967295,2147483648,1431655765,1073741824,
-								  858993459,715827882,613566756,536870912};
+static long umulmip[9] =
+{
+	(long)0,(long)4294967295,(long)2147483648,(long)1431655765,(long)1073741824,
+	(long)858993459,(long)715827882,(long)613566756,(long)536870912
+};
 kv6data *genmipkv6 (kv6data *kv6)
 {
 	kv6data *nkv6;
@@ -10490,7 +10505,7 @@ void savekv6 (const char *filnam, kv6data *kv)
 	FILE *fil;
 	long i;
 
-	if (fil = fopen(filnam,"wb"))
+	if ((fil = fopen(filnam,"wb")))
 	{
 		i = 0x6c78764b; fwrite(&i,4,1,fil); //Kvxl
 		fwrite(&kv->xsiz,4,1,fil); fwrite(&kv->ysiz,4,1,fil); fwrite(&kv->zsiz,4,1,fil);
@@ -10557,7 +10572,7 @@ kv6data *getkv6 (const char *filnam)
 	if (inkhash(filnam,&i)) return(*(kv6data **)&khashbuf[i+4]);
 	if (i == -1) return(0);
 
-	if (kv6ptr = loadkv6((char *)&khashbuf[i+9]))
+	if ((kv6ptr = loadkv6((char *)&khashbuf[i+9])))
 		kv6ptr->namoff = i+9; //Must use offset for ptr->name conversion
 
 	*(kv6data **)&khashbuf[i+4] = kv6ptr;
