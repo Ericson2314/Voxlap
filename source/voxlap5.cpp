@@ -308,6 +308,14 @@ static const long font4x6[] = //256 DOS chars, from Ken's Build SMALLFNT
 	0xeae000,0x0cc000,0x00c000,0x644c40,0xcaa000,0xc4e000,0x0eee00,0x000000,
 };
 
+/**
+ * Draws 4x6 font on screen (very fast!)
+ * @param x x of top-left corner
+ * @param y y of top-left corner
+ * @param fcol foreground color (32-bit RGB format)
+ * @param bcol background color (32-bit RGB format) or -1 for transparent
+ * @param fmt string - same syntax as printf
+ */
 void print4x6 (long x, long y, long fcol, long bcol, const char *fmt, ...)
 {
 	va_list arglist;
@@ -400,6 +408,14 @@ static const int64_t font6x8[] = //256 DOS chars, from: DOSAPP.FON (tab blank)
 	0x02023E4030000000,0x0900000E010E0100,0x3C3C3C0000000A0D,0x000000000000003C,
 };
 
+/**
+ * Draws 6x8 font on screen (very fast!)
+ * @param x x of top-left corner
+ * @param y y of top-left corner
+ * @param fcol foreground color (32-bit RGB format)
+ * @param bcol background color (32-bit RGB format) or -1 for transparent
+ * @param fmt string - same syntax as printf
+ */
 void print6x8 (long x, long y, long fcol, long bcol, const char *fmt, ...)
 {
 	va_list arglist;
@@ -4068,6 +4084,25 @@ endv:
 
 #endif
 
+/**
+ * Set global camera position for future voxlap5 engine calls. Functions
+ * that depend on this include: opticast, drawsprite, spherefill, etc...
+ * 
+ * The 5th & 6th parameters define the center of the screen projection. This
+ * is the point on the screen that intersects the <ipos + ifor*t> vector.
+ * 
+ * The last parameter is the focal length - use it to control zoom. If you
+ * want a 90 degree field of view (left to right side of screen), then
+ * set it to half of the screen's width: (xdim*.5).
+ * 
+ * @param ipo camera position
+ * @param ist camera's unit RIGHT vector
+ * @param ihe camera's unit DOWN vector
+ * @param ifo camera's unit FORWARD vector
+ * @param dahx x-dimension of viewing window
+ * @param dahy y-dimension of viewing window
+ * @param dahz z-dimension of viewing window (should = dahx for 90 degree FOV)
+ */
 void setcamera (dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo,
 					 float dahx, float dahy, float dahz)
 {
@@ -4106,6 +4141,12 @@ void setcamera (dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo,
 	}
 }
 
+/**
+ * Render VXL screen (this is where it all happens!)
+ * Make sure you have .VXL loaded in memory by using one of the loadnul(),
+ * loadvxl(), loadbsp(), loaddta() functions.
+ * Also make sure to call setcamera() and setvoxframebuffer() before this.
+ */
 void opticast ()
 {
 	float f, ff, cx, cy, fx, fy, gx, gy, x0, y0, x1, y1, x2, y2, x3, y3;
@@ -4369,6 +4410,15 @@ void opticast ()
 	//7: down   (12)
 	//setsideshades(0,0,0,0,0,0);
 	//setsideshades(0,28,8,24,12,12);
+/**
+ * Shade offset for each face of the cube: useful for editing
+ * @param sto top face (z minimum) shade offset
+ * @param sbo bottom face (z maximum) shade offset
+ * @param sle left face (x minimum) shade offset
+ * @param sri right face (x maximum) shade offset
+ * @param sup top face (y minimum) shade offset
+ * @param sdo bottom face (y maximum) shade offset
+ */
 void setsideshades (char sto, char sbo, char sle, char sri, char sup, char sdo)
 {
 	((char *)&gcsub[2])[7] = sbo; ((char *)&gcsub[3])[7] = sto;
@@ -8884,6 +8934,9 @@ void setkvx (const char *filename, long ox, long oy, long oz, long rot, long bak
 }
 
 	//This here for game programmer only. I would never use it!
+/**
+ * Draw a pixel on the screen.
+ */
 void drawpoint2d (long sx, long sy, long col)
 {
 	if ((unsigned long)sx >= (unsigned long)xres_voxlap) return;
@@ -8892,6 +8945,9 @@ void drawpoint2d (long sx, long sy, long col)
 }
 
 	//This here for game programmer only. I would never use it!
+/**
+ * Draw a pixel on the screen. (specified by VXL location) Ignores Z-buffer.
+ */
 void drawpoint3d (float x0, float y0, float z0, long col)
 {
 	float ox, oy, oz, r;
@@ -8908,7 +8964,18 @@ void drawpoint3d (float x0, float y0, float z0, long col)
 	*(long *)(ylookup[y]+(x<<2)+frameplace) = col;
 }
 
-	//returns 1 if visible
+/**
+ * Transform & Project a 3D point to a 2D screen coordinate. This could be
+ * used for flat sprites (those cardboard-cutouts from old games)
+ * 
+ * @param x VXL location to transform & project
+ * @param y VXL location to transform & project
+ * @param z VXL location to transform & project
+ * @param px screen coordinate returned
+ * @param py screen coordinate returned
+ * @param sx depth of screen coordinate
+ * @return 1 if visible else 0
+ */
 long project2d (float x, float y, float z, float *px, float *py, float *sx)
 {
 	float ox, oy, oz;
@@ -8926,11 +8993,27 @@ long project2d (float x, float y, float z, float *px, float *py, float *sx)
 static int64_t mskp255 = 0x00ff00ff00ff00ff;
 static int64_t mskn255 = 0xff01ff01ff01ff01;
 static int64_t rgbmask64 = 0xffffff00ffffff;
-
-	//(tf,tp,tx,ty,tcx,tcy): Tile source, (tcx&tcy) is texel (<<16) at (sx,sy)
-	//(sx,sy,xz,yz) screen coordinates and x&y zoom, all (<<16)
-	//(black,white): black & white shade scale (ARGB format)
-	//   Note: if alphas of black&white are same, then alpha channel ignored
+/**
+ * Draws a 32-bit color texture from memory to the screen. This is the
+ * low-level function used to draw text loaded from a PNG,JPG,TGA,GIF.
+ * 
+ * @param tf pointer to top-left corner of SOURCE picture
+ * @param tp pitch (bytes per line) of the SOURCE picture
+ * @param tx dimensions of the SOURCE picture
+ * @param ty dimensions of the SOURCE picture
+ * @param tcx texel (<<16) at (sx,sy). Set this to (0,0) if you want (sx,sy)
+ *            to be the top-left corner of the destination
+ * @param tcy texel (<<16) at (sx,sy). Set this to (0,0) if you want (sx,sy)
+ *            to be the top-left corner of the destination
+ * @param sx screen coordinate (matches the texture at tcx,tcy)
+ * @param sy screen coordinate (matches the texture at tcx,tcy)
+ * @param xz x&y zoom, all (<<16). Use (65536,65536) for no zoom change
+ * @param yz x&y zoom, all (<<16). Use (65536,65536) for no zoom change
+ * @param black shade scale (ARGB format). For no effects, use (0,-1)
+ *              NOTE: if alphas of black&white are same, then alpha channel ignored
+ * @param white shade scale (ARGB format). For no effects, use (0,-1)
+ *              NOTE: if alphas of black&white are same, then alpha channel ignored
+ */
 void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					long sx, long sy, long xz, long yz, long black, long white)
 {
@@ -9272,7 +9355,9 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 		clearMMX();
 	}
 }
-
+/**
+ * Draw a 2d line on the screen
+ */
 void drawline2d (float x1, float y1, float x2, float y2, long col)
 {
 	float dx, dy, fxresm1, fyresm1;
@@ -9363,7 +9448,11 @@ void drawline2dclip (float x1, float y1, float x2, float y2, float rx0, float ry
 	}
 }
 #endif
-
+/**
+ * Draw a 3d line on the screen (specified by VXL location).
+ * Line is automatically Z-buffered into the map.
+ * Set alpha of col to non-zero to disable Z-buffering
+ */
 void drawline3d (float x0, float y0, float z0, float x1, float y1, float z1, long col)
 {
 	float ox, oy, oz, r;
@@ -9402,8 +9491,15 @@ void drawline3d (float x0, float y0, float z0, float x1, float y1, float z1, lon
 	drawline2d(x0*ox+gihx,y0*ox+gihy,x1*oy+gihx,y1*oy+gihy,col);
 #endif
 }
-
-	//If radius is negative, then it uses Z-buffering
+/**
+ * Draw a solid-color filled sphere on screen (useful for particle effects)
+ * @param ox center of sphere
+ * @param oy center of sphere
+ * @param oz center of sphere
+ * @param bakrad radius of sphere. NOTE: if bakrad is negative, it uses
+ *               Z-buffering with abs(radius), otherwise no Z-buffering
+ * @param col 32-bit color of sphere
+ */
 void drawspherefill (float ox, float oy, float oz, float bakrad, long col)
 {
 	float a, b, c, d, e, f, g, h, t, cxcx, cycy, Za, Zb, Zc, ysq;
@@ -9496,6 +9592,38 @@ void drawspherefill (float ox, float oy, float oz, float bakrad, long col)
 #endif
 }
 
+/**
+ * Draw a texture-mapped quadrilateral to the screen. Drawpicinquad projects
+ * the source texture with perspective into the 4 coordinates specified.
+ * 
+ * @param rpic source pointer to top-left corner
+ * @param rbpl source pitch (bytes per line)
+ * @param rxsiz source dimensions of texture/frame
+ * @param rysiz source dimensions of texture/frame
+ *
+ * @param wpic destination pointer to top-left corner
+ * @param wbpl destination pitch (bytes per line)
+ * @param wxsiz destination dimensions of texture/frame
+ * @param wysiz destination dimensions of texture/frame
+ * 
+ * @param x0 the 4 points of the quadrilateral in the destination texture/frame.
+ *           The points must be in loop order.
+ * @param x1 the 4 points of the quadrilateral in the destination texture/frame.
+ *           The points must be in loop order.
+ * @param x2 the 4 points of the quadrilateral in the destination texture/frame.
+ *           The points must be in loop order.
+ * @param x3 the 4 points of the quadrilateral in the destination texture/frame.
+ *           The points must be in loop order.
+ * 
+ * @param y0 the 4 points of the quadrilateral in the destination texture/frame.
+ *           The points must be in loop order.
+ * @param y1 the 4 points of the quadrilateral in the destination texture/frame.
+ *           The points must be in loop order.
+ * @param y2 the 4 points of the quadrilateral in the destination texture/frame.
+ *           The points must be in loop order.
+ * @param y3 the 4 points of the quadrilateral in the destination texture/frame.
+ *           The points must be in loop order.
+ */
 void drawpicinquad (long rpic, long rbpl, long rxsiz, long rysiz,
 						  long wpic, long wbpl, long wxsiz, long wysiz,
 						  float x0, float y0, float x1, float y1,
@@ -13755,6 +13883,16 @@ void finishfalls ()
 
 //----------------------------------------------------------------------------
 
+/**
+ * Since voxlap is currently a software renderer and I don't have any system
+ * dependent code in it, you must provide it with the frame buffer. You
+ * MUST call this once per frame, AFTER startdirectdraw(), but BEFORE any
+ * functions that access the frame buffer.
+ * @param p pointer to the top-left corner of the frame
+ * @param b pitch (bytes per line)
+ * @param x frame width
+ * @param y frame height
+ */
 void voxsetframebuffer (long p, long b, long x, long y)
 {
 	long i;
@@ -13938,6 +14076,15 @@ void pngoutputpixel (long rgbcol)
 }
 //------------------------- Simple PNG OUT code ends -------------------------
 
+/**
+ * Captures a screenshot of the current frame to disk. The current frame
+ * is defined by the last call to the voxsetframebuffer function. NOTE:
+ * you MUST call this function while video memory is accessible. In
+ * DirectX, that means it must be between a call to startdirectdraw and
+ * stopdirectdraw.
+ * @param fname filename to write to (writes uncompressed .PNG format)
+ * @return 0:always
+ */
 long screencapture32bit (const char *fname)
 {
 	long p, x, y;
@@ -13951,7 +14098,17 @@ long screencapture32bit (const char *fname)
 	return(0);
 }
 
-	//Captures all direction onto an un-wrapped cube
+/**
+ * Generates a cubic panorama (skybox) from the given position
+ * This is an old function that is very slow, but it is pretty cool
+ * being able to view a full panorama screenshot. Unfortunately, it
+ * doesn't draw sprites or the sky.
+ * 
+ * @param pos VXL map position of camera
+ * @param fname filename to write to (writes uncompressed .PNG format)
+ * @param boxsiz length of side of square. I recommend using 256 or 512 for this.
+ * @return 0:always
+ */
 long surroundcapture32bit (dpoint3d *pos, const char *fname, long boxsiz)
 {
 	lpoint3d hit;
