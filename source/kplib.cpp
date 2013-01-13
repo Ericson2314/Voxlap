@@ -117,7 +117,7 @@ static __inline int filelength (int h)
 static int bytesperline, xres, yres, globxoffs, globyoffs;
 static INT_PTR frameplace;
 
-static const int pow2mask[32] =
+static const unsigned int pow2mask[32] =
 {
 	0x00000000,0x00000001,0x00000003,0x00000007,
 	0x0000000f,0x0000001f,0x0000003f,0x0000007f,
@@ -128,7 +128,7 @@ static const int pow2mask[32] =
 	0x00ffffff,0x01ffffff,0x03ffffff,0x07ffffff,
 	0x0fffffff,0x1fffffff,0x3fffffff,0x7fffffff,
 };
-static const int pow2long[32] =
+static const unsigned int pow2long[32] =
 {
 	0x00000001,0x00000002,0x00000004,0x00000008,
 	0x00000010,0x00000020,0x00000040,0x00000080,

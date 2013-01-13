@@ -1845,7 +1845,7 @@ int main(int argc, char **argv)
 	int i;
 	
 	cputype = getcputype();
-	if (cputype&((1<<0)+(1<<4)) != ((1<<0)+(1<<4)))
+	if ((cputype&((1<<0)+(1<<4))) != ((1<<0)+(1<<4)))
 		{ fputs("Sorry, this program requires FPU&RDTSC support (>=Pentium)", stderr); return(-1); }
 	
 	sdlinitflags = SDL_INIT_TIMER;
