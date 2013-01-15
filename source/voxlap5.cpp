@@ -10240,6 +10240,14 @@ char *parspr (vx5sprite *spr, char **userst)
 static char *khashbuf = 0;
 static long khashead[256], khashpos = 0, khashsiz = 0;
 
+/**
+ * Returns a pointer to the filename associated with the kv6data/kfatype
+ * object. Notice that each structure has a "namoff" member. Since I
+ * use remalloc(), I have to make these offsets, not pointers. Use this
+ * function to convert the offsets into pointers.
+ * 
+ * @param namoff offset to the name
+ */
 char *getkfilname (long namoff) { return(&khashbuf[namoff]); }
 
 	//Returns: 0,retptr=-1: Error! (bad filename or out of memory)
@@ -10388,6 +10396,22 @@ static long umulmip[9] =
 	(long)0,(long)4294967295,(long)2147483648,(long)1431655765,(long)1073741824,
 	(long)858993459,(long)715827882,(long)613566756,(long)536870912
 };
+
+/**
+ * Generate 1 more mip-level for a .KV6 sprite. This function generates a
+ * lower MIP level only if kv6->lowermip is NULL, and kv6->xsiz,
+ * kv6->ysiz, and kv6->zsiz are all >= 3. When these conditions are
+ * true, it will generate a new .KV6 sprite with half the resolution in
+ * all 3 dimensions. It will set kv6->lowermip so it points to the newly
+ * generated .KV6 object. You can use freekv6() to de-allocate all levels
+ * of the .KV6 object.
+ *
+ * To generate all mip levels use this pseudo-code: 
+ * for(kv6data *tempkv6=mykv6;tempkv6=genmipkv6(tempkv6););
+ * 
+ * @param kv6 pointer to current MIP-level
+ * @return pointer to newly generated half-size MIP-level
+ */
 kv6data *genmipkv6 (kv6data *kv6)
 {
 	kv6data *nkv6;
@@ -10499,7 +10523,14 @@ kv6data *genmipkv6 (kv6data *kv6)
 	kv6->lowermip = nkv6;
 	return(nkv6);
 }
-
+/**
+ * This could be a handy function for debugging I suppose. Use it to save
+ * .KV6 sprites to disk.
+ * 
+ * @param filnam filename of .KV6 to save to disk. It's your responsibility to
+ *               make sure it doesn't overwrite a file of the same name.
+ * @param kv pointer to .KV6 object to save to disk.
+ */
 void savekv6 (const char *filnam, kv6data *kv)
 {
 	FILE *fil;
@@ -10562,8 +10593,26 @@ static kv6data *loadkv6 (const char *filnam)
 	return(newkv6);
 }
 
-	//Cover-up function for LOADKV6: returns a pointer to the loaded kv6data
-	//   structure. Loads file only if not already loaded before with getkv6.
+/**
+ * Loads a .KV6 voxel sprite into memory. It malloc's the array for you and
+ * returns the pointer to the loaded vx5sprite. If the same filename was
+ * passed before to this function, it will return the pointer to the
+ * previous instance of the .KV6 buffer in memory (It will NOT load the
+ * same file twice). Uninitvoxlap() de-allocates all .KV6 sprites for
+ * you.
+ * 
+ * Other advanced info: Uses a 256-entry hash table to compare filenames, so
+ * it should be fast. If you want to modify a .KV6 without affecting all
+ * instances, you must allocate&de-allocate your own kv6data structure,
+ * and use memcpy. The buffer is kv6data.leng bytes long (inclusive).
+ * 
+ * Cover-up function for LOADKV6: returns a pointer to the loaded kv6data
+ * structure. Loads file only if not already loaded before with getkv6.
+ *
+ * @param kv6nam .KV6 filename
+ * @return pointer to malloc'ed kv6data structure. Do NOT free this buffer
+ *         yourself! Returns 0 if there's an error - such as bad filename.
+ */
 kv6data *getkv6 (const char *filnam)
 {
 	kv6data *kv6ptr;
@@ -12035,8 +12084,16 @@ static void kfasorthinge (hingetype *h, long nh, long *hsort)
 	for(i=nh-1;i>=0;i--) h[i].parent = -2-h[i].parent;
 }
 
-	//Returns a pointer to the loaded kfatype structure.
-	//Loads data only if not already loaded before with getkfa
+/**
+ * Loads a .KFA file and its associated .KV6 voxel sprite into memory. Works
+ * just like getkv6() for for .KFA files: (Returns a pointer to the loaded
+ * kfatype structure. Loads data only if not already loaded before with
+ * getkfa.)
+ * 
+ * @param kfanam .KFA filename
+ * @return pointer to malloc'ed kfatype structure. Do NOT free this buffer
+ *         yourself! Returns 0 if there's an error - such as bad filename.
+ */
 kfatype *getkfa (const char *kfanam)
 {
 	kfatype *kfa;
@@ -12114,6 +12171,17 @@ kfatype *getkfa (const char *kfanam)
 	return(kfa);
 }
 
+/**
+ * Cover-up function to handle both .KV6 and .KFA files. It looks at the
+ * filename extension and uses the appropriate function (either getkv6
+ * or getkfa) and sets the sprite flags depending on the type of file.
+ * The file must have either .KV6 or .KFA as the filename extension. If
+ * you want to use weird filenames, then use getkv6/getkfa instead.
+ * 
+ * @param spr Pointer to sprite structure that you provide. getspr() writes:
+ *            only to the kv6data/voxtype, kfatim, and flags members.
+ * @param filnam filename of either a .KV6 or .KFA file.
+ */
 void getspr (vx5sprite *s, const char *filnam)
 {
 	long i;
@@ -12468,6 +12536,14 @@ static long kfatime2seq (kfatype *kfa, long tim)
 	return(a);
 }
 
+/**
+ * You could animate .KFA sprites by simply modifying the .kfatim member of
+ * vx5sprite structure. A better way is to use this function because it
+ * will handle repeat/stop markers for you.
+ * 
+ * @param spr .KFA sprite to animate
+ * @param timeadd number of milliseconds to add to the current animation time
+ */
 void animsprite (vx5sprite *s, long ti)
 {
 	kfatype *kfa;
@@ -12572,6 +12648,13 @@ static void kfadraw (vx5sprite *s)
 
 //--------------------------- KFA sprite code ends ---------------------------
 
+/**
+ * Draw a .KV6/.KFA voxel sprite to the screen. Position & orientation are
+ * specified in the vx5sprite structure. See VOXLAP5.H for details on the
+ * structure.
+ *
+ * @param spr pointer to vx5sprite
+ */
 void drawsprite (vx5sprite *spr)
 {
 	if (spr->flags&4) return;
@@ -12962,6 +13045,18 @@ freezesprcont:;
 
 	//Sprite structure is already allocated
 	//kv6, vox, xlen, ylen are all malloced in here!
+/**
+ * This converts a spherical cut-out of the VXL map into a .KV6 sprite in
+ * memory. This function can be used to make walls fall over (with full
+ * rotation). It allocates a new vx5sprite sprite structure and you are
+ * responsible for freeing the memory using "free" in your own code.
+ * 
+ * @param spr new vx5sprite structure. Position & orientation are initialized
+ *        so when you call drawsprite, it exactly matches the VXL map.
+ * @param hit center of sphere
+ * @param hitrad radius of sphere
+ * @param returns 0:bad, >0:mass of captured object (# of voxels)
+ */
 long meltsphere (vx5sprite *spr, lpoint3d *hit, long hitrad)
 {
 	long i, j, x, y, z, xs, ys, zs, xe, ye, ze, sq, z0, z1;
@@ -13088,6 +13183,29 @@ long meltsphere (vx5sprite *spr, lpoint3d *hit, long hitrad)
 
 	//Sprite structure is already allocated
 	//kv6, vox, xlen, ylen are all malloced in here!
+/**
+ * This function is similar to meltsphere, except you can use any user-
+ * defined shape (with some size limits). The user-defined shape is
+ * described by a list of vertical columns in the "vspans" format:
+ * 
+ * typedef struct { char z1, z0, x, y; } vspans;
+ * 
+ * The list MUST be ordered first in increasing Y, then in increasing X
+ * or else the function will crash! Fortunately, the structure is
+ * arranged in a way that the data can be sorted quite easily using a
+ * simple trick: if you use a typecast from vspans to "unsigned long",
+ * you can use a generic sort code on 32-bit integers to achieve a
+ * correct sort. The vspans members are all treated as unsigned chars,
+ * so it's usually a good idea to bias your columns by 128, and then
+ * reverse-bias them in the "offs" offset.
+ * 
+ * @param spr new vx5sprite structure. Position & orientation are initialized
+ *            so when you call drawsprite, it exactly matches the VXL map.
+ * @param lst list in "vspans" format
+ * @param lstnum number of columns on list
+ * @param offs offset of top-left corner in VXL coordinates
+ * @return mass (in voxel units), returns 0 if error (or no voxels)
+ */
 long meltspans (vx5sprite *spr, vspans *lst, long lstnum, lpoint3d *offs)
 {
 	float f;
@@ -14210,6 +14328,15 @@ static inline void fixsse ()
 }
 #endif
 
+/**
+ * If you generate any sprites using one of the melt* functions, and then
+ * generate mip-maps for it, you can use this function to de-allocate
+ * all mip-maps of the .KV6 safely. You don't need to use this for
+ * kv6data objects that were loaded by getkv6,getkfa, or getspr since
+ * these functions automatically de-allocate them using this function.
+ *
+ * @param kv6 pointer to kv6 voxel sprite
+ */
 void freekv6 (kv6data *kv6)
 {
 	if (kv6->lowermip) freekv6(kv6->lowermip); //NOTE: dangerous - recursive!
