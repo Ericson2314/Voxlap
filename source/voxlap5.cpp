@@ -884,7 +884,6 @@ long compilestack (long *uind, long *n0, long *n1, long *n2, long *n3, char *cbu
 
 static inline void expandbit256 (void *s, void *d)
 {
-	#ifdef NOASM
 	int32_t eax;
 	int32_t ecx = 32; //current bit index
 	uint32_t edx = 0; //value of current 32-bit bits
@@ -940,119 +939,6 @@ static inline void expandbit256 (void *s, void *d)
 		}
 		while ((ecx += 32) <= 0);
 	}
-	#else
-	#ifdef __GNUC__ //gcc inline asm
-	__asm__ __volatile__
-	(
-		".intel_syntax noprefix\n"
-		"mov	ecx, 32\n"   //current bit index
-		"xor	edx, edx\n"  //value of current 32-bit bits
-		"jmp	short 0f\n"
-	"1:\n" //begit
-		"lea	esi, [esi+eax*4]\n"
-		"movzx	eax, byte ptr [esi+3]\n"
-		"sub	eax, ecx\n"                //xor mask [eax] for ceiling begins
-		"jl	short 3f\n"
-	"2:\n" //xdoc
-		"mov	[edi], edx\n"
-		"add	edi, 4\n"
-		"mov	edx, -1\n"
-		"add	ecx, 32\n"
-		"sub	eax, 32\n"
-		"jge	short 2b\n"
-	"3:\n" //xskpc
-		".att_syntax prefix\n"
-		"andl	%c[ceil]+0x80(,%%eax,4), %%edx\n" //~(-1<<eax)
-		".intel_syntax noprefix\n"
-
-	"0:\n" //in2it
-		"movzx	eax, byte ptr [esi+1]\n"
-		"sub	eax, ecx\n"                //xor mask [eax] for floor begins
-		"jl	short 5f\n"
-	"4:\n" //xdof
-		"mov	[edi], edx\n"
-		"add	edi, 4\n"
-		"xor	edx, edx\n"
-		"add	ecx, 32\n"
-		"sub	eax, 32\n"
-		"jge	short 4b\n"
-	"5:\n" //xskpf
-		".att_syntax prefix\n"
-		"orl	%c[floor]+0x80(,%%eax,4), %%edx\n" //(-1<<eax)
-		".intel_syntax noprefix\n"
-
-		"movzx	eax, byte ptr [esi]\n"
-		"test	eax, eax\n"
-		"jnz	short 1b\n"
-		"sub	ecx, 256\n"              //finish writing buffer to [edi]
-		"jg	short 7f\n"
-	"6:\n" //xdoe
-		"mov	[edi], edx\n"
-		"add	edi, 4\n"
-		"mov	edx, -1\n"
-		"add	ecx, 32\n"
-		"jle	short 6b\n"
-	"7:\n" //xskpe
-		".att_syntax prefix\n"
-		:
-		: "S" (s), "D" (d), [ceil] "p" (xbsceil), [floor] "p" (xbsflor)
-		: "cc", "eax", "ecx", "edx"
-	);
-	#endif
-	#ifdef _MSC_VER //msvc inline asm
-	_asm
-	{
-		push	esi
-		push	edi
-		mov	esi, s
-		mov	edi, d
-		mov	ecx, 32   //current bit index
-		xor	edx, edx  //value of current 32-bit bits
-		jmp	short in2it
-	begit:
-		lea	esi, [esi+eax*4]
-		movzx	eax, byte ptr [esi+3]
-		sub	eax, ecx                //xor mask [eax] for ceiling begins
-		jl	short xskpc
-	xdoc:
-		mov	[edi], edx
-		add	edi, 4
-		mov	edx, -1
-		add	ecx, 32
-		sub	eax, 32
-		jge	short xdoc
-	xskpc:
-		and	edx, xbsceil[eax*4+128] //~(-1<<eax); xor mask [eax] for ceiling ends
-	in2it:
-		movzx	eax, byte ptr [esi+1]
-		sub	eax, ecx                //xor mask [eax] for floor begins
-		jl	short xskpf
-	xdof:
-		mov	[edi], edx
-		add	edi, 4
-		xor	edx, edx
-		add	ecx, 32
-		sub	eax, 32
-		jge	short xdof
-	xskpf:
-		or	edx, xbsflor[eax*4+128] //(-1<<eax); xor mask [eax] for floor ends
-		movzx	eax, byte ptr [esi]
-		test	eax, eax
-		jnz	short begit
-		sub	ecx, 256                //finish writing buffer to [edi]
-		jg	short xskpe
-	xdoe:
-		mov	[edi], edx
-		add	edi, 4
-		mov	edx, -1
-		add	ecx, 32
-		jle	short xdoe
-	xskpe:
-		pop	edi
-		pop	esi
-	}
-	#endif
-	#endif
 }
 
 void expandbitstack (long x, long y, int64_t *bind)
