@@ -22,55 +22,43 @@ Graphics
 		SDL DEV-MinGW/GCC and RUNTIME (libs)
 
 ------------------------------------------------------------------------------
-Quick Porting Progress Overview :
+Guide to the various branches (they don't all exist yet)
 
-* -- Done | $ -- In Progress | # -- not started
+I used to have an outline of things to do. But it became horrendously out of
+date. This should serve the same purpose, and actually reflects what I want to
+do. Keep in mind that to some extent all branches are developed
+simultaneously.
 
-1. Compile with MS Visual Studio 2010 utilities, and June 2010 DirectX sdk (*)
-	* Makefile mead from *.c headers
-	* Old DirectX SDK *.LIBs included
-	* v5.asm modified as per
-	  http://natural-satellite.com/2011/06/19/visual-studio-and-voxlap/
-2. Use cross-platform assembler: (*)
-	$ make v5.asm compile in NASM. [I give up on this]
-	  Thanks, http://www.drpaulcarter.com/pcasm/
-	  and http://www.devoresoftware.com/nomyso/
-	* make v5.asm compile in JWASM. [I did this instead.]
-	  JWASM uses MASM syntax, making this trivially easy.
-	  Thanks person on ##ASM on freenode for giving me the idea.
-		* Links with MSVC too
-	# make macro to support both cdecl and stdcall naming conventions.
-3. Compile with GCC/MinGW: ($)
-	* Update makefile for MinGW
-		* Move all program names, directories, and flags to macros
-		* Add corresponding MinGW macro defs.
-		* Makefile is now very modular
-	* Convert all C++ to compile as both C and C++
-	  This allows me to compare mscv and gcc versions more directly, as I the
-	  ABI for C is more consistent between the two toolchains.
-		# Bug: game in C does not allow weapons to be fired, but that shouldn't
-		  be a voxlap issue.
-	* Convert inline assembly to work with gcc
-	  GCC now supports ".intel_syntax noprefix" making this much easier
-		# make local variables work
-		  for now, with intel syntax GCC treats all labels as global
-	* Compiles
-	# Link with ld
-		# Fix Bugs
-4. Compile on *NIX (Linux in my case) ($)
-	* Compiles (including sdlmain
-	# link
-Alternative step 2:
-2. Compiler on MSVC with minimal asm ($)
-	$ Compile game without v5.asm (the only external assembly)
-	$ Remove inline asm to simplify toolchain interoperability.
-Misc
-	* Heirarchy implemented. (Makefile ready; code needs to be adjusted so bin
-	  and data don't need to be in same folder.)
-	* .c to .cpp (until it all works as true C), accuracy is great.
-	# PreMake? CMake? automake?
+Conservative: This is what master is now. In short, every block of MSVC inline
+asm has a block of gcc inline asm to go with it. Nothing else semantically
+should be changed. I doubt this will work, as sometimes Voxlap used persistent
+registers.
 
+no_fatbin: Currently Voxlap actually contains both SSE2 and 3DN
+inline assembly, and uses some run-time stuff to chose which routines to use.
+This is really weird, and makes replacing with C slightly more complicated as
+some functions like "movps_3dn" are no longer used. I should remove the
+"cputype" routine, and make the choice of architecture compliantly compile
+time. This should be rebased off conservative. ("Fatbin" reffers to the fact
+that cputype is used to compile something analogous to a fat binary.)
 
+no_asm: This is no_asm, a rush to get something that works and also uses as
+little compiler-specific code as possible. I have used ken's C alternatives
+even when vector built-ins would be more efficient, or said alternatives don't
+even work right (kv6draw). all the point4d vector arithmetic functions should
+be moved to a separate header. This should be rebased off no_fatbin.
+
+SIMD: This is where I want to end up. This will be completely architecture
+independent. Pure C is used where appropriate, but if something is better done
+with SIMD/vector built-ins I use those instead. By the time I get to this,
+no_asm should be bug free. And if I havenâ€™t bothered to redo v5.?asm in no_asm,
+I should re-do it now with vector-built-ins. Probably a lot of the little
+inline functions used for assembly can be manual inlined and discarded at this
+point. I may drop MSVC support here, as I don't really want to have to redo all
+the SIMD stuff for two compilers. Also I might do the minimal pre-processor
+stuff needed to allow for building as Pure C if I have not done so already
+(this involves making a few static struct members into global variables, so it
+will change the API). This should be rebased off no_fatbin, not no_asm.
 
 ------------------------------------------------------------------------------
 Introduction:
@@ -102,13 +90,13 @@ primitive, and I can't test them anyways until v5.asm works.
 Therefore I HAD opted to dispense with assembly code altogether. Voxlap5 (the
 main Voxlap code) is littered with commented out replacement C for various
 assembly routines. Not all of it works as well as the assembly -- I think Ken
-mainly used it as a guide for writing the assembly and didn’t debug it as
-the program evolved -- but it’s certainly better than nothing. As to the
-external assembly, there is a macro that’s supposed to let the program run
+mainly used it as a guide for writing the assembly and didnÂ’t debug it as
+the program evolved -- but itÂ’s certainly better than nothing. As to the
+external assembly, there is a macro thatÂ’s supposed to let the program run
 without it, but it leaves in a few missing linkages -- it was probably also
 ignored as the program evolved. For better or worse, the inline assembly and
 external assembly often relies on each other.  On one hand, this means taking
-out one can help get rid of the other. On the other hand, it means it’s
+out one can help get rid of the other. On the other hand, it means itÂ’s
 very difficult to replace the assembly incrementally and debug as you go.
 
 I learned of another assembly, JWASM, on IRC which is both cross-platform and
@@ -151,18 +139,18 @@ Library issues:
 I can't really dive into this until the former step is complete, but it seems
 that again a good bit of the work is already done.
 
-Voxlap itself is a surprisingly self-contained beast, primary because it’s
+Voxlap itself is a surprisingly self-contained beast, primary because itÂ’s
 a software render so it only uses DirectX to copy frame buffers and other
 trivial stuff. The backend it currently uses Winmain, is not Voxlap-Specific,
-but rather used by a couple of Ken’s things (maybe even the build engine).
+but rather used by a couple of KenÂ’s things (maybe even the build engine).
 
 On the flip side, the example game, and probably other games based around
-Voxlap don’t just use voxlap’s header, but also directly use Sysmain.h,
-Winmain’s interface. So to have a genuinely useful Voxlap port, seemingly
+Voxlap donÂ’t just use voxlapÂ’s header, but also directly use Sysmain.h,
+WinmainÂ’s interface. So to have a genuinely useful Voxlap port, seemingly
 unused features of Sysmain.h must also be ported.
 
-Thankfully, available on Ken’s site is SDLmain, a non-Voxlap-Specific
-port of Winmain. I’m not sure how complete it is, but I’d hope it has
+Thankfully, available on KenÂ’s site is SDLmain, a non-Voxlap-Specific
+port of Winmain. IÂ’m not sure how complete it is, but IÂ’d hope it has
 the most basic stuff that Voxlap itself requires available. The more progress
 I've made, the more I been able to validate the SDLmain basically works as
 advertised. Now that I have the Voxlap building with SDLmain and MSVC, I am
@@ -198,9 +186,9 @@ being compiled as C or C++ in order to work in many situations.
 ------------------------------------------------------------------------------
 License:
 
-Based on my concept of a “true port” I should keep the license the same
+Based on my concept of a Â“true portÂ” I should keep the license the same
 as the original: basically attribution + non-commercial only without Ken
-Silverman’s explicit permission. I previously stated here my work could be
+SilvermanÂ’s explicit permission. I previously stated here my work could be
 licensed with the LGPL provided Ken's restrictions are also followed, but I
 now see that is not possible due to the GPL's requirement that commercial
 distribution *must* be permitted.
