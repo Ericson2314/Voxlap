@@ -223,7 +223,7 @@ long zbufoff;
 
 	//Ken Silverman knows how to use EMMS
 #if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
-	#pragma warning(disable:4799) 
+	#pragma warning(disable:4799)
 #endif
 
 
@@ -973,7 +973,7 @@ static inline void expandbit256 (void *s, void *d)
 		".att_syntax prefix\n"
 		"andl	%c[ceil]+0x80(,%%eax,4), %%edx\n" //~(-1<<eax)
 		".intel_syntax noprefix\n"
-		
+
 	"0:\n" //in2it
 		"movzx	eax, byte ptr [esi+1]\n"
 		"sub	eax, ecx\n"                //xor mask [eax] for floor begins
@@ -989,7 +989,7 @@ static inline void expandbit256 (void *s, void *d)
 		".att_syntax prefix\n"
 		"orl	%c[floor]+0x80(,%%eax,4), %%edx\n" //(-1<<eax)
 		".intel_syntax noprefix\n"
-		
+
 		"movzx	eax, byte ptr [esi]\n"
 		"test	eax, eax\n"
 		"jnz	short 1b\n"
@@ -1003,7 +1003,7 @@ static inline void expandbit256 (void *s, void *d)
 		"jle	short 6b\n"
 	"7:\n" //xskpe
 		".att_syntax prefix\n"
-		: 
+		:
 		: "S" (s), "D" (d), [ceil] "p" (xbsceil), [floor] "p" (xbsflor)
 		: "cc", "eax", "ecx", "edx"
 	);
@@ -1183,7 +1183,7 @@ void gline (long leng, float x0, float y0, float x1, float y1)
 		skycast.dist = 0x7fffffff;
 #endif
 	}
-	
+
 	if (vx5.sideshademode)
 	{
 		gcsub[0] = gcsub[(((unsigned long)gixy[0])>>31)+4];
@@ -2030,10 +2030,10 @@ EXTERN_C void *opti4asm;
 void (*hrend)(long,long,long,long,long,long);
 void (*vrend)(long,long,long,long,long);
 
-	
+
 #if (USEZBUFFER != 1) //functions without Z Buffer
-	
-	// Portable C/C++ 
+
+	// Portable C/C++
 void hrendnoz (long sx, long sy, long p1, long plc, long incr, long j)
 {
 	sy = ylookup[sy]+frameplace; p1 = sy+(p1<<2); sy += (sx<<2);
@@ -2056,7 +2056,7 @@ void vrendnoz (long sx, long sy, long p1, long iplc, long iinc)
 
 #else //functions with Z Buffer
 
-#ifdef __NOASM__ //Portable C/C++ 
+#ifdef __NOASM__ //Portable C/C++
 
 void hrendz (long sx, long sy, long p1, long plc, long incr, long j)
 {
@@ -4099,14 +4099,14 @@ endv:
 /**
  * Set global camera position for future voxlap5 engine calls. Functions
  * that depend on this include: opticast, drawsprite, spherefill, etc...
- * 
+ *
  * The 5th & 6th parameters define the center of the screen projection. This
  * is the point on the screen that intersects the <ipos + ifor*t> vector.
- * 
+ *
  * The last parameter is the focal length - use it to control zoom. If you
  * want a 90 degree field of view (left to right side of screen), then
  * set it to half of the screen's width: (xdim*.5).
- * 
+ *
  * @param ipo camera position
  * @param ist camera's unit RIGHT vector
  * @param ihe camera's unit DOWN vector
@@ -5842,12 +5842,12 @@ long savevxl (const char *savfilnam, dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe
  * Loads a sky into memory. Sky must be PNG,JPG,TGA,GIF,BMP,PCX formatted as
  * a Mercator projection on its side. This means x-coordinate is latitude
  * and y-coordinate is longitude. Loadsky() can be called at any time.
- * 
+ *
  * If for some reason you don't want to load a textured sky, you call call
  * loadsky with these 2 built-in skies:
  * loadsky("BLACK");  //pitch black
  * loadsky("BLUE");   //a cool ramp of bright blue to blue to greenish
- * 
+ *
  * @param skyfilnam the name of the image to load
  * @return -1:bad, 0:good
  */
@@ -6833,7 +6833,7 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 								mixn[cz] = 0;
 								#else
 								#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
-								__asm__ __volatile__ 
+								__asm__ __volatile__
 								(
 									".intel_syntax noprefix\n"
 									"mov eax, cz\n"
@@ -8355,18 +8355,18 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 					(
 						".intel_syntax noprefix\n"
 						"movhlps xmm3, xmm7\n"       //xmm3:?,?,0,0
-						
+
 						".intel_syntax prefix\n"
 						"cvtsi2ss %%xmm7, %[z]\n"    //xmm7:0,0,0,z
 						".intel_syntax noprefix\n"
-						
+
 						"movlhps xmm0, xmm7\n"       //xmm0:0,z,y,x
-						
+
 						".intel_syntax prefix\n"
 						"mov %%eax, %[numcurs]\n"
 						"mov %%edx, %[p]\n"
 						".intel_syntax noprefix\n"
-						
+
 						"lea eax, [eax+eax*2-3]\n"
 					".Lbeg:\n"
 						"movups xmm1, [edx+eax*4]\n" //xmm1: ?,pz,py,pz
@@ -8383,11 +8383,11 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 						"addss xmm3, xmm1\n"
 						"sub eax, 3\n"
 						"jnc short .Lbeg\n"
-						
+
 						".intel_syntax prefix\n"
 						"movss [%[v]], %%xmm3\n"
 						".att_syntax prefix\n"
-						: 
+						:
 						: [z] "r" (z), [v] "r" (&v), [numcurs] "r" (numcurs), [p] "r" (p)
 						: "eax", "edx"
 					);
@@ -8979,7 +8979,7 @@ void drawpoint3d (float x0, float y0, float z0, long col)
 /**
  * Transform & Project a 3D point to a 2D screen coordinate. This could be
  * used for flat sprites (those cardboard-cutouts from old games)
- * 
+ *
  * @param x VXL location to transform & project
  * @param y VXL location to transform & project
  * @param z VXL location to transform & project
@@ -9008,7 +9008,7 @@ static int64_t rgbmask64 = 0xffffff00ffffff;
 /**
  * Draws a 32-bit color texture from memory to the screen. This is the
  * low-level function used to draw text loaded from a PNG,JPG,TGA,GIF.
- * 
+ *
  * @param tf pointer to top-left corner of SOURCE picture
  * @param tp pitch (bytes per line) of the SOURCE picture
  * @param tx dimensions of the SOURCE picture
@@ -9271,7 +9271,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 			for(x=x0,uu=x*ui+u;x<x1;x++,uu+=ui)
 			{
 				i = *(long *)(((uu>>16)<<2) + j);
-				
+
 				#ifdef __NOASM__
 				i.a = i.a*(white.a-black.a)/256 + black.a
 				i.r = i.r*(white.r-black.r)/256 + black.r
@@ -9307,7 +9307,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 				}
 				#endif
 				#endif
-				
+
 					//a = (((unsigned long)i)>>24);
 					//if (!a) continue;
 					//if (a == 255) { *(long *)((x<<2)+p) = i; continue; }
@@ -9607,7 +9607,7 @@ void drawspherefill (float ox, float oy, float oz, float bakrad, long col)
 /**
  * Draw a texture-mapped quadrilateral to the screen. Drawpicinquad projects
  * the source texture with perspective into the 4 coordinates specified.
- * 
+ *
  * @param rpic source pointer to top-left corner
  * @param rbpl source pitch (bytes per line)
  * @param rxsiz source dimensions of texture/frame
@@ -9617,7 +9617,7 @@ void drawspherefill (float ox, float oy, float oz, float bakrad, long col)
  * @param wbpl destination pitch (bytes per line)
  * @param wxsiz destination dimensions of texture/frame
  * @param wysiz destination dimensions of texture/frame
- * 
+ *
  * @param x0 the 4 points of the quadrilateral in the destination texture/frame.
  *           The points must be in loop order.
  * @param x1 the 4 points of the quadrilateral in the destination texture/frame.
@@ -9626,7 +9626,7 @@ void drawspherefill (float ox, float oy, float oz, float bakrad, long col)
  *           The points must be in loop order.
  * @param x3 the 4 points of the quadrilateral in the destination texture/frame.
  *           The points must be in loop order.
- * 
+ *
  * @param y0 the 4 points of the quadrilateral in the destination texture/frame.
  *           The points must be in loop order.
  * @param y1 the 4 points of the quadrilateral in the destination texture/frame.
@@ -10000,10 +10000,10 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 					"lea	ecx, [ecx*4]\n"
 					"sub	eax, ecx\n"
 					"add	ecx, offset dpqdistlut\n"
-                    
+
 					"test dword ptr cputype, 1 shl 25\n"
 					"jz short .Ldpqpre3dn\n"
-                    
+
 					"movss	xmm0, t\n" //dd+ddi*3 dd+ddi*2 dd+ddi*1 dd+ddi*0
 					"shufps	xmm0, xmm0, 0\n"
 					"addps	xmm0, xmm6\n"
@@ -10245,7 +10245,7 @@ static long khashead[256], khashpos = 0, khashsiz = 0;
  * object. Notice that each structure has a "namoff" member. Since I
  * use remalloc(), I have to make these offsets, not pointers. Use this
  * function to convert the offsets into pointers.
- * 
+ *
  * @param namoff offset to the name
  */
 char *getkfilname (long namoff) { return(&khashbuf[namoff]); }
@@ -10406,9 +10406,9 @@ static long umulmip[9] =
  * generated .KV6 object. You can use freekv6() to de-allocate all levels
  * of the .KV6 object.
  *
- * To generate all mip levels use this pseudo-code: 
+ * To generate all mip levels use this pseudo-code:
  * for(kv6data *tempkv6=mykv6;tempkv6=genmipkv6(tempkv6););
- * 
+ *
  * @param kv6 pointer to current MIP-level
  * @return pointer to newly generated half-size MIP-level
  */
@@ -10526,7 +10526,7 @@ kv6data *genmipkv6 (kv6data *kv6)
 /**
  * This could be a handy function for debugging I suppose. Use it to save
  * .KV6 sprites to disk.
- * 
+ *
  * @param filnam filename of .KV6 to save to disk. It's your responsibility to
  *               make sure it doesn't overwrite a file of the same name.
  * @param kv pointer to .KV6 object to save to disk.
@@ -10600,12 +10600,12 @@ static kv6data *loadkv6 (const char *filnam)
  * previous instance of the .KV6 buffer in memory (It will NOT load the
  * same file twice). Uninitvoxlap() de-allocates all .KV6 sprites for
  * you.
- * 
+ *
  * Other advanced info: Uses a 256-entry hash table to compare filenames, so
  * it should be fast. If you want to modify a .KV6 without affecting all
  * instances, you must allocate&de-allocate your own kv6data structure,
  * and use memcpy. The buffer is kv6data.leng bytes long (inclusive).
- * 
+ *
  * Cover-up function for LOADKV6: returns a pointer to the loaded kv6data
  * structure. Loads file only if not already loaded before with getkv6.
  *
@@ -11277,8 +11277,8 @@ static inline void movps_3dn (point4d *dest, point4d *src)
 	);
 	#endif
 	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-	
-	_asm	
+
+	_asm
 	{
 		mov	eax, src
 		movq	mm0, [eax]
@@ -11310,7 +11310,7 @@ static inline void intss_3dn (point4d *dest, long src)
 	);
 	#endif
 	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-	
+
 	_asm
 	{
 		mov	eax, dest
@@ -11430,7 +11430,7 @@ static inline void subps_3dn (point4d *sum, point4d *a, point4d *b)
 		".att_syntax prefix\n"
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY	
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		mov	eax, a
@@ -12089,7 +12089,7 @@ static void kfasorthinge (hingetype *h, long nh, long *hsort)
  * just like getkv6() for for .KFA files: (Returns a pointer to the loaded
  * kfatype structure. Loads data only if not already loaded before with
  * getkfa.)
- * 
+ *
  * @param kfanam .KFA filename
  * @return pointer to malloc'ed kfatype structure. Do NOT free this buffer
  *         yourself! Returns 0 if there's an error - such as bad filename.
@@ -12177,7 +12177,7 @@ kfatype *getkfa (const char *kfanam)
  * or getkfa) and sets the sprite flags depending on the type of file.
  * The file must have either .KV6 or .KFA as the filename extension. If
  * you want to use weird filenames, then use getkv6/getkfa instead.
- * 
+ *
  * @param spr Pointer to sprite structure that you provide. getspr() writes:
  *            only to the kv6data/voxtype, kfatim, and flags members.
  * @param filnam filename of either a .KV6 or .KFA file.
@@ -12540,7 +12540,7 @@ static long kfatime2seq (kfatype *kfa, long tim)
  * You could animate .KFA sprites by simply modifying the .kfatim member of
  * vx5sprite structure. A better way is to use this function because it
  * will handle repeat/stop markers for you.
- * 
+ *
  * @param spr .KFA sprite to animate
  * @param timeadd number of milliseconds to add to the current animation time
  */
@@ -13050,7 +13050,7 @@ freezesprcont:;
  * memory. This function can be used to make walls fall over (with full
  * rotation). It allocates a new vx5sprite sprite structure and you are
  * responsible for freeing the memory using "free" in your own code.
- * 
+ *
  * @param spr new vx5sprite structure. Position & orientation are initialized
  *        so when you call drawsprite, it exactly matches the VXL map.
  * @param hit center of sphere
@@ -13187,9 +13187,9 @@ long meltsphere (vx5sprite *spr, lpoint3d *hit, long hitrad)
  * This function is similar to meltsphere, except you can use any user-
  * defined shape (with some size limits). The user-defined shape is
  * described by a list of vertical columns in the "vspans" format:
- * 
+ *
  * typedef struct { char z1, z0, x, y; } vspans;
- * 
+ *
  * The list MUST be ordered first in increasing Y, then in increasing X
  * or else the function will crash! Fortunately, the structure is
  * arranged in a way that the data can be sorted quite easily using a
@@ -13198,7 +13198,7 @@ long meltsphere (vx5sprite *spr, lpoint3d *hit, long hitrad)
  * correct sort. The vspans members are all treated as unsigned chars,
  * so it's usually a good idea to bias your columns by 128, and then
  * reverse-bias them in the "offs" offset.
- * 
+ *
  * @param spr new vx5sprite structure. Position & orientation are initialized
  *            so when you call drawsprite, it exactly matches the VXL map.
  * @param lst list in "vspans" format
@@ -14236,7 +14236,7 @@ long screencapture32bit (const char *fname)
  * This is an old function that is very slow, but it is pretty cool
  * being able to view a full panorama screenshot. Unfortunately, it
  * doesn't draw sprites or the sky.
- * 
+ *
  * @param pos VXL map position of camera
  * @param fname filename to write to (writes uncompressed .PNG format)
  * @param boxsiz length of side of square. I recommend using 256 or 512 for this.
