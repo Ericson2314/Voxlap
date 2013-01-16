@@ -6910,13 +6910,13 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 							}
 							break;
 						case 3: curz[besti] = curzn[besti][3]; break;
-						//default:
+						/*default:
 						    #ifdef (__GNUC__)
 						    __builtin_unreachable(); //tells GCC default can't be reached
 						    #endif
 						    #ifdef (_MSC_VER)
 						    __assume(0); //tells MSVC default can't be reached
-						    #endif
+						    #endif*/
 					}
 				}
 				tbuf[oldn+2]--;
