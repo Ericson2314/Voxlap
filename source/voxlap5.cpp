@@ -223,7 +223,7 @@ long zbufoff;
 
 	//Ken Silverman knows how to use EMMS
 #if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
-	#pragma warning(disable:4799) 
+	#pragma warning(disable:4799)
 #endif
 
 
@@ -973,7 +973,7 @@ static inline void expandbit256 (void *s, void *d)
 		".att_syntax prefix\n"
 		"andl	%c[ceil]+0x80(,%%eax,4), %%edx\n" //~(-1<<eax)
 		".intel_syntax noprefix\n"
-		
+
 	"0:\n" //in2it
 		"movzx	eax, byte ptr [esi+1]\n"
 		"sub	eax, ecx\n"                //xor mask [eax] for floor begins
@@ -989,7 +989,7 @@ static inline void expandbit256 (void *s, void *d)
 		".att_syntax prefix\n"
 		"orl	%c[floor]+0x80(,%%eax,4), %%edx\n" //(-1<<eax)
 		".intel_syntax noprefix\n"
-		
+
 		"movzx	eax, byte ptr [esi]\n"
 		"test	eax, eax\n"
 		"jnz	short 1b\n"
@@ -1003,7 +1003,7 @@ static inline void expandbit256 (void *s, void *d)
 		"jle	short 6b\n"
 	"7:\n" //xskpe
 		".att_syntax prefix\n"
-		: 
+		:
 		: "S" (s), "D" (d), [ceil] "p" (xbsceil), [floor] "p" (xbsflor)
 		: "cc", "eax", "ecx", "edx"
 	);
@@ -1183,7 +1183,7 @@ void gline (long leng, float x0, float y0, float x1, float y1)
 		skycast.dist = 0x7fffffff;
 #endif
 	}
-	
+
 	if (vx5.sideshademode)
 	{
 		gcsub[0] = gcsub[(((unsigned long)gixy[0])>>31)+4];
@@ -2030,10 +2030,10 @@ EXTERN_C void *opti4asm;
 void (*hrend)(long,long,long,long,long,long);
 void (*vrend)(long,long,long,long,long);
 
-	
+
 #if (USEZBUFFER != 1) //functions without Z Buffer
-	
-	// Portable C/C++ 
+
+	// Portable C/C++
 void hrendnoz (long sx, long sy, long p1, long plc, long incr, long j)
 {
 	sy = ylookup[sy]+frameplace; p1 = sy+(p1<<2); sy += (sx<<2);
@@ -2056,7 +2056,7 @@ void vrendnoz (long sx, long sy, long p1, long iplc, long iinc)
 
 #else //functions with Z Buffer
 
-#ifdef __NOASM__ //Portable C/C++ 
+#ifdef __NOASM__ //Portable C/C++
 
 void hrendz (long sx, long sy, long p1, long plc, long incr, long j)
 {
@@ -4099,14 +4099,14 @@ endv:
 /**
  * Set global camera position for future voxlap5 engine calls. Functions
  * that depend on this include: opticast, drawsprite, spherefill, etc...
- * 
+ *
  * The 5th & 6th parameters define the center of the screen projection. This
  * is the point on the screen that intersects the <ipos + ifor*t> vector.
- * 
+ *
  * The last parameter is the focal length - use it to control zoom. If you
  * want a 90 degree field of view (left to right side of screen), then
  * set it to half of the screen's width: (xdim*.5).
- * 
+ *
  * @param ipo camera position
  * @param ist camera's unit RIGHT vector
  * @param ihe camera's unit DOWN vector
@@ -5842,12 +5842,12 @@ long savevxl (const char *savfilnam, dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe
  * Loads a sky into memory. Sky must be PNG,JPG,TGA,GIF,BMP,PCX formatted as
  * a Mercator projection on its side. This means x-coordinate is latitude
  * and y-coordinate is longitude. Loadsky() can be called at any time.
- * 
+ *
  * If for some reason you don't want to load a textured sky, you call call
  * loadsky with these 2 built-in skies:
  * loadsky("BLACK");  //pitch black
  * loadsky("BLUE");   //a cool ramp of bright blue to blue to greenish
- * 
+ *
  * @param skyfilnam the name of the image to load
  * @return -1:bad, 0:good
  */
@@ -6833,7 +6833,7 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 								mixn[cz] = 0;
 								#else
 								#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
-								__asm__ __volatile__ 
+								__asm__ __volatile__
 								(
 									".intel_syntax noprefix\n"
 									"mov eax, cz\n"
@@ -6910,7 +6910,13 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 							}
 							break;
 						case 3: curz[besti] = curzn[besti][3]; break;
-						//default: __assume(0); //tells MSVC default can't be reached
+						/*default:
+						    #ifdef (__GNUC__)
+						    __builtin_unreachable(); //tells GCC default can't be reached
+						    #endif
+						    #ifdef (_MSC_VER)
+						    __assume(0); //tells MSVC default can't be reached
+						    #endif*/
 					}
 				}
 				tbuf[oldn+2]--;
@@ -7870,7 +7876,13 @@ static void setsectorb (point3d *p, long *point2, long n, float thick, long daco
 								  y0 = p[i].z-p2.z; y1 = p[j].z-p2.z; break;
 						case 2: x0 = p[i].x-p2.x; x1 = p[j].x-p2.x;
 								  y0 = p[i].y-p2.y; y1 = p[j].y-p2.y; break;
-						default: __assume(0); //tells MSVC default can't be reached
+						default:
+						    #ifdef (__GNUC__)
+						    __builtin_unreachable();
+						    #endif
+						    #ifdef (_MSC_VER)
+                            __assume(0); //tells MSVC default can't be reached
+                            #endif
 					}
 					if (((*(long *)&y0)^(*(long *)&y1)) < 0)
 					{
@@ -8242,7 +8254,13 @@ void setlathe (point3d *p, long numcurs, long dacol, long bakit)
 								  y0 = p[i].z-pz; y1 = p[j].z-pz; break;
 						case 2: x0 = p[i].x-px; x1 = p[j].x-px;
 								  y0 = p[i].y-py; y1 = p[j].y-py; break;
-						default: __assume(0); //tells MSVC default can't be reached
+						default:
+						    #ifdef (__GNUC__)
+						    __builtin_unreachable(); //tells GCC default can't be reached
+						    #endif
+						    #ifdef (_MSC_VER)
+						    __assume(0); //tells MSVC default can't be reached
+						    #endif
 					}
 					if (((*(long *)&y0)^(*(long *)&y1)) < 0)
 					{
@@ -8355,18 +8373,18 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 					(
 						".intel_syntax noprefix\n"
 						"movhlps xmm3, xmm7\n"       //xmm3:?,?,0,0
-						
+
 						".intel_syntax prefix\n"
 						"cvtsi2ss %%xmm7, %[z]\n"    //xmm7:0,0,0,z
 						".intel_syntax noprefix\n"
-						
+
 						"movlhps xmm0, xmm7\n"       //xmm0:0,z,y,x
-						
+
 						".intel_syntax prefix\n"
 						"mov %%eax, %[numcurs]\n"
 						"mov %%edx, %[p]\n"
 						".intel_syntax noprefix\n"
-						
+
 						"lea eax, [eax+eax*2-3]\n"
 					".Lbeg:\n"
 						"movups xmm1, [edx+eax*4]\n" //xmm1: ?,pz,py,pz
@@ -8383,11 +8401,11 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 						"addss xmm3, xmm1\n"
 						"sub eax, 3\n"
 						"jnc short .Lbeg\n"
-						
+
 						".intel_syntax prefix\n"
 						"movss [%[v]], %%xmm3\n"
 						".att_syntax prefix\n"
-						: 
+						:
 						: [z] "r" (z), [v] "r" (&v), [numcurs] "r" (numcurs), [p] "r" (p)
 						: "eax", "edx"
 					);
@@ -8828,7 +8846,13 @@ void setkvx (const char *filename, long ox, long oy, long oz, long rot, long bak
 		case 24: k[0] = 2; k[3] = 0; k[6] = 1; break;
 		case 32: k[0] = 1; k[3] = 2; k[6] = 0; break;
 		case 40: k[0] = 2; k[3] = 1; k[6] = 0; break;
-		default: __assume(0); //tells MSVC default can't be reached
+		default:
+		    #ifdef (__GNUC__)
+            __builtin_unreachable(); //tells GCC default can't be reached
+            #endif
+            #ifdef (_MSC_VER)
+            __assume(0); //tells MSVC default can't be reached
+            #endif
 	}
 	k[1] = ((rot<<31)>>31);
 	k[4] = ((rot<<30)>>31);
@@ -8979,7 +9003,7 @@ void drawpoint3d (float x0, float y0, float z0, long col)
 /**
  * Transform & Project a 3D point to a 2D screen coordinate. This could be
  * used for flat sprites (those cardboard-cutouts from old games)
- * 
+ *
  * @param x VXL location to transform & project
  * @param y VXL location to transform & project
  * @param z VXL location to transform & project
@@ -9008,7 +9032,7 @@ static int64_t rgbmask64 = 0xffffff00ffffff;
 /**
  * Draws a 32-bit color texture from memory to the screen. This is the
  * low-level function used to draw text loaded from a PNG,JPG,TGA,GIF.
- * 
+ *
  * @param tf pointer to top-left corner of SOURCE picture
  * @param tp pitch (bytes per line) of the SOURCE picture
  * @param tx dimensions of the SOURCE picture
@@ -9271,7 +9295,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 			for(x=x0,uu=x*ui+u;x<x1;x++,uu+=ui)
 			{
 				i = *(long *)(((uu>>16)<<2) + j);
-				
+
 				#ifdef __NOASM__
 				i.a = i.a*(white.a-black.a)/256 + black.a
 				i.r = i.r*(white.r-black.r)/256 + black.r
@@ -9307,7 +9331,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 				}
 				#endif
 				#endif
-				
+
 					//a = (((unsigned long)i)>>24);
 					//if (!a) continue;
 					//if (a == 255) { *(long *)((x<<2)+p) = i; continue; }
@@ -9607,7 +9631,7 @@ void drawspherefill (float ox, float oy, float oz, float bakrad, long col)
 /**
  * Draw a texture-mapped quadrilateral to the screen. Drawpicinquad projects
  * the source texture with perspective into the 4 coordinates specified.
- * 
+ *
  * @param rpic source pointer to top-left corner
  * @param rbpl source pitch (bytes per line)
  * @param rxsiz source dimensions of texture/frame
@@ -9617,7 +9641,7 @@ void drawspherefill (float ox, float oy, float oz, float bakrad, long col)
  * @param wbpl destination pitch (bytes per line)
  * @param wxsiz destination dimensions of texture/frame
  * @param wysiz destination dimensions of texture/frame
- * 
+ *
  * @param x0 the 4 points of the quadrilateral in the destination texture/frame.
  *           The points must be in loop order.
  * @param x1 the 4 points of the quadrilateral in the destination texture/frame.
@@ -9626,7 +9650,7 @@ void drawspherefill (float ox, float oy, float oz, float bakrad, long col)
  *           The points must be in loop order.
  * @param x3 the 4 points of the quadrilateral in the destination texture/frame.
  *           The points must be in loop order.
- * 
+ *
  * @param y0 the 4 points of the quadrilateral in the destination texture/frame.
  *           The points must be in loop order.
  * @param y1 the 4 points of the quadrilateral in the destination texture/frame.
@@ -10000,10 +10024,10 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 					"lea	ecx, [ecx*4]\n"
 					"sub	eax, ecx\n"
 					"add	ecx, offset dpqdistlut\n"
-                    
+
 					"test dword ptr cputype, 1 shl 25\n"
 					"jz short .Ldpqpre3dn\n"
-                    
+
 					"movss	xmm0, t\n" //dd+ddi*3 dd+ddi*2 dd+ddi*1 dd+ddi*0
 					"shufps	xmm0, xmm0, 0\n"
 					"addps	xmm0, xmm6\n"
@@ -10206,7 +10230,13 @@ char *parspr (vx5sprite *spr, char **userst)
 			case  9: spr->f.x = f; break;
 			case 10: spr->f.y = f; break;
 			case 11: spr->f.z = f; break;
-			default: __assume(0); //tells MSVC default can't be reached
+			default:
+			    #ifdef (__GNUC__)
+                __builtin_unreachable(); //tells GCC default can't be reached
+                #endif
+                #ifdef (_MSC_VER)
+                __assume(0); //tells MSVC default can't be reached
+                #endif
 		}
 	}
 	while (((sxlbuf[j]==13) || (sxlbuf[j]==10)) && (j < sxlparslen)) j++;
@@ -11277,8 +11307,8 @@ static inline void movps_3dn (point4d *dest, point4d *src)
 	);
 	#endif
 	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-	
-	_asm	
+
+	_asm
 	{
 		mov	eax, src
 		movq	mm0, [eax]
@@ -11310,7 +11340,7 @@ static inline void intss_3dn (point4d *dest, long src)
 	);
 	#endif
 	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-	
+
 	_asm
 	{
 		mov	eax, dest
@@ -11430,7 +11460,7 @@ static inline void subps_3dn (point4d *sum, point4d *a, point4d *b)
 		".att_syntax prefix\n"
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY	
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		mov	eax, a
@@ -11967,7 +11997,13 @@ static void floodsucksprite (vx5sprite *spr, kv6data *kv, long ox, long oy,
 				case 1: x = ox+1; y = oy; break;
 				case 2: x = ox; y = oy-1; break;
 				case 3: x = ox; y = oy+1; break;
-				default: __assume(0); //tells MSVC default can't be reached
+				default:
+				    #ifdef (__GNUC__)
+                    __builtin_unreachable(); //tells GCC default can't be reached
+                    #endif
+                    #ifdef (_MSC_VER)
+                    __assume(0); //tells MSVC default can't be reached
+                    #endif
 			}
 			if ((unsigned long)x >= kv->xsiz) continue;
 			if ((unsigned long)y >= kv->ysiz) continue;
@@ -12512,7 +12548,13 @@ static void setlimb (kfatype *kfa, long i, long p, long trans_type, short val)
 			qh.y = ph.y*r[0] - pf.y*r[1]; qf.y = ph.y*r[1] + pf.y*r[0];
 			qh.z = ph.z*r[0] - pf.z*r[1]; qf.z = ph.z*r[1] + pf.z*r[0];
 			break;
-		default: __assume(0); //tells MSVC default can't be reached
+		default:
+		    #ifdef (__GNUC__)
+            __builtin_unreachable(); //tells GCC default can't be reached
+            #endif
+            #ifdef (_MSC_VER)
+            __assume(0); //tells MSVC default can't be reached
+            #endif
 	}
 
 		//Generate orthonormal matrix in world space for parent limb
@@ -13689,7 +13731,13 @@ long isnewfloating (flstboxtype *flb)
 				case 5: nx = p.x+1; ny = p.y-1; break;
 				case 6: nx = p.x-1; ny = p.y+1; break;
 				case 7: nx = p.x+1; ny = p.y+1; break;
-				default: __assume(0); //tells MSVC default can't be reached
+				default:
+				    #ifdef (__GNUC__)
+                    __builtin_unreachable(); //tells GCC default can't be reached
+                    #endif
+                    #ifdef (_MSC_VER)
+                    __assume(0); //tells MSVC default can't be reached
+                    #endif
 			}
 			if ((unsigned long)(nx|ny) >= VSID) continue;
 
@@ -14236,7 +14284,7 @@ long screencapture32bit (const char *fname)
  * This is an old function that is very slow, but it is pretty cool
  * being able to view a full panorama screenshot. Unfortunately, it
  * doesn't draw sprites or the sky.
- * 
+ *
  * @param pos VXL map position of camera
  * @param fname filename to write to (writes uncompressed .PNG format)
  * @param boxsiz length of side of square. I recommend using 256 or 512 for this.
@@ -14377,7 +14425,13 @@ void uninitvoxlap ()
 					}
 					free((void *)kfp);
 					break;
-				default: __assume(0); //tells MSVC default can't be reached
+				default:
+				    #ifdef (__GNUC__)
+                    __builtin_unreachable(); //tells GCC default can't be reached
+                    #endif
+                    #ifdef (_MSC_VER)
+                    __assume(0); //tells MSVC default can't be reached
+                    #endif
 			}
 		}
 		free(khashbuf); khashbuf = 0; khashpos = khashsiz = 0;
