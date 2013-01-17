@@ -85,7 +85,7 @@ long cputype = 0; //I think this will work just fine.
 
 static inline long testflag (long c)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	long a;
 	__asm__ __volatile__ (
 		"pushf\n\tpopl %%eax\n\tmovl %%eax, %%ebx\n\txorl %%ecx, %%eax\n\tpushl %%eax\n\t"
@@ -94,7 +94,7 @@ static inline long testflag (long c)
 		: "=a" (a) : "c" (c) : "ebx","cc" );
 	return a;
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov ecx, c
@@ -117,13 +117,13 @@ static inline long testflag (long c)
 
 static inline void cpuid (long a, long *s)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__ (
 		"cpuid\n\tmovl %%eax, (%%esi)\n\tmovl %%ebx, 4(%%esi)\n\t"
 		"movl %%ecx, 8(%%esi)\n\tmovl %%edx, 12(%%esi)"
 		: "+a" (a) : "S" (s) : "ebx","ecx","edx","memory","cc");
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		push ebx
@@ -167,12 +167,12 @@ static long getcputype ()
 
 static MUST_INLINE uint64_t rdtsc64(void)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	uint64_t q;
 	__asm__ __volatile__ ("rdtsc" : "=A" (q) : : "cc");
 	return q;
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm rdtsc
 	#endif
 }
@@ -930,7 +930,7 @@ static void audclipcopy (long *lptr, short *dptr, long nsamp)
 			jnz short begc0
 		}
 #else
-		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__ (
 			"testl $4, %%edx\n\t"
 			"leal (%%edx,%%ecx,4), %%edx\n\t"
@@ -959,7 +959,7 @@ static void audclipcopy (long *lptr, short *dptr, long nsamp)
 			: "+a" (lptr), "+d" (dptr), "+c" (nsamp) : : "memory","cc"
 		);
 		#endif
-		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+		#ifdef _MSC_VER //msvc inline asm
 		_asm //Same as above, but does 8-byte aligned writes instead of 4
 		{
 			mov eax, lptr
@@ -1800,7 +1800,7 @@ void arg2filename (const char *oarg, const char *ext, char *narg)
 static long fpuasm[2];
 static inline void fpuinit (long a)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		"fninit\n"
@@ -1813,7 +1813,7 @@ static inline void fpuinit (long a)
 		: "cc"
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a

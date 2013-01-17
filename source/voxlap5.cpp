@@ -47,7 +47,7 @@
 #include "kplib.h"
 
 #define USEZBUFFER 1                 //Should a Z-Buffer be Used?
-//#define __NOASM__                  //Instructs compiler to use C(++) alternatives
+//#define NOASM                  //Instructs compiler to use C(++) alternatives
 #define PREC (256*4096)
 #define CMPPREC (256*4096)
 #define FPREC (256*4096)
@@ -222,7 +222,7 @@ long zbufoff;
 
 
 	//Ken Silverman knows how to use EMMS
-#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+#if defined(_MSC_VER) && !defined(NOASM)
 	#pragma warning(disable:4799)
 #endif
 
@@ -893,7 +893,7 @@ long compilestack (long *uind, long *n0, long *n1, long *n2, long *n3, char *cbu
 
 static inline void expandbit256 (void *s, void *d)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	int32_t eax;
 	int32_t ecx = 32; //current bit index
 	uint32_t edx = 0; //value of current 32-bit bits
@@ -950,7 +950,7 @@ static inline void expandbit256 (void *s, void *d)
 		while ((ecx += 32) <= 0);
 	}
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -1008,7 +1008,7 @@ static inline void expandbit256 (void *s, void *d)
 		: "cc", "eax", "ecx", "edx"
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		push	esi
@@ -1643,7 +1643,7 @@ void estnorm (long x, long y, long z, point3d *fp)
 	zz = n.x*n.x + n.y*n.y + n.z*n.z;
 	if (cputype&(1<<25))
 	{
-		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 		(
 			"cvtsi2ss	zz,%xmm0\n\t"
@@ -1662,7 +1662,7 @@ void estnorm (long x, long y, long z, point3d *fp)
 			"movss	%xmm0,8(%eax)\n\t"
 		);
 		#endif
-		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+		#ifdef _MSC_VER //msvc inline asm
 		_asm
 		{
 			cvtsi2ss	xmm0, zz
@@ -1684,9 +1684,9 @@ void estnorm (long x, long y, long z, point3d *fp)
 	}
 	else
 	{
-		#ifdef __NOASM__
+		#ifdef NOASM
 		#endif
-		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 		(
 			"pi2fd	zz,%mm0\n\t"       //mm0:     0          zz
@@ -1703,7 +1703,7 @@ void estnorm (long x, long y, long z, point3d *fp)
 			"femms\n\t"
 		);
 		#endif
-		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+		#ifdef _MSC_VER //msvc inline asm
 		_asm
 		{
 			pi2fd	mm0, zz      //mm0:      0          zz
@@ -2056,7 +2056,7 @@ void vrendnoz (long sx, long sy, long p1, long iplc, long iinc)
 
 #else //functions with Z Buffer
 
-#ifdef __NOASM__ //Portable C/C++
+#ifdef NOASM //Portable C/C++
 
 void hrendz (long sx, long sy, long p1, long plc, long incr, long j)
 {
@@ -2137,7 +2137,7 @@ void vrendzfog (long sx, long sy, long p1, long iplc, long iinc)
 // SSE Assembly
 void hrendzsse (long sx, long sy, long p1, long plc, long incr, long j)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -2307,7 +2307,7 @@ void hrendzsse (long sx, long sy, long p1, long plc, long incr, long j)
 		".att_syntax prefix\n"
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		push	esi
@@ -2480,7 +2480,7 @@ void hrendzsse (long sx, long sy, long p1, long plc, long incr, long j)
 void hrendzfogsse (long sx, long sy, long p1, long plc, long incr, long j)
 {
 	static int64_t mm7bak;
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -2725,7 +2725,7 @@ void hrendzfogsse (long sx, long sy, long p1, long plc, long incr, long j)
 		".att_syntax prefix\n"
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		push	esi
@@ -2971,7 +2971,7 @@ void hrendzfogsse (long sx, long sy, long p1, long plc, long incr, long j)
 
 void vrendzsse (long sx, long sy, long p1, long iplc, long iinc)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -3200,7 +3200,7 @@ void vrendzsse (long sx, long sy, long p1, long iplc, long iinc)
 		".att_syntax prefix\n"
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		push	ebx
@@ -3431,14 +3431,14 @@ beg1va:
 
 void vrendzfogsse (long sx, long sy, long p1, long iplc, long iinc)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
 		".att_syntax prefix\n"
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		push	ebx
@@ -3779,14 +3779,14 @@ endv:
 // 3DNow! Assembly
 void hrendz3dn (long sx, long sy, long p1, long plc, long incr, long j)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
 		".att_syntax prefix\n"
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		push	esi
@@ -3846,14 +3846,14 @@ beg:
 
 void hrendzfog3dn (long sx, long sy, long p1, long plc, long incr, long j)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
 		".att_syntax prefix\n"
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		push	esi
@@ -3927,14 +3927,14 @@ beg:
 
 void vrendz3dn (long sx, long sy, long p1, long iplc, long iinc)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
 		".att_syntax prefix\n"
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		push	ebx
@@ -4004,14 +4004,14 @@ endv:
 
 void vrendzfog3dn (long sx, long sy, long p1, long iplc, long iinc)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
 		".att_syntax prefix\n"
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		push	ebx
@@ -4190,7 +4190,7 @@ void opticast ()
 #else
 	if (ofogdist < 0)
 	{
-		#ifdef __NOASM__
+		#ifdef NOASM
 		hrend = hrendz; vrend = vrendz;
 		#else
 		if (cputype&(1<<25)) { hrend = hrendzsse; vrend = vrendzsse; }
@@ -4199,7 +4199,7 @@ void opticast ()
 	}
 	else
 	{
-		#ifdef __NOASM__
+		#ifdef NOASM
 		hrend = hrendzfog; vrend = vrendzfog;
 		#else
 		if (cputype&(1<<25)) { hrend = hrendzfogsse; vrend = vrendzfogsse; }
@@ -6753,11 +6753,11 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 							while ((((long)tbuf[oldn+2])<<1) < z)
 							{
 								zz = (long)tbuf[oldn+2];
-								#ifdef __NOASM__
+								#ifdef NOASM
 								*(long *)&tbuf[n] = mixc[zz][rand()%mixn[zz]];
 								mixn[zz] = 0;
 								#else
-								#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+								#ifdef __GNUC__ //gcc inline asm
 								__asm__ __volatile__
 								(
 									".intel_syntax noprefix\n"
@@ -6784,7 +6784,7 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 									".att_syntax prefix\n"
 								);
 								#endif
-								#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+								#ifdef _MSC_VER //msvc inline asm
 								_asm
 								{
 									mov eax, zz
@@ -6828,11 +6828,11 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 							}
 							while ((cz<<1) < z)
 							{
-								#ifdef __NOASM__
+								#ifdef NOASM
 								*(long *)&tbuf[n] = mixc[cz][rand()%mixn[cz]];
 								mixn[cz] = 0;
 								#else
-								#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+								#ifdef __GNUC__ //gcc inline asm
 								__asm__ __volatile__
 								(
 									".intel_syntax noprefix\n"
@@ -6859,7 +6859,7 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 									".att_syntax prefix\n"
 								);
 								#endif
-								#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+								#ifdef _MSC_VER //msvc inline asm
 								_asm
 								{
 									mov eax, cz
@@ -8294,7 +8294,7 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 
 	if (cputype&(1<<25))
 	{
-		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 		(
 			"mov	$256,%eax\n\t"
@@ -8303,7 +8303,7 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 			"movlhps	%xmm6,%xmm6\n\t"  //xmm6: ?,256,?,256
 		);
 		#endif
-		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+		#ifdef _MSC_VER //msvc inline asm
 		_asm
 		{
 			mov eax, 256
@@ -8320,7 +8320,7 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 		{
 			if (cputype&(1<<25))
 			{
-				#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+				#ifdef __GNUC__ //gcc inline asm
 				__asm__ __volatile__
 				(
 					".intel_syntax noprefix\n"
@@ -8334,7 +8334,7 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 					:
 				);
 				#endif
-				#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+				#ifdef _MSC_VER //msvc inline asm
 				_asm
 				{
 					cvtsi2ss	xmm0, x      //xmm0:?,?,?,x
@@ -8350,7 +8350,7 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 			{
 				if (cputype&(1<<25))
 				{
-					#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+					#ifdef __GNUC__ //gcc inline asm
 					__asm__ __volatile__
 					(
 						".intel_syntax noprefix\n"
@@ -8392,7 +8392,7 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 						: "eax", "edx"
 					);
 					#endif
-					#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+					#ifdef _MSC_VER //msvc inline asm
 					_asm
 					{
 						movhlps xmm3, xmm7       //xmm3:?,?,0,0
@@ -9041,7 +9041,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 	vi = shldiv16(65536,yz); v = mulshr16(-sy0,vi);
 	if (!((black^white)&0xff000000)) //Ignore alpha
 	{
-		#ifdef __NOASM__
+		#ifdef NOASM
 		for(y=y0,vv=y*vi+v;y<y1;y++,vv+=vi)
 		{
 			p = ylookup[y] + frameplace; j = (vv>>16)*tp + tf;
@@ -9056,7 +9056,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 			{
 				p = ylookup[y] + frameplace;
 				plc = (((x0*ui+u)>>16)<<2) + (vv>>16)*tp + tf;
-				#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+				#ifdef __GNUC__ //gcc inline asm
 				__asm__ __volatile__
 				(
 					".intel_syntax noprefix\n"
@@ -9085,7 +9085,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					".att_syntax prefix\n"
 				);
 				#endif
-				#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+				#ifdef _MSC_VER //msvc inline asm
 				_asm
 				{
 					push ebx
@@ -9121,7 +9121,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 			for(y=y0,vv=y*vi+v;y<y1;y++,vv+=vi)
 			{
 				p = ylookup[y] + frameplace; j = (vv>>16)*tp + tf;
-				#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+				#ifdef __GNUC__ //gcc inline asm
 				__asm__ __volatile__
 				(
 					".intel_syntax noprefix\n"
@@ -9170,7 +9170,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					".att_syntax prefix\n"
 				);
 				#endif
-				#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+				#ifdef _MSC_VER //msvc inline asm
 				_asm
 				{
 					push ebx
@@ -9225,7 +9225,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 	else //Use alpha for masking
 	{
 		//Init for black/white code
-		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 		(
 			".intel_syntax noprefix\n"
@@ -9246,7 +9246,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 			".att_syntax prefix\n"
 		);
 		#endif
-		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+		#ifdef _MSC_VER //msvc inline asm
 		_asm
 		{
 			pxor mm7, mm7
@@ -9272,13 +9272,13 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 			{
 				i = *(long *)(((uu>>16)<<2) + j);
 
-				#ifdef __NOASM__
+				#ifdef NOASM
 				i.a = i.a*(white.a-black.a)/256 + black.a
 				i.r = i.r*(white.r-black.r)/256 + black.r
 				i.g = i.g*(white.g-black.g)/256 + black.g
 				i.b = i.b*(white.b-black.b)/256 + black.b
 				#else
-				#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+				#ifdef __GNUC__ //gcc inline asm
 				__asm__ __volatile__
 				(
 					".intel_syntax noprefix\n"
@@ -9293,7 +9293,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					".att_syntax prefix\n"
 				);
 				#endif
-				#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+				#ifdef _MSC_VER //msvc inline asm
 				_asm
 				{
 					movd mm0, i           //mm1: [00000000AaRrGgBb]
@@ -9316,7 +9316,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					if (i < 0) *(long *)((x<<2)+p) = i;
 					continue;
 				}
-				#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+				#ifdef __GNUC__ //gcc inline asm
 				__asm__ __volatile__
 				(
 					".intel_syntax noprefix\n"
@@ -9340,7 +9340,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					".att_syntax prefix\n"
 				);
 				#endif
-				#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+				#ifdef _MSC_VER //msvc inline asm
 				_asm
 				{
 					mov eax, x            //mm0 = (mm1-mm0)*a + mm0
@@ -9896,7 +9896,7 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 	scaler = 1.f/scaler; t = dx*scaler;
 	if (cputype&(1<<25))
 	{
-		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__ //SSE
 		(
 			".intel_syntax noprefix\n"
@@ -9908,7 +9908,7 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 			".att_syntax prefix\n"
 		);
 		#endif
-		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+		#ifdef _MSC_VER //msvc inline asm
 		_asm //SSE
 		{
 			movss xmm6, t         //xmm6: -,-,-,dx*scaler
@@ -9990,7 +9990,7 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 				iu = iv*rbpl + (iu<<2);
 
 				t *= scaler;
-				#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+				#ifdef __GNUC__ //gcc inline asm
 				__asm__ __volatile__
 				(
 					".intel_syntax noprefix\n"
@@ -10034,7 +10034,7 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 					".att_syntax prefix\n"
 				);
 				#endif
-				#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+				#ifdef _MSC_VER //msvc inline asm
 				_asm
 				{
 					mov	ecx, sxe
@@ -10710,13 +10710,13 @@ static void updatereflects (vx5sprite *spr)
 		if (i > 2047) i = 2047;
 		fogmul = foglut[i];
 
-	#ifdef __NOASM__
+	#ifdef NOASM
 		i = (long)(*(short *)&fogmul);
 		((short *)kv6coladd)[0] = (short)((((long)(((short *)&fogcol)[0]))*i)>>1);
 		((short *)kv6coladd)[1] = (short)((((long)(((short *)&fogcol)[1]))*i)>>1);
 		((short *)kv6coladd)[2] = (short)((((long)(((short *)&fogcol)[2]))*i)>>1);
 	#else
-		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 		(
 			".intel_syntax noprefix\n"
@@ -10728,7 +10728,7 @@ static void updatereflects (vx5sprite *spr)
 			".att_syntax prefix\n"
 		);
 		#endif
-		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+		#ifdef _MSC_VER //msvc inline asm
 		_asm
 		{
 			movq	mm0, fogcol
@@ -10768,7 +10768,7 @@ static void updatereflects (vx5sprite *spr)
 		tp.z = spr->f.x*fx + spr->f.y*fy + spr->f.z*fz;
 
 		f = 64.0 / sqrt(tp.x*tp.x + tp.y*tp.y + tp.z*tp.z);
-		#ifdef __NOASM__
+		#ifdef NOASM
 		for(i=255;i>=0;i--)
 		{
 		   ftol(univec[i].x*tp.x + univec[i].y*tp.y + univec[i].z*tp.z,&j);
@@ -10788,7 +10788,7 @@ static void updatereflects (vx5sprite *spr)
 			lightlist[0][1] = (short)(tp.y*f);
 			lightlist[0][2] = (short)(tp.z*f);
 			lightlist[0][3] = (short)(g*128.f);
-			#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+			#ifdef __GNUC__ //gcc inline asm
 			__asm__ __volatile__
 			(
 				".intel_syntax noprefix\n"
@@ -10812,7 +10812,7 @@ static void updatereflects (vx5sprite *spr)
 				".att_syntax prefix\n"
 			);
 			#endif
-			#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+			#ifdef _MSC_VER //msvc inline asm
 			_asm
 			{
 				movq	mm6, lightlist[0]
@@ -10842,7 +10842,7 @@ static void updatereflects (vx5sprite *spr)
 			lightlist[0][1] = (short)(tp.y*f);
 			lightlist[0][2] = (short)(tp.z*f);
 			lightlist[0][3] = (short)(g*128.f);
-			#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+			#ifdef __GNUC__ //gcc inline asm
 			__asm__ __volatile__
 			(
 				".intel_syntax noprefix\n"
@@ -10869,7 +10869,7 @@ static void updatereflects (vx5sprite *spr)
 				".att_syntax prefix\n"
 			);
 			#endif
-			#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+			#ifdef _MSC_VER //msvc inline asm
 			_asm
 			{
 				punpcklbw	mm5, vx5.kv6col
@@ -10939,7 +10939,7 @@ static void updatereflects (vx5sprite *spr)
 		}
 
 		fx = 0.0; fy = 0.5; fz = 1.0;
-		#ifdef __NOASM__
+		#ifdef NOASM
 		tp.x = (sprs.x*fx + sprs.y*fy + sprs.z*fz)*16.0;
 		tp.y = (sprh.x*fx + sprh.y*fy + sprh.z*fz)*16.0;
 		tp.z = (sprf.x*fx + sprf.y*fy + sprf.z*fz)*16.0;
@@ -10963,7 +10963,7 @@ static void updatereflects (vx5sprite *spr)
 		lightlist[lightcnt][1] = (short)((sprh.x*fx + sprh.y*fy + sprh.z*fz)*hh);
 		lightlist[lightcnt][2] = (short)((sprf.x*fx + sprf.y*fy + sprf.z*fz)*hh);
 		lightlist[lightcnt][3] = (short)(hh*(48/16.0));
-		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 		(
 			".intel_syntax noprefix\n"
@@ -10999,7 +10999,7 @@ static void updatereflects (vx5sprite *spr)
 			".att_syntax prefix\n"
 		);
 		#endif
-		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+		#ifdef _MSC_VER //msvc inline asm
 		_asm
 		{
 			punpcklbw	mm5, vx5.kv6col
@@ -11040,10 +11040,10 @@ static void updatereflects (vx5sprite *spr)
 
 static inline void movps (point4d *dest, point4d *src)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	*dest = *src;
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		""
@@ -11052,7 +11052,7 @@ static inline void movps (point4d *dest, point4d *src)
 		:
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, src
@@ -11066,10 +11066,10 @@ static inline void movps (point4d *dest, point4d *src)
 
 static inline void intss (point4d *dest, long src)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	dest->x = dest->y = dest->z = dest->z2 = (float)src;
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -11081,7 +11081,7 @@ static inline void intss (point4d *dest, long src)
 		:
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, dest
@@ -11095,13 +11095,13 @@ static inline void intss (point4d *dest, long src)
 
 static inline void addps (point4d *sum, point4d *a, point4d *b)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	sum->x  =  a->x  +  b->x;
 	sum->y  =  a->y  +  b->y;
 	sum->z  =  a->z  +  b->z;
 	sum->z2 =  a->z2 +  b->z2;
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -11112,7 +11112,7 @@ static inline void addps (point4d *sum, point4d *a, point4d *b)
 		:
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -11128,13 +11128,13 @@ static inline void addps (point4d *sum, point4d *a, point4d *b)
 
 static inline void mulps (point4d *sum, point4d *a, point4d *b)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	sum->x  =  a->x  *  b->x;
 	sum->y  =  a->y  *  b->y;
 	sum->z  =  a->z  *  b->z;
 	sum->z2 =  a->z2 *  b->z2;
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -11145,7 +11145,7 @@ static inline void mulps (point4d *sum, point4d *a, point4d *b)
 		:
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -11161,13 +11161,13 @@ static inline void mulps (point4d *sum, point4d *a, point4d *b)
 
 static inline void subps (point4d *sum, point4d *a, point4d *b)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	sum->x  =  a->x  -  b->x;
 	sum->y  =  a->y  -  b->y;
 	sum->z  =  a->z  -  b->z;
 	sum->z2 =  a->z2 -  b->z2;
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -11178,7 +11178,7 @@ static inline void subps (point4d *sum, point4d *a, point4d *b)
 		:
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -11194,13 +11194,13 @@ static inline void subps (point4d *sum, point4d *a, point4d *b)
 
 static inline void minps (point4d *sum, point4d *a, point4d *b)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	sum->x  =  MIN(a->x,  b->x);
 	sum->y  =  MIN(a->y,  b->y);
 	sum->z  =  MIN(a->z,  b->z);
 	sum->z2 =  MIN(a->z2, b->z2);
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -11211,7 +11211,7 @@ static inline void minps (point4d *sum, point4d *a, point4d *b)
 		:
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -11227,13 +11227,13 @@ static inline void minps (point4d *sum, point4d *a, point4d *b)
 
 static inline void maxps (point4d *sum, point4d *a, point4d *b)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	sum->x  =  MAX(a->x,  b->x);
 	sum->y  =  MAX(a->y,  b->y);
 	sum->z  =  MAX(a->z,  b->z);
 	sum->z2 =  MAX(a->z2, b->z2);
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -11244,7 +11244,7 @@ static inline void maxps (point4d *sum, point4d *a, point4d *b)
 		:
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -11260,10 +11260,10 @@ static inline void maxps (point4d *sum, point4d *a, point4d *b)
 
 static inline void movps_3dn (point4d *dest, point4d *src)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	*dest = *src;
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -11276,7 +11276,7 @@ static inline void movps_3dn (point4d *dest, point4d *src)
 		".att_syntax prefix\n"
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 
 	_asm
 	{
@@ -11293,10 +11293,10 @@ static inline void movps_3dn (point4d *dest, point4d *src)
 
 static inline void intss_3dn (point4d *dest, long src)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	dest->x = dest->y = dest->z = dest->z2 = (float)src;
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -11309,7 +11309,7 @@ static inline void intss_3dn (point4d *dest, long src)
 		".att_syntax prefix\n"
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 
 	_asm
 	{
@@ -11326,13 +11326,13 @@ static inline void intss_3dn (point4d *dest, long src)
 
 static inline void addps_3dn (point4d *sum, point4d *a, point4d *b)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	sum->x  =  a->x  +  b->x;
 	sum->y  =  a->y  +  b->y;
 	sum->z  =  a->z  +  b->z;
 	sum->z2 =  a->z2 +  b->z2;
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -11348,7 +11348,7 @@ static inline void addps_3dn (point4d *sum, point4d *a, point4d *b)
 		".att_syntax prefix\n"
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -11367,13 +11367,13 @@ static inline void addps_3dn (point4d *sum, point4d *a, point4d *b)
 
 static inline void mulps_3dn (point4d *sum, point4d *a, point4d *b)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	sum->x  =  a->x  *  b->x;
 	sum->y  =  a->y  *  b->y;
 	sum->z  =  a->z  *  b->z;
 	sum->z2 =  a->z2 *  b->z2;
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -11389,7 +11389,7 @@ static inline void mulps_3dn (point4d *sum, point4d *a, point4d *b)
 		".att_syntax prefix\n"
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -11408,13 +11408,13 @@ static inline void mulps_3dn (point4d *sum, point4d *a, point4d *b)
 
 static inline void subps_3dn (point4d *sum, point4d *a, point4d *b)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	sum->x  =  a->x  -  b->x;
 	sum->y  =  a->y  -  b->y;
 	sum->z  =  a->z  -  b->z;
 	sum->z2 =  a->z2 -  b->z2;
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -11430,7 +11430,7 @@ static inline void subps_3dn (point4d *sum, point4d *a, point4d *b)
 		".att_syntax prefix\n"
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -11449,13 +11449,13 @@ static inline void subps_3dn (point4d *sum, point4d *a, point4d *b)
 
 static inline void minps_3dn (point4d *sum, point4d *a, point4d *b)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	sum->x  =  MIN(a->x,  b->x);
 	sum->y  =  MIN(a->y,  b->y);
 	sum->z  =  MIN(a->z,  b->z);
 	sum->z2 =  MIN(a->z2, b->z2);
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -11471,7 +11471,7 @@ static inline void minps_3dn (point4d *sum, point4d *a, point4d *b)
 		".att_syntax prefix\n"
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -11490,13 +11490,13 @@ static inline void minps_3dn (point4d *sum, point4d *a, point4d *b)
 
 static inline void maxps_3dn (point4d *sum, point4d *a, point4d *b)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	sum->x  =  MAX(a->x,  b->x);
 	sum->y  =  MAX(a->y,  b->y);
 	sum->z  =  MAX(a->z,  b->z);
 	sum->z2 =  MAX(a->z2, b->z2);
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -11512,7 +11512,7 @@ static inline void maxps_3dn (point4d *sum, point4d *a, point4d *b)
 		".att_syntax prefix\n"
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -11698,7 +11698,7 @@ static void kv6draw (vx5sprite *spr)
 
 		subps(r1,r1,&cadd4[4]); //ANNOYING HACK!!!
 
-		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 		(
 			".intel_syntax noprefix\n"
@@ -11707,7 +11707,7 @@ static void kv6draw (vx5sprite *spr)
 			".att_syntax prefix\n"
 		);
 		#endif
-		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+		#ifdef _MSC_VER //msvc inline asm
 		_asm
 		{
 			movq	mm6, qsum0
@@ -11809,7 +11809,7 @@ static void kv6draw (vx5sprite *spr)
 
 		subps_3dn(r1,r1,&cadd4[4]); //ANNOYING HACK!!!
 
-		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 		(
 			".intel_syntax noprefix\n"
@@ -11818,7 +11818,7 @@ static void kv6draw (vx5sprite *spr)
 			".att_syntax prefix\n"
 		);
 		#endif
-		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+		#ifdef _MSC_VER //msvc inline asm
 		_asm
 		{
 			movq	mm6, qsum0
@@ -12275,7 +12275,7 @@ void mat2 (point3d *a_s, point3d *a_h, point3d *a_f, point3d *a_o,
 {
 	if (cputype&(1<<25))
 	{
-		#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 		(
 			".intel_syntax noprefix\n"
@@ -12375,7 +12375,7 @@ void mat2 (point3d *a_s, point3d *a_h, point3d *a_f, point3d *a_o,
 			".att_syntax prefix\n"
 		);
 		#endif
-		#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+		#ifdef _MSC_VER //msvc inline asm
 		_asm
 		{
 			mov	eax, b_s
@@ -13485,12 +13485,12 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 									h = tp.x*fx+tp.y*fy+tp.z*fz; if (*(long *)&h >= 0) continue;
 									g = fx*fx+fy*fy+fz*fz; if (g >= vx5.lightsrc[j].r2) continue;
 
-									#ifdef __NOASM__
+									#ifdef NOASM
 									g = 1.0/(g*sqrt(g))-lightsub[i]; //1.0/g;
 									#else
 									if (cputype&(1<<25))
 									{
-										#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+										#ifdef __GNUC__ //gcc inline asm
 										__asm__ __volatile__
 										(
 											".intel_syntax noprefix\n"
@@ -13504,7 +13504,7 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 											".att_syntax prefix\n"
 										);
 										#endif
-										#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+										#ifdef _MSC_VER //msvc inline asm
 										_asm
 										{
 											movss	xmm0, g        //xmm0=g
@@ -13519,7 +13519,7 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 									}
 									else
 									{
-										#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+										#ifdef __GNUC__ //gcc inline asm
 										__asm__ __volatile__
 										(
 											".intel_syntax noprefix\n"
@@ -13534,7 +13534,7 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 											".att_syntax prefix\n"
 										);
 										#endif
-										#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+										#ifdef _MSC_VER //msvc inline asm
 										_asm
 										{
 											movd mm0, g
@@ -14084,7 +14084,7 @@ void voxsetframebuffer (long p, long b, long x, long y)
 			while (i < 2048) foglut[i++] = all32767;
 #else
 			i = 0x7fffffff/vx5.maxscandist;
-			#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+			#ifdef __GNUC__ //gcc inline asm
 			__asm__ __volatile__
 			(
 				".intel_syntax noprefix\n"
@@ -14113,7 +14113,7 @@ void voxsetframebuffer (long p, long b, long x, long y)
 				: "eax", "ecx", "mm0"
 			);
 			#endif
-			#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+			#ifdef _MSC_VER //msvc inline asm
 			_asm
 			{
 				xor	eax, eax
@@ -14307,7 +14307,7 @@ long surroundcapture32bit (dpoint3d *pos, const char *fname, long boxsiz)
 static inline void fixsse ()
 {
 	static long asm32;
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -14317,7 +14317,7 @@ static inline void fixsse ()
 		".att_syntax prefix\n"
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		stmxcsr	[asm32]   //Default is:0x1f80
