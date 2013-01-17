@@ -6910,7 +6910,7 @@ void genmipvxl (long x0, long y0, long x1, long y1)
 							}
 							break;
 						case 3: curz[besti] = curzn[besti][3]; break;
-						//default: __assume(0); //tells MSVC default can't be reached
+						//default: _gtfo(); //tells MSVC default can't be reached
 					}
 				}
 				tbuf[oldn+2]--;
@@ -7870,7 +7870,7 @@ static void setsectorb (point3d *p, long *point2, long n, float thick, long daco
 								  y0 = p[i].z-p2.z; y1 = p[j].z-p2.z; break;
 						case 2: x0 = p[i].x-p2.x; x1 = p[j].x-p2.x;
 								  y0 = p[i].y-p2.y; y1 = p[j].y-p2.y; break;
-						default: __assume(0); //tells MSVC default can't be reached
+						default: _gtfo(); //tells MSVC default can't be reached
 					}
 					if (((*(long *)&y0)^(*(long *)&y1)) < 0)
 					{
@@ -8242,7 +8242,7 @@ void setlathe (point3d *p, long numcurs, long dacol, long bakit)
 								  y0 = p[i].z-pz; y1 = p[j].z-pz; break;
 						case 2: x0 = p[i].x-px; x1 = p[j].x-px;
 								  y0 = p[i].y-py; y1 = p[j].y-py; break;
-						default: __assume(0); //tells MSVC default can't be reached
+						default: _gtfo(); //tells MSVC default can't be reached
 					}
 					if (((*(long *)&y0)^(*(long *)&y1)) < 0)
 					{
@@ -8828,7 +8828,7 @@ void setkvx (const char *filename, long ox, long oy, long oz, long rot, long bak
 		case 24: k[0] = 2; k[3] = 0; k[6] = 1; break;
 		case 32: k[0] = 1; k[3] = 2; k[6] = 0; break;
 		case 40: k[0] = 2; k[3] = 1; k[6] = 0; break;
-		default: __assume(0); //tells MSVC default can't be reached
+		default: _gtfo(); //tells MSVC default can't be reached
 	}
 	k[1] = ((rot<<31)>>31);
 	k[4] = ((rot<<30)>>31);
@@ -10206,7 +10206,7 @@ char *parspr (vx5sprite *spr, char **userst)
 			case  9: spr->f.x = f; break;
 			case 10: spr->f.y = f; break;
 			case 11: spr->f.z = f; break;
-			default: __assume(0); //tells MSVC default can't be reached
+			default: _gtfo(); //tells MSVC default can't be reached
 		}
 	}
 	while (((sxlbuf[j]==13) || (sxlbuf[j]==10)) && (j < sxlparslen)) j++;
@@ -11967,7 +11967,7 @@ static void floodsucksprite (vx5sprite *spr, kv6data *kv, long ox, long oy,
 				case 1: x = ox+1; y = oy; break;
 				case 2: x = ox; y = oy-1; break;
 				case 3: x = ox; y = oy+1; break;
-				default: __assume(0); //tells MSVC default can't be reached
+				default: _gtfo(); //tells MSVC default can't be reached
 			}
 			if ((unsigned long)x >= kv->xsiz) continue;
 			if ((unsigned long)y >= kv->ysiz) continue;
@@ -12512,7 +12512,7 @@ static void setlimb (kfatype *kfa, long i, long p, long trans_type, short val)
 			qh.y = ph.y*r[0] - pf.y*r[1]; qf.y = ph.y*r[1] + pf.y*r[0];
 			qh.z = ph.z*r[0] - pf.z*r[1]; qf.z = ph.z*r[1] + pf.z*r[0];
 			break;
-		default: __assume(0); //tells MSVC default can't be reached
+		default: _gtfo(); //tells MSVC default can't be reached
 	}
 
 		//Generate orthonormal matrix in world space for parent limb
@@ -13689,7 +13689,7 @@ long isnewfloating (flstboxtype *flb)
 				case 5: nx = p.x+1; ny = p.y-1; break;
 				case 6: nx = p.x-1; ny = p.y+1; break;
 				case 7: nx = p.x+1; ny = p.y+1; break;
-				default: __assume(0); //tells MSVC default can't be reached
+				default: _gtfo(); //tells MSVC default can't be reached
 			}
 			if ((unsigned long)(nx|ny) >= VSID) continue;
 
@@ -14377,7 +14377,7 @@ void uninitvoxlap ()
 					}
 					free((void *)kfp);
 					break;
-				default: __assume(0); //tells MSVC default can't be reached
+				default: _gtfo(); //tells MSVC default can't be reached
 			}
 		}
 		free(khashbuf); khashbuf = 0; khashpos = khashsiz = 0;

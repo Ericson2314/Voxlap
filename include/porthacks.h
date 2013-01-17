@@ -20,10 +20,10 @@
 		     + __GNUC_PATCHLEVEL__)
 
 	#if GCC_VERSION >= 40500
-		#define __assume(cond) do { if (!(cond)) __builtin_unreachable(); } while (0)
-	#else
-		#define __assume(cond)
-	#endif
+        #define _gtfo (__builtin_unreachable();)
+    #elif _MSC_VER >= 1310
+        #define _gtfo (__assume(0);)
+    #endif
 
 	// Aligns symbol
 	#define __ALIGN(num) __attribute__((aligned(num)))
@@ -146,7 +146,7 @@ typedef unsigned __int64 uint64_t;
 #define MIN(a, b)  (((a) < (b)) ? (a) : (b))
 
 #define MAX(a, b)  (((a) > (b)) ? (a) : (b))
-	
+
 #define BOUND(value, min, max)  ((value)>(max)?(max):((value)<(min)?(min):(value)))
 
 #define ANTIBOUND(value, min, max) ((value)>((max)+(min)/2)?((value)>(max)?(value):(max)):((value)<(min)?(value):(min)))
