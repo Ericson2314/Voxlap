@@ -153,8 +153,9 @@ void *colfunclst[] =
 };
 #define numcolfunc (sizeof(colfunclst)>>2)
 
-#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-	#pragma warning(disable:4799) //I know how to use EMMS
+	//Ken Silverman knows how to use EMMS
+#if defined(_MSC_VER) && !defined(NOASM)
+	#pragma warning(disable:4799)
 #endif
 
 	//RGB color selection variables
@@ -203,7 +204,7 @@ void rgbcolselrend (long, long, long, long, long);
 
 static inline void rgbcolselinitinc (long a, long b, long c)
 {
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__
 	(
 		"mov a, %eax\n"
@@ -215,7 +216,7 @@ static inline void rgbcolselinitinc (long a, long b, long c)
 		"movd %eax, %mm5\n"
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov eax, a
@@ -231,7 +232,7 @@ static inline void rgbcolselinitinc (long a, long b, long c)
 
 static inline void rgbcolselrend (long a, long b, long c, long t, long s)
 {
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__
 	(
 		"push %ebx\n"
@@ -263,7 +264,7 @@ static inline void rgbcolselrend (long a, long b, long c, long t, long s)
 		"pop %ebx\n"
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		push ebx
@@ -2891,7 +2892,7 @@ void doframe ()
 #if (STEREOMODE == 2)
 #ifdef _WIN32
 	i = ((numframes&1^1)<<2)^0xff;
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__
 	{
 		"mov $0x378, %dx\n"
@@ -2899,7 +2900,7 @@ void doframe ()
 		"out %al, %dx\n"
 	}
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	dx, 0x378

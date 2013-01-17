@@ -246,7 +246,7 @@ static long keyrepeat (long scancode)
 	//Better for Pentium Pros (with Fastvid)
 static inline void clearbufbyte (void *d, long c, long a)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -260,7 +260,7 @@ static inline void clearbufbyte (void *d, long c, long a)
 		:
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov edi, d
@@ -279,7 +279,7 @@ static inline void clearbufbyte (void *d, long c, long a)
 	//Better for Pentiums
 static inline void clearbufbyte (void *d, long c, long a)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -303,7 +303,7 @@ static inline void clearbufbyte (void *d, long c, long a)
 		: "edx"
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov edi, d
@@ -332,7 +332,7 @@ static inline void clearbufbyte (void *d, long c, long a)
 static inline long fstcw ()
 {
 	long fpumode;
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		"fstcw %0\n"
@@ -341,7 +341,7 @@ static inline long fstcw ()
 		:
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm fstcw fpumode
 	#endif
 	return(fpumode);
@@ -349,7 +349,7 @@ static inline long fstcw ()
 
 static inline void fldcw (long fpumode)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		"fldcw %0\n"
@@ -358,17 +358,17 @@ static inline void fldcw (long fpumode)
 		:
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm fldcw fpumode
 	#endif
 }
 
 static inline void ftol (float f, long *a)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	*a = (long) f;
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -379,7 +379,7 @@ static inline void ftol (float f, long *a)
 		:
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -392,11 +392,11 @@ static inline void ftol (float f, long *a)
 
 static inline void fcossin (float a, float *c, float *s)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	*c = cosf(a);
 	*s = sinf(a);
 	#else
-	#if __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -409,7 +409,7 @@ static inline void fcossin (float a, float *c, float *s)
 		".att_syntax prefix\n"
 	);
 	#endif
-	#if _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		fld a
@@ -459,7 +459,7 @@ void initfrecipasm ()
 
 static inline void qinterpolatedown16 (long *a, long c, long d, long s)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -488,7 +488,7 @@ static inline void qinterpolatedown16 (long *a, long c, long d, long s)
 		: "ebx", "edi"
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -521,7 +521,7 @@ static inline void qinterpolatedown16 (long *a, long c, long d, long s)
 
 static inline void qinterpolatehiadd16 (long *a, long c, long d, long s)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -550,7 +550,7 @@ static inline void qinterpolatehiadd16 (long *a, long c, long d, long s)
 		: "ebx" "edi"
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov eax, a
@@ -671,7 +671,7 @@ static equivectyp equivec;
 
 static inline long dmulshr0 (long a, long d, long s, long t)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -692,7 +692,7 @@ static inline long dmulshr0 (long a, long d, long s, long t)
 	);
 	return a + s;
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -1498,7 +1498,7 @@ void rendercube ()
 
 static inline long testflag (long c)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	long a;
 	__asm__ __volatile__ (
 		"pushf\n\tpopl %%eax\n\tmovl %%eax, %%ebx\n\txorl %%ecx, %%eax\n\tpushl %%eax\n\t"
@@ -1507,7 +1507,7 @@ static inline long testflag (long c)
 		: "=a" (a) : "c" (c) : "ebx","cc" );
 	return a;
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov ecx, c
@@ -1530,13 +1530,13 @@ static inline long testflag (long c)
 
 static inline void cpuid (long a, long *s)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__ (
 		"cpuid\n\tmovl %%eax, (%%esi)\n\tmovl %%ebx, 4(%%esi)\n\t"
 		"movl %%ecx, 8(%%esi)\n\tmovl %%edx, 12(%%esi)"
 		: "+a" (a) : "S" (s) : "ebx","ecx","edx","memory","cc");
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		push ebx
@@ -1603,10 +1603,10 @@ char ptfaces16[43][8] =
 
 static inline void movps (point4d *dest, point4d *src)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	*dest = *src;
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -1617,7 +1617,7 @@ static inline void movps (point4d *dest, point4d *src)
 		:
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, src
@@ -1631,10 +1631,10 @@ static inline void movps (point4d *dest, point4d *src)
 
 static inline void intss (point4d *dest, long src)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	dest->x = dest->y = dest->z = dest->z2 = (float)src;
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -1647,7 +1647,7 @@ static inline void intss (point4d *dest, long src)
 		: "xmm7"
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, dest
@@ -1661,13 +1661,13 @@ static inline void intss (point4d *dest, long src)
 
 static inline void addps (point4d *sum, point4d *a, point4d *b)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	sum->x  =  a->x  +  b->x;
 	sum->y  =  a->y  +  b->y;
 	sum->z  =  a->z  +  b->z;
 	sum->z2 =  a->z2 +  b->z2;
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -1679,7 +1679,7 @@ static inline void addps (point4d *sum, point4d *a, point4d *b)
 		:
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -1695,13 +1695,13 @@ static inline void addps (point4d *sum, point4d *a, point4d *b)
 
 static inline void mulps (point4d *sum, point4d *a, point4d *b)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	sum->x  =  a->x  *  b->x;
 	sum->y  =  a->y  *  b->y;
 	sum->z  =  a->z  *  b->z;
 	sum->z2 =  a->z2 *  b->z2;
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -1713,7 +1713,7 @@ static inline void mulps (point4d *sum, point4d *a, point4d *b)
 		:
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -1729,13 +1729,13 @@ static inline void mulps (point4d *sum, point4d *a, point4d *b)
 
 static inline void subps (point4d *sum, point4d *a, point4d *b)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	sum->x  =  a->x  -  b->x;
 	sum->y  =  a->y  -  b->y;
 	sum->z  =  a->z  -  b->z;
 	sum->z2 =  a->z2 -  b->z2;
 	#else
-	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -1747,7 +1747,7 @@ static inline void subps (point4d *sum, point4d *a, point4d *b)
 		:
 	);
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -2777,7 +2777,7 @@ static cpoint4d fbuf[FILLBUFSIZ];
 
 static inline long bsf (long a)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		"bsf %0, %%eax\n"
@@ -2786,14 +2786,14 @@ static inline long bsf (long a)
 		:
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm bsf eax, a
 	#endif
 
 }
 static inline long bsr (long a)
 {
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		"bsr %0, %%eax\n"
@@ -2802,7 +2802,7 @@ static inline long bsr (long a)
 		:
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm bsr eax, a
 	#endif
 }

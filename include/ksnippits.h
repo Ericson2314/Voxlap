@@ -47,11 +47,11 @@ long umulshr32 (long, long);
 
 static inline void fcossin (float a, float *c, float *s)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	*c = cosf(a);
 	*s = cosf(a);
 	#else
-	#if __GNUC__ //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -64,7 +64,7 @@ static inline void fcossin (float a, float *c, float *s)
 		:
 	);
 	#endif
-	#if _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		fld a
@@ -80,11 +80,11 @@ static inline void fcossin (float a, float *c, float *s)
 
 static inline void dcossin (double a, double *c, double *s)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	*c = cos(a);
 	*s = sin(a);
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -97,7 +97,7 @@ static inline void dcossin (double a, double *c, double *s)
 		:
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		fld	a
@@ -113,10 +113,10 @@ static inline void dcossin (double a, double *c, double *s)
 
 static inline void ftol (float f, long *a)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	*a = (long) f;
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -127,7 +127,7 @@ static inline void ftol (float f, long *a)
 		:
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -140,10 +140,10 @@ static inline void ftol (float f, long *a)
 
 static inline void dtol (double d, long *a)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	*a = (long) d;
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -154,7 +154,7 @@ static inline void dtol (double d, long *a)
 		:
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -168,11 +168,11 @@ static inline void dtol (double d, long *a)
 
 static inline double dbound (double d, double dmin, double dmax)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	return BOUND(d, dmin, dmax);
 	#else
 	//WARNING: This ASM code requires >= PPRO
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -187,7 +187,7 @@ static inline double dbound (double d, double dmin, double dmax)
 		:
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		fld	dmin
@@ -208,10 +208,10 @@ static inline double dbound (double d, double dmin, double dmax)
 
 static inline long mulshr16 (long a, long d)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	return (long)((((int64_t)a) * ((int64_t)d)) >> 16);
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -224,7 +224,7 @@ static inline long mulshr16 (long a, long d)
 	);
 	return a;
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -238,10 +238,10 @@ static inline long mulshr16 (long a, long d)
 
 static inline long mulshr24 (long a, long d)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	return (long)((((int64_t)a) * ((int64_t)d)) >> 24);
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -254,7 +254,7 @@ static inline long mulshr24 (long a, long d)
 	);
 	return a;
 	#endif
-	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov eax, a
@@ -268,10 +268,10 @@ static inline long mulshr24 (long a, long d)
 
 static inline long mulshr32 (long a, long d)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	return (long)((((int64_t)a) * ((int64_t)d)) >> 32);
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		"imull %%edx"
@@ -281,7 +281,7 @@ static inline long mulshr32 (long a, long d)
 	);
 	return d;
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov eax, a
@@ -294,10 +294,10 @@ static inline long mulshr32 (long a, long d)
 
 static inline int64_t mul64 (long a, long d)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	return ((int64_t)a) * ((int64_t)d);
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	int64_t out64;
 	__asm__ __volatile__
 	(
@@ -310,7 +310,7 @@ static inline int64_t mul64 (long a, long d)
 	);
 	return out64;
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -322,10 +322,10 @@ static inline int64_t mul64 (long a, long d)
 
 static inline long shldiv16 (long a, long b)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	return (long)((((int64_t)a) << 16) / ((int64_t)b));
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -340,7 +340,7 @@ static inline long shldiv16 (long a, long b)
 	);
 	return a;
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -355,10 +355,10 @@ static inline long shldiv16 (long a, long b)
 
 static inline long isshldiv16safe (long a, long b)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	return ((uint32_t)(((-abs(b)) - ((-abs(a)) >> 14)))) >> 31;
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -384,7 +384,7 @@ static inline long isshldiv16safe (long a, long b)
 	);
 	return b;
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	edx, a
@@ -411,10 +411,10 @@ static inline long isshldiv16safe (long a, long b)
 
 static inline long umulshr32 (long a, long d)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	return (long)((((uint64_t)a) * ((uint64_t)d)) >> 32);
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	long product;
 	__asm__ __volatile__
 	(
@@ -427,7 +427,7 @@ static inline long umulshr32 (long a, long d)
 	);
 	return product;
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -440,10 +440,10 @@ static inline long umulshr32 (long a, long d)
 
 static inline long scale (long a, long d, long c)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	return a * d / c;
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -453,7 +453,7 @@ static inline long scale (long a, long d, long c)
 		".att_syntax prefix\n"
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -466,10 +466,10 @@ static inline long scale (long a, long d, long c)
 
 static inline long dmulshr0 (long a, long d, long s, long t)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	return a*d + s*t;
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -490,7 +490,7 @@ static inline long dmulshr0 (long a, long d, long s, long t)
 	);
 	return a + s;
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -506,10 +506,10 @@ static inline long dmulshr0 (long a, long d, long s, long t)
 
 static inline long dmulshr22 (long a, long b, long c, long d)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	return (long)(((((int64_t)a)*((int64_t)b)) + (((int64_t)c)*((int64_t)d))) >> 22);
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -541,7 +541,7 @@ static inline long dmulshr22 (long a, long b, long c, long d)
 	);
 	return c;
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -561,10 +561,10 @@ static inline long dmulshr22 (long a, long b, long c, long d)
 
 static inline long dmulrethigh (long b, long c, long a, long d)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	return (long)(((((int64_t)a)*((int64_t)b)) + (((int64_t)c)*((int64_t)d))) >> 32);
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax prefix\n"
@@ -595,7 +595,7 @@ static inline long dmulrethigh (long b, long c, long a, long d)
 	);
 	return c;
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -615,12 +615,12 @@ static inline long dmulrethigh (long b, long c, long a, long d)
 
 static inline void copybuf (void *s, void *d, long c)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	int i;
 	for (i = 0;	i < c; i++)
 		((long *)d)[i] = ((long *)s)[i];
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -631,7 +631,7 @@ static inline void copybuf (void *s, void *d, long c)
 		:
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		push	esi
@@ -649,12 +649,12 @@ static inline void copybuf (void *s, void *d, long c)
 
 static inline void clearbuf (void *d, long c, long a)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	int i;
 	for (i = 0;	i < c; i++)
 		((long *)d)[i] = a;
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -665,7 +665,7 @@ static inline void clearbuf (void *d, long c, long a)
 		:
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		push	edi
@@ -681,7 +681,7 @@ static inline void clearbuf (void *d, long c, long a)
 
 static inline unsigned long bswap (unsigned long a)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	#ifdef __GNUC__
 	return __builtin_bswap32(a);
 	#endif
@@ -689,7 +689,7 @@ static inline unsigned long bswap (unsigned long a)
 	return _byteswap_ulong(a);
 	#endif
 	#else
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -701,7 +701,7 @@ static inline unsigned long bswap (unsigned long a)
 	);
 	return a;
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a

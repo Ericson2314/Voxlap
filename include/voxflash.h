@@ -30,13 +30,13 @@ void mmxcolorsub (long *);
 
 static inline void mmxcoloradd (long *a)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	((uint8_t *)a)[0] += ((uint8_t *)flashbrival)[0];
 	((uint8_t *)a)[1] += ((uint8_t *)flashbrival)[1];
 	((uint8_t *)a)[2] += ((uint8_t *)flashbrival)[2];
 	((uint8_t *)a)[3] += ((uint8_t *)flashbrival)[3];
 	#endif
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		"paddusb	%c[fb], %[a]\n"
@@ -45,7 +45,7 @@ static inline void mmxcoloradd (long *a)
 		:
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
@@ -58,13 +58,13 @@ static inline void mmxcoloradd (long *a)
 
 static inline void mmxcolorsub (long *a)
 {
-	#ifdef __NOASM__
+	#ifdef NOASM
 	((uint8_t *)a)[0] -= ((uint8_t *)flashbrival)[0];
 	((uint8_t *)a)[1] -= ((uint8_t *)flashbrival)[1];
 	((uint8_t *)a)[2] -= ((uint8_t *)flashbrival)[2];
 	((uint8_t *)a)[3] -= ((uint8_t *)flashbrival)[3];
 	#endif
-	#if defined(__GNUC__) && !defined(__NOASM__) //AT&T SYNTAX ASSEMBLY
+	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
 		"psubusb	%c[fb], %[a]\n"
@@ -73,7 +73,7 @@ static inline void mmxcolorsub (long *a)
 		:
 	);
 	#endif
-	#if defined(_MSC_VER) && !defined(__NOASM__) //MASM SYNTAX ASSEMBLY
+	#ifdef _MSC_VER //msvc inline asm
 	_asm
 	{
 		mov	eax, a
