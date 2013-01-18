@@ -1,3 +1,4 @@
+
 /**************************************************************************************************
  * porthacks.h: Macros-out differences between GCC & VS, and GNUC & MSVC                          *
  **************************************************************************************************/
@@ -14,15 +15,13 @@
 
 
 #ifdef __GNUC__
-	// Maps __assume() to __builtin_unreachable()
+	// Maps __builtin_unreachable() to _gtfo
 	#define GCC_VERSION (__GNUC__ * 10000 \
 		     + __GNUC_MINOR__ * 100 \
 		     + __GNUC_PATCHLEVEL__)
 
 	#if GCC_VERSION >= 40500
-        #define _gtfo (__builtin_unreachable();)
-    #elif _MSC_VER >= 1310
-        #define _gtfo (__assume(0);)
+    	#define _gtfo (__builtin_unreachable();)
     #endif
 
 	// Aligns symbol
@@ -32,6 +31,12 @@
 #endif
 
 #ifdef _MSC_VER
+	
+	//maps __assume(0) to _gtfo
+	#if _MSC_VER >= 1310
+		#define _gtfo (__assume(0);)
+    #endif
+    	
 	// Aligns symbol
 	#define __ALIGN(num) __declspec(align(num))
 	#ifndef __cplusplus
