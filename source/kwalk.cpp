@@ -327,7 +327,7 @@ void floodsucksprite (kv6data *kv, long ox, long oy,
 				case 1: x = ox+1; y = oy; break;
 				case 2: x = ox; y = oy-1; break;
 				case 3: x = ox; y = oy+1; break;
-				default: __assume(0); //tells MSVC default can't be reached
+				default: _gtfo; //tells MSVC default can't be reached
 			}
 			if ((unsigned long)x >= kv->xsiz) continue;
 			if ((unsigned long)y >= kv->ysiz) continue;
