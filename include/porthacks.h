@@ -14,21 +14,19 @@
 
 
 #ifdef __GNUC__
-	// Maps __assume() to __builtin_unreachable()
 	#define GCC_VERSION (__GNUC__ * 10000 \
 		     + __GNUC_MINOR__ * 100 \
 		     + __GNUC_PATCHLEVEL__)
-
-	#if GCC_VERSION >= 40500
-        #define _gtfo (__builtin_unreachable();)
-    #elif _MSC_VER >= 1310
-        #define _gtfo (__assume(0);)
-    #endif
 
 	// Aligns symbol
 	#define __ALIGN(num) __attribute__((aligned(num)))
 	#define MUST_INLINE __attribute__((always_inline))
 	#define FORCE_NAME(symbol) asm(symbol)
+
+	//_gtfo marks dead code
+	#if GCC_VERSION >= 40500
+		#define _gtfo __builtin_unreachable()
+	#endif
 #endif
 
 #ifdef _MSC_VER
@@ -39,6 +37,11 @@
 	#endif
 	#define MUST_INLINE __forceinline
 	#define FORCE_NAME(symbol)
+
+	//_gtfo marks dead code
+	#if _MSC_VER >= 1310
+		#define _gtfo __assume(0)
+	#endif
 #endif
 
 /**
@@ -136,12 +139,12 @@ typedef unsigned __int64 uint64_t;
 	#define EXTERN_C extern
 #endif
 
-#define COSSIN(degree, cos_, sin_) \
-    do \
-    { \
-        sin_ = sin(degree); \
-        cos_ = cos(degree); \
-    } while(0)
+#define COSSIN(degree, cos_, sin_)	\
+	do								\
+    {								\
+		sin_ = sin(degree);			\
+		cos_ = cos(degree);			\
+	} while(0)
 
 #define MIN(a, b)  (((a) < (b)) ? (a) : (b))
 
