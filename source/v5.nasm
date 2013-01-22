@@ -192,7 +192,7 @@ ALIGN 16
 GLOBAL	grouscanasm ;Visual C entry point (passes parameters by stack)
 grouscanasm:
 	mov eax, [esp+4]
-	push ebx   ;Visual C's _cdeclrequires EBX,ESI,EDI,EBP to be preserved
+	push ebx   ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
 	push esi
 	push edi
 	push ebp
@@ -735,7 +735,7 @@ endskyslab:
 retsub:
 	emms
 	mov esp, dword [espbak]
-	pop ebp    ;Visual C's _cdeclrequires EBX,ESI,EDI,EBP to be preserved
+	pop ebp    ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
 	pop edi
 	pop esi
 	pop ebx
@@ -803,14 +803,14 @@ drawboundcubesseinit:
 	mov eax, [zbufoff]
 	mov dword [bcmod1-4], eax
 %endif
-	retn       ;Visual C's _cdeclrequires EBX,ESI,EDI,EBP to be preserved
+	retn       ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
 
 ALIGN 16
 GLOBAL	drawboundcubesse       ;Visual C entry point (pass by stack)
 drawboundcubesse:
 	mov eax, [esp+4]
 	mov ecx, [esp+8]
-	push ebx   ;Visual C's _cdeclrequires EBX,ESI,EDI,EBP to be preserved
+	push ebx   ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
 	push edi
 
 	movzx edi, byte [eax+6]
@@ -893,8 +893,8 @@ bcskip6case:
 	punpckldq mm0, mm1          ; mm0: [ My, Mx, my, mx]    Ý
 
 		;See SCRCLP2D.BAS for a derivation of these 4 lines:
-	paddsw mm0, mm6 ;qsum0     ; mm0: ["+?,"+?,"+?,"+?]    Û
-	pmaxsw mm0, mm7 ;qsum1     ; mm0: [sy1,sx1,sy0,sx0]    Û
+	paddsw mm0, [qsum0]           ; mm0: ["+?,"+?,"+?,"+?]    Û
+	pmaxsw mm0, [qsum1]           ; mm0: [sy1,sx1,sy0,sx0]    Û
 	pshufw mm1, mm0, 0eeh       ; mm1: [sy1,sx1,sy1,sx1]    Û
 	psubusw mm1, mm0            ; mm1: [  0,  0, dy, dx]    Ý
 		;kv6frameplace -= ((32767-yres)*bpl + (32767-xres)*4);
@@ -945,7 +945,7 @@ bcmod3:
 	jnc short boundcubenextline
 
 retboundcube:
-	pop edi    ;Visual C's _cdeclrequires EBX,ESI,EDI,EBP to be preserved
+	pop edi    ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
 	pop ebx
 	retn
 
@@ -961,14 +961,14 @@ drawboundcube3dninit:
 	mov eax, [zbufoff]
 	mov dword [bcmod1_3dn-4], eax
 %endif
-	retn       ;Visual C's _cdeclrequires EBX,ESI,EDI,EBP to be preserved
+	retn       ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
 
 ALIGN 16
 GLOBAL	drawboundcube3dn       ;Visual C entry point (pass by stack)
 drawboundcube3dn:
 	mov eax, [esp+4]
 	mov ecx, [esp+8]
-	push ebx   ;Visual C's _cdeclrequires EBX,ESI,EDI,EBP to be preserved
+	push ebx   ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
 	push edi
 
 	movzx edi, byte [eax+6]
@@ -1116,7 +1116,7 @@ bcmod3_3dn:
 	jnc short boundcubenextline_3dn
 
 retboundcube_3dn:
-	pop edi    ;Visual C's _cdeclrequires EBX,ESI,EDI,EBP to be preserved
+	pop edi    ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
 	pop ebx
 	retn
 
