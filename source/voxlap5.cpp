@@ -10460,14 +10460,18 @@ static inline void maxps_3dn (point4d *sum, point4d *a, point4d *b)
 }
 
 #define DRAWBOUNDCUBELINE(const) \
-	for(;v0<=v1 && v0->z<inz;v0++) drawboundcubesse(v0,const+0x20);\
-	for(;v0<=v1 && v1->z>inz;v1--) drawboundcubesse(v1,const+0x10);\
-						  if (v0 == v1) drawboundcubesse(v1,const+0x00);
-
-#define DRAWBOUNDCUBELINE_3DN(const) \
-	for(;v0<=v1 && v0->z<inz;v0++) drawboundcube3dn(v0,const+0x20);\
-	for(;v0<=v1 && v1->z>inz;v1--) drawboundcube3dn(v1,const+0x10);\
-						  if (v0 == v1) drawboundcube3dn(v1,const+0x00);
+	if (cputype&(1<<25)) \
+	{ \
+		for(;v0<=v1 && v0->z<inz;v0++) drawboundcubesse(v0,const+0x20);\
+		for(;v0<=v1 && v1->z>inz;v1--) drawboundcubesse(v1,const+0x10);\
+						 if (v0 == v1) drawboundcubesse(v1,const+0x00);\
+	} \
+	else \
+	{ \
+		for(;v0<=v1 && v0->z<inz;v0++) drawboundcube3dn(v0,const+0x20);\
+		for(;v0<=v1 && v1->z>inz;v1--) drawboundcube3dn(v1,const+0x10);\
+						 if (v0 == v1) drawboundcube3dn(v1,const+0x00);\
+	}
 
 	//Code taken from renderboundcube of SLAB6D (Pentium III version :)
 #define MAXZSIZ 1024
@@ -10616,228 +10620,95 @@ static void kv6draw (vx5sprite *spr)
 	updatereflects(spr);
 	//No more 8087 code after here!!! ----------------------------------------
 
-	if (cputype&(1<<25))
+	addps(&cadd4[3],&cadd4[1],&cadd4[2]);
+	addps(&cadd4[5],&cadd4[1],&cadd4[4]);
+	addps(&cadd4[6],&cadd4[2],&cadd4[4]);
+	addps(&cadd4[7],&cadd4[3],&cadd4[4]);
+
+	for(z=1;z<kv->zsiz;z++) addps(&ztab4[z],&ztab4[z-1],&cadd4[2]);
+	intss(r2,-kv->ysiz); mulps(r2,r2,&cadd4[4]);
+
+	subps(r1,r1,&cadd4[4]); //ANNOYING HACK!!!
+
+	xv = kv->vox; ylenptr = kv->ylen;
+	for(x=0;x<inx;x++,ylenptr+=kv->ysiz)
 	{
-		addps(&cadd4[3],&cadd4[1],&cadd4[2]);
-		addps(&cadd4[5],&cadd4[1],&cadd4[4]);
-		addps(&cadd4[6],&cadd4[2],&cadd4[4]);
-		addps(&cadd4[7],&cadd4[3],&cadd4[4]);
-
-		for(z=1;z<kv->zsiz;z++) addps(&ztab4[z],&ztab4[z-1],&cadd4[2]);
-		intss(r2,-kv->ysiz); mulps(r2,r2,&cadd4[4]);
-
-		subps(r1,r1,&cadd4[4]); //ANNOYING HACK!!!
-
-		#ifdef __GNUC__ //gcc inline asm
-		__asm__ __volatile__
-		(
-			"movq	%c[q0], %%mm6\n"
-			"movq	%c[q1], %%mm7\n"
-			:
-			: [q0] "p" (&qsum0), [q1] "p" (&qsum1)
-			:
-		);
-		#endif
-		#ifdef _MSC_VER //msvc inline asm
-		_asm
+		if ((x < nxplanemin) || (x >= nxplanemax))
+			{ xv += kv->xlen[x]; addps(r1,r1,&cadd4[1]); continue; }
+		yv = xv+kv->xlen[x]; movps(r0,r1);
+		for(y=0;y<iny;y++)
 		{
-			movq	mm6, qsum0
-			movq	mm7, qsum1
+			v0 = xv; xv += ylenptr[y]; v1 = xv-1;
+			DRAWBOUNDCUBELINE(0xa)
+			subps(r0,r0,&cadd4[4]);
 		}
-		#endif
-
-		xv = kv->vox; ylenptr = kv->ylen;
-		for(x=0;x<inx;x++,ylenptr+=kv->ysiz)
+		xv = yv;
+		addps(r0,r1,r2);
+		addps(r1,r1,&cadd4[1]);
+		for(y=kv->ysiz-1;y>iny;y--)
 		{
-			if ((x < nxplanemin) || (x >= nxplanemax))
-				{ xv += kv->xlen[x]; addps(r1,r1,&cadd4[1]); continue; }
-			yv = xv+kv->xlen[x]; movps(r0,r1);
-			for(y=0;y<iny;y++)
-			{
-				v0 = xv; xv += ylenptr[y]; v1 = xv-1;
-				DRAWBOUNDCUBELINE(0xa)
-				subps(r0,r0,&cadd4[4]);
-			}
-			xv = yv;
-			addps(r0,r1,r2);
-			addps(r1,r1,&cadd4[1]);
-			for(y=kv->ysiz-1;y>iny;y--)
-			{
-				addps(r0,r0,&cadd4[4]);
-				v1 = yv-1; yv -= ylenptr[y]; v0 = yv;
-				DRAWBOUNDCUBELINE(0x6)
-			}
-			if ((unsigned long)iny < (unsigned long)kv->ysiz)
-			{
-				addps(r0,r0,&cadd4[4]);
-				v1 = yv-1; yv -= ylenptr[y]; v0 = yv;
-				DRAWBOUNDCUBELINE(0x2)
-			}
+			addps(r0,r0,&cadd4[4]);
+			v1 = yv-1; yv -= ylenptr[y]; v0 = yv;
+			DRAWBOUNDCUBELINE(0x6)
 		}
-		xv = &kv->vox[kv->numvoxs]; ylenptr = &kv->ylen[(kv->xsiz-1)*kv->ysiz];
-		intss(r0,kv->xsiz-x); mulps(r0,r0,&cadd4[1]); addps(r1,r1,r0);
-		for(x=kv->xsiz-1;x>inx;x--,ylenptr-=kv->ysiz)
+		if ((unsigned long)iny < (unsigned long)kv->ysiz)
 		{
-			if ((x < nxplanemin) || (x >= nxplanemax))
-				{ xv -= kv->xlen[x]; subps(r1,r1,&cadd4[1]); continue; }
-			yv = xv-kv->xlen[x];
-			subps(r1,r1,&cadd4[1]);
-			addps(r0,r1,r2);
-			for(y=kv->ysiz-1;y>iny;y--)
-			{
-				addps(r0,r0,&cadd4[4]);
-				v1 = xv-1; xv -= ylenptr[y]; v0 = xv;
-				DRAWBOUNDCUBELINE(0x5)
-			}
-			xv = yv; movps(r0,r1);
-			for(y=0;y<iny;y++)
-			{
-				v0 = yv; yv += ylenptr[y]; v1 = yv-1;
-				DRAWBOUNDCUBELINE(0x9)
-				subps(r0,r0,&cadd4[4]);
-			}
-			if ((unsigned long)iny < (unsigned long)kv->ysiz)
-			{
-				v0 = yv; yv += ylenptr[y]; v1 = yv-1;
-				DRAWBOUNDCUBELINE(0x1)
-			}
-		}
-		if ((unsigned long)inx < (unsigned long)kv->xsiz)
-		{
-			if ((x < nxplanemin) || (x >= nxplanemax)) { { clearMMX(); } return;}
-			yv = xv-kv->xlen[x];
-			subps(r1,r1,&cadd4[1]);
-			addps(r0,r1,r2);
-			for(y=kv->ysiz-1;y>iny;y--)
-			{
-				addps(r0,r0,&cadd4[4]);
-				v1 = xv-1; xv -= ylenptr[y]; v0 = xv;
-				DRAWBOUNDCUBELINE(0x4)
-			}
-			xv = yv; movps(r0,r1);
-			for(y=0;y<iny;y++)
-			{
-				v0 = yv; yv += ylenptr[y]; v1 = yv-1;
-				DRAWBOUNDCUBELINE(0x8)
-				subps(r0,r0,&cadd4[4]);
-			}
-			if ((unsigned long)iny < (unsigned long)kv->ysiz)
-			{
-				v0 = yv; yv += ylenptr[y]; v1 = yv-1;
-				DRAWBOUNDCUBELINE(0x0)
-			}
+			addps(r0,r0,&cadd4[4]);
+			v1 = yv-1; yv -= ylenptr[y]; v0 = yv;
+			DRAWBOUNDCUBELINE(0x2)
 		}
 	}
-	else
+	xv = &kv->vox[kv->numvoxs]; ylenptr = &kv->ylen[(kv->xsiz-1)*kv->ysiz];
+	intss(r0,kv->xsiz-x); mulps(r0,r0,&cadd4[1]); addps(r1,r1,r0);
+	for(x=kv->xsiz-1;x>inx;x--,ylenptr-=kv->ysiz)
 	{
-		addps_3dn(&cadd4[3],&cadd4[1],&cadd4[2]);
-		addps_3dn(&cadd4[5],&cadd4[1],&cadd4[4]);
-		addps_3dn(&cadd4[6],&cadd4[2],&cadd4[4]);
-		addps_3dn(&cadd4[7],&cadd4[3],&cadd4[4]);
-
-		for(z=1;z<kv->zsiz;z++) addps_3dn(&ztab4[z],&ztab4[z-1],&cadd4[2]);
-		intss_3dn(r2,-kv->ysiz); mulps_3dn(r2,r2,&cadd4[4]);
-
-		subps_3dn(r1,r1,&cadd4[4]); //ANNOYING HACK!!!
-
-		#ifdef __GNUC__ //gcc inline asm
-		__asm__ __volatile__
-		(
-			"movq	%c[q0], %%mm6\n"
-			"movq	%c[q1], %%mm7\n"
-			:
-			: [q0] "p" (&qsum0), [q1] "p" (&qsum1)
-			:
-		);
-		#endif
-		#ifdef _MSC_VER //msvc inline asm
-		_asm
+		if ((x < nxplanemin) || (x >= nxplanemax))
+			{ xv -= kv->xlen[x]; subps(r1,r1,&cadd4[1]); continue; }
+		yv = xv-kv->xlen[x];
+		subps(r1,r1,&cadd4[1]);
+		addps(r0,r1,r2);
+		for(y=kv->ysiz-1;y>iny;y--)
 		{
-			movq	mm6, qsum0
-			movq	mm7, qsum1
+			addps(r0,r0,&cadd4[4]);
+			v1 = xv-1; xv -= ylenptr[y]; v0 = xv;
+			DRAWBOUNDCUBELINE(0x5)
 		}
-		#endif
-
-		xv = kv->vox; ylenptr = kv->ylen;
-		for(x=0;x<inx;x++,ylenptr+=kv->ysiz)
+		xv = yv; movps(r0,r1);
+		for(y=0;y<iny;y++)
 		{
-			if ((x < nxplanemin) || (x >= nxplanemax))
-				{ xv += kv->xlen[x]; addps_3dn(r1,r1,&cadd4[1]); continue; }
-			yv = xv+kv->xlen[x]; movps_3dn(r0,r1);
-			for(y=0;y<iny;y++)
-			{
-				v0 = xv; xv += ylenptr[y]; v1 = xv-1;
-				DRAWBOUNDCUBELINE_3DN(0xa)
-				subps_3dn(r0,r0,&cadd4[4]);
-			}
-			xv = yv;
-			addps_3dn(r0,r1,r2);
-			addps_3dn(r1,r1,&cadd4[1]);
-			for(y=kv->ysiz-1;y>iny;y--)
-			{
-				addps_3dn(r0,r0,&cadd4[4]);
-				v1 = yv-1; yv -= ylenptr[y]; v0 = yv;
-				DRAWBOUNDCUBELINE_3DN(0x6)
-			}
-			if ((unsigned long)iny < (unsigned long)kv->ysiz)
-			{
-				addps_3dn(r0,r0,&cadd4[4]);
-				v1 = yv-1; yv -= ylenptr[y]; v0 = yv;
-				DRAWBOUNDCUBELINE_3DN(0x2)
-			}
+			v0 = yv; yv += ylenptr[y]; v1 = yv-1;
+			DRAWBOUNDCUBELINE(0x9)
+			subps(r0,r0,&cadd4[4]);
 		}
-		xv = &kv->vox[kv->numvoxs]; ylenptr = &kv->ylen[(kv->xsiz-1)*kv->ysiz];
-		intss_3dn(r0,kv->xsiz-x); mulps_3dn(r0,r0,&cadd4[1]); addps_3dn(r1,r1,r0);
-		for(x=kv->xsiz-1;x>inx;x--,ylenptr-=kv->ysiz)
+		if ((unsigned long)iny < (unsigned long)kv->ysiz)
 		{
-			if ((x < nxplanemin) || (x >= nxplanemax))
-				{ xv -= kv->xlen[x]; subps_3dn(r1,r1,&cadd4[1]); continue; }
-			yv = xv-kv->xlen[x];
-			subps_3dn(r1,r1,&cadd4[1]);
-			addps_3dn(r0,r1,r2);
-			for(y=kv->ysiz-1;y>iny;y--)
-			{
-				addps_3dn(r0,r0,&cadd4[4]);
-				v1 = xv-1; xv -= ylenptr[y]; v0 = xv;
-				DRAWBOUNDCUBELINE_3DN(0x5)
-			}
-			xv = yv; movps_3dn(r0,r1);
-			for(y=0;y<iny;y++)
-			{
-				v0 = yv; yv += ylenptr[y]; v1 = yv-1;
-				DRAWBOUNDCUBELINE_3DN(0x9)
-				subps_3dn(r0,r0,&cadd4[4]);
-			}
-			if ((unsigned long)iny < (unsigned long)kv->ysiz)
-			{
-				v0 = yv; yv += ylenptr[y]; v1 = yv-1;
-				DRAWBOUNDCUBELINE_3DN(0x1)
-			}
+			v0 = yv; yv += ylenptr[y]; v1 = yv-1;
+			DRAWBOUNDCUBELINE(0x1)
 		}
-		if ((unsigned long)inx < (unsigned long)kv->xsiz)
+	}
+	if ((unsigned long)inx < (unsigned long)kv->xsiz)
+	{
+		if ((x < nxplanemin) || (x >= nxplanemax)) { { clearMMX(); } return;}
+		yv = xv-kv->xlen[x];
+		subps(r1,r1,&cadd4[1]);
+		addps(r0,r1,r2);
+		for(y=kv->ysiz-1;y>iny;y--)
 		{
-			if ((x < nxplanemin) || (x >= nxplanemax)) { { clearMMX(); } return;}
-			yv = xv-kv->xlen[x];
-			subps_3dn(r1,r1,&cadd4[1]);
-			addps_3dn(r0,r1,r2);
-			for(y=kv->ysiz-1;y>iny;y--)
-			{
-				addps_3dn(r0,r0,&cadd4[4]);
-				v1 = xv-1; xv -= ylenptr[y]; v0 = xv;
-				DRAWBOUNDCUBELINE_3DN(0x4)
-			}
-			xv = yv; movps_3dn(r0,r1);
-			for(y=0;y<iny;y++)
-			{
-				v0 = yv; yv += ylenptr[y]; v1 = yv-1;
-				DRAWBOUNDCUBELINE_3DN(0x8)
-				subps_3dn(r0,r0,&cadd4[4]);
-			}
-			if ((unsigned long)iny < (unsigned long)kv->ysiz)
-			{
-				v0 = yv; yv += ylenptr[y]; v1 = yv-1;
-				DRAWBOUNDCUBELINE_3DN(0x0)
-			}
+			addps(r0,r0,&cadd4[4]);
+			v1 = xv-1; xv -= ylenptr[y]; v0 = xv;
+			DRAWBOUNDCUBELINE(0x4)
+		}
+		xv = yv; movps(r0,r1);
+		for(y=0;y<iny;y++)
+		{
+			v0 = yv; yv += ylenptr[y]; v1 = yv-1;
+			DRAWBOUNDCUBELINE(0x8)
+			subps(r0,r0,&cadd4[4]);
+		}
+		if ((unsigned long)iny < (unsigned long)kv->ysiz)
+		{
+			v0 = yv; yv += ylenptr[y]; v1 = yv-1;
+			DRAWBOUNDCUBELINE(0x0)
 		}
 	}
 	clearMMX();
