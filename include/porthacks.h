@@ -28,7 +28,9 @@
 
 	//_gtfo marks dead code
 	#if GCC_VERSION >= 40500
-		#define _gtfo __builtin_unreachable()
+		#define _gtfo() __builtin_unreachable()
+	#else
+		#define _gtfo()
 	#endif
 #endif
 
@@ -46,7 +48,9 @@
 
 	//_gtfo marks dead code
 	#if _MSC_VER >= 1310
-		#define _gtfo __assume(0)
+		#define _gtfo() __assume(0)
+	#else
+		#define _gtfo()
 	#endif
 #endif
 
