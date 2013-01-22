@@ -43,6 +43,14 @@ long umulshr32 (long, long);
 	modify exact [eax edx]\
 	value [edx]
 
+void clearMMX ();
+#pragma aux emms =\
+	".686"\
+	"emms"\
+	parm nomemory []\
+	modify exact []\
+	value
+
 #else
 
 static inline void fcossin (float a, float *c, float *s)
@@ -708,6 +716,16 @@ static inline unsigned long bswap (unsigned long a)
 		bswap	eax
 	}
 	#endif
+	#endif
+}
+
+static inline void clearMMX () // inserts opcode emms, used to avoid many compiler checks
+{
+	#ifdef __GNUC__
+	__asm__ __volatile__ ("emms" : : : "cc");
+	#endif
+	#ifdef _MSC_VER
+	_asm { emms }
 	#endif
 }
 

@@ -23,6 +23,9 @@
 	#define MUST_INLINE __attribute__((always_inline))
 	#define FORCE_NAME(symbol) asm(symbol)
 
+	//used to add a breakpoint
+	#define DEBUG_BREAK() __asm__ __volatile__ ("int $3\n");
+
 	//_gtfo marks dead code
 	#if GCC_VERSION >= 40500
 		#define _gtfo __builtin_unreachable()
@@ -38,45 +41,13 @@
 	#define MUST_INLINE __forceinline
 	#define FORCE_NAME(symbol)
 
+	//used to add a breakpoint
+	#define DEBUG_BREAK() _asm { int 3 }
+
 	//_gtfo marks dead code
 	#if _MSC_VER >= 1310
 		#define _gtfo __assume(0)
 	#endif
-#endif
-
-/**
- * Inline Assembly Syntax Hacks
- **/
-
-#ifdef __WATCOMC__
-
-void clearMMX ();
-#pragma aux emms =\
-	".686"\
-	"emms"\
-	parm nomemory []\
-	modify exact []\
-	value
-
-#else
-
-static inline void clearMMX () // inserts opcode emms, used to avoid many compiler checks
-{
-	#ifdef __GNUC__
-	__asm__ __volatile__ ("emms" : : : "cc");
-	#endif
-	#ifdef _MSC_VER
-	_asm { emms }
-	#endif
-}
-
-#endif
-
-#ifdef __GNUC__
-	#define DEBUG_BREAK() __asm__ __volatile__ ("int $3\n");
-#endif
-#ifdef _MSC_VER
-	#define DEBUG_BREAK() _asm { int 3 }
 #endif
 
 /**
@@ -146,10 +117,10 @@ typedef unsigned __int64 uint64_t;
 		cos_ = cos(degree);			\
 	} while(0)
 
-#define MIN(a, b)  (((a) < (b)) ? (a) : (b))
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
-#define MAX(a, b)  (((a) > (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
-#define BOUND(value, min, max)  ((value)>(max)?(max):((value)<(min)?(min):(value)))
+#define BOUND(value, min, max) ((value)>(max)?(max):((value)<(min)?(min):(value)))
 
 #define ANTIBOUND(value, min, max) ((value)>((max)+(min)/2)?((value)>(max)?(value):(max)):((value)<(min)?(value):(min)))
