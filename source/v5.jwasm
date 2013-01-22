@@ -895,8 +895,8 @@ bcskip6case:
 	punpckldq mm0, mm1          ; mm0: [ My, Mx, my, mx]    Ý
 
 		;See SCRCLP2D.BAS for a derivation of these 4 lines:
-	paddsw mm0, mm6 ;qsum0     ; mm0: ["+?,"+?,"+?,"+?]    Û
-	pmaxsw mm0, mm7 ;qsum1     ; mm0: [sy1,sx1,sy0,sx0]    Û
+	paddsw mm0, qsum0           ; mm0: ["+?,"+?,"+?,"+?]    Û
+	pmaxsw mm0, qsum1           ; mm0: [sy1,sx1,sy0,sx0]    Û
 	pshufw mm1, mm0, 0eeh       ; mm1: [sy1,sx1,sy1,sx1]    Û
 	psubusw mm1, mm0            ; mm1: [  0,  0, dy, dx]    Ý
 		;kv6frameplace -= ((32767-yres)*bpl + (32767-xres)*4);
