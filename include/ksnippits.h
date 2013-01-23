@@ -62,13 +62,9 @@ static inline void fcossin (float a, float *c, float *s)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
 		"fsincos\n\t"
-		"fstp	DWORD PTR [%[c]]\n\t"
-		"fstp	DWORD PTR [%[s]]\n\t"
-		".att_syntax prefix\n"
-		:
-		: "t" (a), [c] "r" (c), [s] "r" (s)
+		: "=t" (*c), "=u" (*s)
+		:  "0" (a)
 		:
 	);
 	#endif
@@ -95,13 +91,9 @@ static inline void dcossin (double a, double *c, double *s)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
 		"fsincos\n\t"
-		"fstp	QWORD PTR [%[c]]\n\t"
-		"fstp	QWORD PTR [%[s]]\n\t"
-		".att_syntax prefix\n"
-		:
-		: "t" (a), [c] "r" (c), [s] "r" (s)
+		: "=t" (*c), "=u" (*s)
+		:  "0" (a)
 		:
 	);
 	#endif
@@ -127,10 +119,8 @@ static inline void ftol (float f, long *a)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
-		"fstp	DWORD PTR [%[a]]\n\t"
-		".att_syntax prefix\n"
-		:
+		"fistpl	(%[a])"
+		: 
 		: "t" (f), [a] "r" (a)
 		:
 	);
@@ -154,10 +144,8 @@ static inline void dtol (double d, long *a)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
-		"fstp	QWORD PTR [%[a]]\n\t"
-		".att_syntax prefix\n"
-		:
+		"fistpl	(%[a])"
+		: 
 		: "t" (d), [a] "r" (a)
 		:
 	);
@@ -183,13 +171,11 @@ static inline double dbound (double d, double dmin, double dmax)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"fucomi	%[d], %[dmin]\n"      //if (d < dmin)
-		"fcmovb	%[d], %[dmin]\n"      //    d = dmin;
-		"fucomi	%[d], %[dmax]\n"      //if (d > dmax)
-		"fcmovnb	%[d], %[dmax]\n"  //    d = dmax;
+		"fucomi	%[dmin], %[d]\n"      //if (d < dmin)
+		"fcmovb	%[dmin], %[d]\n"      //    d = dmin;
+		"fucomi	%[dmax], %[d]\n"      //if (d > dmax)
+		"fcmovnb	%[dmin], %[d]\n"  //    d = dmax;
 		"fucom	%[dmax]\n"
-		".att_syntax prefix\n"
 		: [d] "=t" (d)
 		:     "0"  (d), [dmin] "f" (dmin), [dmax] "f" (dmax)
 		:
