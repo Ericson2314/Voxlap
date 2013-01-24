@@ -310,7 +310,7 @@ static inline int64_t mul64 (long a, long d)
 static inline long shldiv16 (long a, long b)
 {
 	#ifdef NOASM
-	return (long)((((int64_t)a) << 16) / ((int64_t)b));
+	return (long)(((int64_t)a << 16) / (int64_t)b);
 	#else
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
@@ -397,7 +397,7 @@ static inline long isshldiv16safe (long a, long b)
 static inline long umulshr32 (long a, long d)
 {
 	#ifdef NOASM
-	return (long)((((uint64_t)a) * ((uint64_t)d)) >> 32);
+	return (long)(((uint64_t)a * (uint64_t)d) >> 32);
 	#else
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
