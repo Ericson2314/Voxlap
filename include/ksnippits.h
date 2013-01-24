@@ -203,17 +203,15 @@ static inline double dbound (double d, double dmin, double dmax)
 static inline long mulshr16 (long a, long d)
 {
 	#ifdef NOASM
-	return (long)((((int64_t)a) * ((int64_t)d)) >> 16);
+	return (long)(((int64_t)a * (int64_t)d) >> 16);
 	#else
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
 		"imul	%[d]\n"
-		"shrd	%[a], %%edx, 16\n"
-		".att_syntax prefix\n"
-		: [a] "=a" (a)
-		:      "0" (a), [d] "r" (d)
+		"shrd	$16, %%edx, %[a]\n"
+		: [a] "+a" (a)
+		: [d]  "r" (d)
 		: "edx"
 	);
 	return a;
@@ -233,17 +231,15 @@ static inline long mulshr16 (long a, long d)
 static inline long mulshr24 (long a, long d)
 {
 	#ifdef NOASM
-	return (long)((((int64_t)a) * ((int64_t)d)) >> 24);
+	return (long)(((int64_t)a * (int64_t)d) >> 24);
 	#else
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
 		"imul	%[d]\n"
-		"shrd	%[a], %%edx, 24\n"
-		".att_syntax prefix\n"
-		: [a] "=a" (a)
-		:      "0" (a), [d] "r" (d)
+		"shrd	$24, %%edx, %[a]\n"
+		: [a] "+a" (a)
+		: [d]  "r" (d)
 		: "edx"
 	);
 	return a;
@@ -263,15 +259,14 @@ static inline long mulshr24 (long a, long d)
 static inline long mulshr32 (long a, long d)
 {
 	#ifdef NOASM
-	return (long)((((int64_t)a) * ((int64_t)d)) >> 32);
+	return (long)(((int64_t)a * (int64_t)d) >> 32);
 	#else
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		"imull %%edx"
-		: "+a" (a), "+d" (d)
-		:
-		: "cc"
+		"imul %%edx"
+		: "+d" (d)
+		:  "a" (a)	
 	);
 	return d;
 	#endif
@@ -289,15 +284,13 @@ static inline long mulshr32 (long a, long d)
 static inline int64_t mul64 (long a, long d)
 {
 	#ifdef NOASM
-	return ((int64_t)a) * ((int64_t)d);
+	return (int64_t)a * (int64_t)d;
 	#else
 	#ifdef __GNUC__ //gcc inline asm
 	int64_t out64;
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix \n"
 		"imul	%[d] \n"
-		".att_syntax prefix \n"
 		: "=A" (out64)
 		:  "a" (a),    [d] "r" (d)
 		:
@@ -322,14 +315,12 @@ static inline long shldiv16 (long a, long b)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
-		"mov	%%edx, %[a]\n"
-		"shl	%[a], 16\n"
-		"sar	%%edx, 16\n"
-		"idiv	%[b]\n" //dword ptr
-		".att_syntax prefix\n"
-		: [a] "=a" (a)
-		:      "0" (a), [b] "r" (b)
+		"mov	%[a], %%edx\n"
+		"shl	$16, %[a]\n"
+		"sar	$16, %%edx\n"
+		"idiv	%[b]\n"
+		: [a] "+a" (a)
+		: [b] "r" (b)
 		: "edx"
 	);
 	return a;
@@ -350,7 +341,7 @@ static inline long shldiv16 (long a, long b)
 static inline long isshldiv16safe (long a, long b)
 {
 	#ifdef NOASM
-	return ((uint32_t)(((-abs(b)) - ((-abs(a)) >> 14)))) >> 31;
+	return ((uint32_t)((-abs(b) - ((-abs(a)) >> 14)))) >> 31;
 	#else
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
@@ -409,17 +400,14 @@ static inline long umulshr32 (long a, long d)
 	return (long)((((uint64_t)a) * ((uint64_t)d)) >> 32);
 	#else
 	#ifdef __GNUC__ //gcc inline asm
-	long product;
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
-		"mul	%[d]\n" //dword ptr
-		".att_syntax prefix\n"
-		: "=d" (product)
-		:  "a" (a), [d] "r" (d)
+		"mul	%%edx\n" //dword ptr
+		: "+d" (d)
+		:  "a" (a)
 		:
 	);
-	return product;
+	return d;
 	#endif
 	#ifdef _MSC_VER //msvc inline asm
 	_asm
@@ -435,17 +423,18 @@ static inline long umulshr32 (long a, long d)
 static inline long scale (long a, long d, long c)
 {
 	#ifdef NOASM
-	return a * d / c;
+	return (long)((int64_t)a * (int64_t)d / (int64_t)c);
 	#else
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"imul	dword ptr d\n"
-		"idiv	dword ptr c\n"
-		".att_syntax prefix\n"
+		"imul	%[d]\n"
+		"idiv	%[c]\n"
+		: "+a" (a)
+		: [c] "r" (c), [d] "r" (d)
+		:
 	);
+	return a;
 	#endif
 	#ifdef _MSC_VER //msvc inline asm
 	_asm
@@ -461,25 +450,21 @@ static inline long scale (long a, long d, long c)
 static inline long dmulshr0 (long a, long d, long s, long t)
 {
 	#ifdef NOASM
-	return a*d + s*t;
+	return (long)((int64_t)a*(int64_t)d + (int64_t)s*(int64_t)t);
 	#else
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
 		"imul	%[d]\n"
-		".att_syntax prefix\n"
-		:    "=a" (a)
-		: [a] "0" (a), [d] "r" (d)
+		:    "+a" (a)
+		: [d] "r" (d)
 		:
 	);
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
 		"imul	%[d]\n"
-		".att_syntax prefix\n"
-		:    "=a" (s)
-		: [s] "0" (s), [d] "r" (t)
+		:    "+a" (s)
+		: [d] "r" (t)
 		:
 	);
 	return a + s;
@@ -506,31 +491,25 @@ static inline long dmulshr22 (long a, long b, long c, long d)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
 		"imul	%[b]\n"
-		".att_syntax prefix\n"
-		:    "=a" (a),    "=d" (b)
-		: [a] "0" (a), [b] "1" (b)
+		:    "+a,a" (a), "=d,d" (b)
+		: [b] "r,1" (b)
 		:
 	);
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
-		"imul	%[c]\n"
-		".att_syntax prefix\n"
-		:    "=a" (c),    "=d" (d)
-		: [c] "0" (c), [d] "1" (d)
+		"imul	%[d]\n"
+		:    "+a,a" (c), "=d,d" (d) 
+		: [d] "r,1" (d)
 		:
 	);
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
-		"add	%[c], %[a]\n"
-		"adc	%[d], %[b]\n"
-		"shrd	%[c], %[d], 22\n"
-		".att_syntax prefix\n"
-		:                              "=r" (c)
-		: [a] "r" (a), [b] "r" (b), [c] "0" (c), [d] "r" (d)
+		"add	%[a], %[c]\n"
+		"adc	%[b], %[d]\n"
+		"shrd	$22,  %[d], %[c]\n"
+		: [c] "+r" (c)
+		: [a]  "r" (a), [b] "r" (b), [d] "r" (d)
 		:
 	);
 	return c;
@@ -556,35 +535,29 @@ static inline long dmulshr22 (long a, long b, long c, long d)
 static inline long dmulrethigh (long b, long c, long a, long d)
 {
 	#ifdef NOASM
-	return (long)(((((int64_t)a)*((int64_t)b)) + (((int64_t)c)*((int64_t)d))) >> 32);
+	return (long)(((int64_t)b*(int64_t)c - (int64_t)a*(int64_t)d) >> 32);
 	#else
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
 		"imul	%[d]\n"
-		".att_syntax prefix\n"
-		:    "=a" (a),    "=d" (d)
-		: [a] "0" (a), [d] "1" (d)
+		:    "+a,a" (a), "=d,d" (d)
+		: [d] "r,1" (d)
 		:
 	);
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
 		"imul	%[c]\n"
-		".att_syntax prefix\n"
-		:    "=a" (b),    "=d" (c)
-		: [b] "0" (b), [c] "1" (c)
+		:    "+a,a" (b), "=d,d" (c)
+		: [c] "r,1" (c)
 		:
 	);
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
-		"sub	%[b], %[a]\n"
-		"sbb	%[c], %[d]\n"
-		".att_syntax prefix\n"
-		:                              "=r" (c)
-		: [a] "r" (a), [b] "r" (b), [c] "0" (c), [d] "r" (d)
+		"sub	%[a], %[b]\n"
+		"sbb	%[d], %[c]\n"
+		: [c] "+r" (c)
+		: [a]  "r" (a), [b] "r" (b), [d] "r" (d)
 		:
 	);
 	return c;
@@ -617,9 +590,7 @@ static inline void copybuf (void *s, void *d, long c)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"rep	movsd\n"
-		".att_syntax prefix\n"
+		"rep	movsl\n"
 		:
 		: "S" (s), "D" (d), "c" (c)
 		:
@@ -651,9 +622,7 @@ static inline void clearbuf (void *d, long c, long a)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"rep	stosd\n"
-		".att_syntax prefix\n"
+		"rep	stosl\n"
 		:
 		: "D" (d), "c" (c), "a" (a)
 		:
@@ -686,11 +655,9 @@ static inline unsigned long bswap (unsigned long a)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
 		"bswap	%[a]\n"
-		".att_syntax prefix\n"
-		:    "=r" (a)
-		: [a] "0" (a)
+		: [a] "+r" (a)
+		:
 		:
 	);
 	return a;
