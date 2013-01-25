@@ -1646,20 +1646,20 @@ void estnorm (long x, long y, long z, point3d *fp)
 		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 		(
-			"cvtsi2ss	zz,%xmm0\n\t"
-			"rsqrtss	%xmm0,%xmm0\n\t"
-			//"movss	%xmm0, f\n\t"
+			"cvtsi2ss	zz,%xmm0\n"
+			"rsqrtss	%xmm0,%xmm0\n"
+			//"movss	%xmm0, f\n"
 
-				//fp->x = f*(float)n.x; fp->y = f*(float)n.y; fp->z = f*(float)n.z;\n\t"
-			"cvtsi2ss	%xmm1,n	.	z\n\t"
-			"shufps	0,%xmm0,%xmm0\n\t"
-			"mov	fp,%eax\n\t"
-			"movlhps	%xmm1,%xmm1\n\t"
-			"cvtpi2ps	n,%xmm1\n\t"
-			"mulps	%xmm1,%xmm0\n\t"
-			"movlps	%xmm0,(%eax)\n\t"
-			"movhlps	%xmm0,%xmm0\n\t"
-			"movss	%xmm0,8(%eax)\n\t"
+				//fp->x = f*(float)n.x; fp->y = f*(float)n.y; fp->z = f*(float)n.z;\n"
+			"cvtsi2ss	%xmm1,n.z\n"
+			"shufps	0,%xmm0,%xmm0\n"
+			"mov	fp,%eax\n"
+			"movlhps	%xmm1,%xmm1\n"
+			"cvtpi2ps	n,%xmm1\n"
+			"mulps	%xmm1,%xmm0\n"
+			"movlps	%xmm0,(%eax)\n"
+			"movhlps	%xmm0,%xmm0\n"
+			"movss	%xmm0,8(%eax)\n"
 		);
 		#endif
 		#ifdef _MSC_VER //msvc inline asm
@@ -1689,18 +1689,18 @@ void estnorm (long x, long y, long z, point3d *fp)
 		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 		(
-			"pi2fd	zz,%mm0\n\t"       //mm0:     0          zz
-			"pfrsqrt	%mm0,%mm0\n\t" //mm0: 1/sqrt(zz) 1/sqrt(zz)
-			"pi2fd	n.x,%mm1\n\t"      //mm1:     0         n.x
-			"pi2fd	n.y,%mm2\n\t"      //mm2:     0         n.y
-			"punpckldq	%mm2,%mm1\n\t" //mm1:    n.y        n.x
-			"pi2fd	n.z,%mm2\n\t"      //mm2:     0         n.z
-			"pfmul	%mm0,%mm1\n\t"     //mm1:n.y/sqrt(zz) n.x/sqrt(zz)
-			"pfmul	%mm0,%mm2\n\t"     //mm2:     0       n.z/sqrt(zz)
-			"mov	fp,%eax\n\t"
-			"movq	%mm1,(%eax)\n\t"
-			"movl	%mm2,8(%eax)\n\t"
-			"femms\n\t"
+			"pi2fd	zz,%mm0\n"       //mm0:     0          zz
+			"pfrsqrt	%mm0,%mm0\n" //mm0: 1/sqrt(zz) 1/sqrt(zz)
+			"pi2fd	n.x,%mm1\n"      //mm1:     0         n.x
+			"pi2fd	n.y,%mm2\n"      //mm2:     0         n.y
+			"punpckldq	%mm2,%mm1\n" //mm1:    n.y        n.x
+			"pi2fd	n.z,%mm2\n"      //mm2:     0         n.z
+			"pfmul	%mm0,%mm1\n"     //mm1:n.y/sqrt(zz) n.x/sqrt(zz)
+			"pfmul	%mm0,%mm2\n"     //mm2:     0       n.z/sqrt(zz)
+			"mov	fp,%eax\n"
+			"movq	%mm1,(%eax)\n"
+			"movl	%mm2,8(%eax)\n"
+			"femms\n"
 		);
 		#endif
 		#ifdef _MSC_VER //msvc inline asm
@@ -8297,10 +8297,10 @@ void setblobs (point3d *p, long numcurs, long dacol, long bakit)
 		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 		(
-			"mov	$256,%eax\n\t"
-			"xorps	%xmm7,%xmm7\n\t"      //xmm7: 0,0,0,0
-			"cvtsi2ss	%eax,%xmm6\n\t"   //xmm6: ?,?,?,256
-			"movlhps	%xmm6,%xmm6\n\t"  //xmm6: ?,256,?,256
+			"mov	$256,%eax\n"
+			"xorps	%xmm7,%xmm7\n"      //xmm7: 0,0,0,0
+			"cvtsi2ss	%eax,%xmm6\n"   //xmm6: ?,?,?,256
+			"movlhps	%xmm6,%xmm6\n"  //xmm6: ?,256,?,256
 		);
 		#endif
 		#ifdef _MSC_VER //msvc inline asm

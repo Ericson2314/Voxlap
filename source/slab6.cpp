@@ -400,12 +400,12 @@ static inline void fcossin (float a, float *c, float *s)
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
-		"fld	DWORD PTR a\n\t"
-		"fsincos\n\t"
-		"mov	eax, c\n\t"
-		"fstp	DWORD PTR [eax]\n\t"
-		"mov	eax, s\n\t"
-		"fstp	DWORD PTR [eax]\n\t"
+		"fld	DWORD PTR a\n"
+		"fsincos\n"
+		"mov	eax, c\n"
+		"fstp	DWORD PTR [eax]\n"
+		"mov	eax, s\n"
+		"fstp	DWORD PTR [eax]\n"
 		".att_syntax prefix\n"
 	);
 	#endif
@@ -1501,9 +1501,9 @@ static inline long testflag (long c)
 	#ifdef __GNUC__ //gcc inline asm
 	long a;
 	__asm__ __volatile__ (
-		"pushf\n\tpopl %%eax\n\tmovl %%eax, %%ebx\n\txorl %%ecx, %%eax\n\tpushl %%eax\n\t"
-		"popf\n\tpushf\n\tpopl %%eax\n\txorl %%ebx, %%eax\n\tmovl $1, %%eax\n\tjne 0f\n\t"
-		"xorl %%eax, %%eax\n\t0:"
+		"pushf\npopl %%eax\nmovl %%eax, %%ebx\nxorl %%ecx, %%eax\npushl %%eax\n"
+		"popf\npushf\npopl %%eax\nxorl %%ebx, %%eax\nmovl $1, %%eax\njne 0f\n"
+		"xorl %%eax, %%eax\n0:"
 		: "=a" (a) : "c" (c) : "ebx","cc" );
 	return a;
 	#endif
@@ -1532,8 +1532,8 @@ static inline void cpuid (long a, long *s)
 {
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__ (
-		"cpuid\n\tmovl %%eax, (%%esi)\n\tmovl %%ebx, 4(%%esi)\n\t"
-		"movl %%ecx, 8(%%esi)\n\tmovl %%edx, 12(%%esi)"
+		"cpuid\nmovl %%eax, (%%esi)\nmovl %%ebx, 4(%%esi)\n"
+		"movl %%ecx, 8(%%esi)\nmovl %%edx, 12(%%esi)"
 		: "+a" (a) : "S" (s) : "ebx","ecx","edx","memory","cc");
 	#endif
 	#ifdef _MSC_VER //msvc inline asm
