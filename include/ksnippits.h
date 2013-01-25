@@ -62,7 +62,7 @@ static inline void fcossin (float a, float *c, float *s)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		"fsincos\n\t"
+		"fsincos\n"
 		: "=t" (*c), "=u" (*s)
 		:  "0" (a)
 		:
@@ -91,7 +91,7 @@ static inline void dcossin (double a, double *c, double *s)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		"fsincos\n\t"
+		"fsincos\n"
 		: "=t" (*c), "=u" (*s)
 		:  "0" (a)
 		:

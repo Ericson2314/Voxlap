@@ -335,7 +335,7 @@ static inline int bitrev (int b, int c)
 {
 	int a;
 	__asm__ __volatile__ (
-		"xorl %%eax, %%eax\n\t0:\n\tshrl $1, %%edx\n\tadcl %%eax, %%eax\n\tsubl $1, %%ecx\n\tjnz 0b"
+		"xorl %%eax, %%eax\n0:\nshrl $1, %%edx\nadcl %%eax, %%eax\nsubl $1, %%ecx\njnz 0b"
 		: "+a" (a), "+d" (b), "+c" (c) : : "cc");
 	return a;
 }
@@ -344,9 +344,9 @@ static inline int testflag (int c)
 {
 	int a;
 	__asm__ __volatile__ (
-		"pushf\n\tpopl %%eax\n\tmovl %%eax, %%edx\n\txorl %%ecx, %%eax\n\tpushl %%eax\n\t"
-		"popf\n\tpushf\n\tpopl %%eax\n\txorl %%edx, %%eax\n\tmovl $1, %%eax\n\tjne 0f\n\t"
-		"xorl %%eax, %%eax\n\t0:"
+		"pushf\npopl %%eax\nmovl %%eax, %%edx\nxorl %%ecx, %%eax\npushl %%eax\n"
+		"popf\npushf\npopl %%eax\nxorl %%edx, %%eax\nmovl $1, %%eax\njne 0f\n"
+		"xorl %%eax, %%eax\n0:"
 		: "=a" (a) : "c" (c) : "edx","cc" );
 	return a;
 }
@@ -354,10 +354,10 @@ static inline int testflag (int c)
 static inline void cpuid (int a, int *s)
 {
 	__asm__ __volatile__ (
-		"pushl %%ebx\n\t"
-		"cpuid\n\tmovl %%eax, (%%esi)\n\tmovl %%ebx, 4(%%esi)\n\t"
-		"movl %%ecx, 8(%%esi)\n\tmovl %%edx, 12(%%esi)\n\t"
-		"popl %%ebx\n\t"
+		"pushl %%ebx\n"
+		"cpuid\nmovl %%eax, (%%esi)\nmovl %%ebx, 4(%%esi)\n"
+		"movl %%ecx, 8(%%esi)\nmovl %%edx, 12(%%esi)\n"
+		"popl %%ebx\n"
 		: "+a" (a) : "S" (s) : "ecx","edx","memory","cc");
 }
 

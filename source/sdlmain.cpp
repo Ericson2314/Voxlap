@@ -88,9 +88,9 @@ static inline long testflag (long c)
 	#ifdef __GNUC__ //gcc inline asm
 	long a;
 	__asm__ __volatile__ (
-		"pushf\n\tpopl %%eax\n\tmovl %%eax, %%ebx\n\txorl %%ecx, %%eax\n\tpushl %%eax\n\t"
-		"popf\n\tpushf\n\tpopl %%eax\n\txorl %%ebx, %%eax\n\tmovl $1, %%eax\n\tjne 0f\n\t"
-		"xorl %%eax, %%eax\n\t0:"
+		"pushf\npopl %%eax\nmovl %%eax, %%ebx\nxorl %%ecx, %%eax\npushl %%eax\n"
+		"popf\npushf\npopl %%eax\nxorl %%ebx, %%eax\nmovl $1, %%eax\njne 0f\n"
+		"xorl %%eax, %%eax\n0:"
 		: "=a" (a) : "c" (c) : "ebx","cc" );
 	return a;
 	#endif
@@ -119,8 +119,8 @@ static inline void cpuid (long a, long *s)
 {
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__ (
-		"cpuid\n\tmovl %%eax, (%%esi)\n\tmovl %%ebx, 4(%%esi)\n\t"
-		"movl %%ecx, 8(%%esi)\n\tmovl %%edx, 12(%%esi)"
+		"cpuid\nmovl %%eax, (%%esi)\nmovl %%ebx, 4(%%esi)\n"
+		"movl %%ecx, 8(%%esi)\nmovl %%edx, 12(%%esi)"
 		: "+a" (a) : "S" (s) : "ebx","ecx","edx","memory","cc");
 	#endif
 	#ifdef _MSC_VER //msvc inline asm
@@ -932,30 +932,30 @@ static void audclipcopy (long *lptr, short *dptr, long nsamp)
 #else
 		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__ (
-			"testl $4, %%edx\n\t"
-			"leal (%%edx,%%ecx,4), %%edx\n\t"
-			"leal (%%eax,%%ecx,8), %%eax\n\t"
-			"jz 0f\n\t"   // skipc
-			"negl %%ecx\n\t"
-			"movq (%%eax,%%ecx,8), %%mm0\n\t"
-			"packssdw %%mm0, %%mm0\n\t"
-			"movd %%mm0, (%%edx,%%ecx,4)\n\t"
-			"addl $2, %%ecx\n\t"
-			"jg 3f\n\t"   // endc
-			"jz 2f\n\t"   // skipd
-			"jmp 1f\n\t"   // begc1
-			"0:\n\tnegl %%ecx\n\t"   // skipc:
-			"addl $1, %%ecx\n\t"
-			"1:\n\tmovq -8(%%eax,%%ecx,8), %%mm0\n\t"   // begc1:
-			"packssdw (%%eax,%%ecx,8), %%mm0\n\t"
-			"movq %%mm0, -4(%%edx,%%ecx,4)\n\t"
-			"addl $2, %%ecx\n\t"
-			"jl 1b\n\t"   // begc1
-			"jg 3f\n\t"   // endc
-			"2:\n\tmovq -8(%%eax), %%mm0\n\t"   // skipd:
-			"packssdw %%mm0, %%mm0\n\t"
-			"movd %%mm0, -4(%%edx)\n\t"
-			"3:\n\t"   // endc:
+			"testl $4, %%edx\n"
+			"leal (%%edx,%%ecx,4), %%edx\n"
+			"leal (%%eax,%%ecx,8), %%eax\n"
+			"jz 0f\n"   // skipc
+			"negl %%ecx\n"
+			"movq (%%eax,%%ecx,8), %%mm0\n"
+			"packssdw %%mm0, %%mm0\n"
+			"movd %%mm0, (%%edx,%%ecx,4)\n"
+			"addl $2, %%ecx\n"
+			"jg 3f\n"   // endc
+			"jz 2f\n"   // skipd
+			"jmp 1f\n"   // begc1
+			"0:\nnegl %%ecx\n"   // skipc:
+			"addl $1, %%ecx\n"
+			"1:\nmovq -8(%%eax,%%ecx,8), %%mm0\n"   // begc1:
+			"packssdw (%%eax,%%ecx,8), %%mm0\n"
+			"movq %%mm0, -4(%%edx,%%ecx,4)\n"
+			"addl $2, %%ecx\n"
+			"jl 1b\n"   // begc1
+			"jg 3f\n"   // endc
+			"2:\nmovq -8(%%eax), %%mm0\n"   // skipd:
+			"packssdw %%mm0, %%mm0\n"
+			"movd %%mm0, -4(%%edx)\n"
+			"3:\n"   // endc:
 			: "+a" (lptr), "+d" (dptr), "+c" (nsamp) : : "memory","cc"
 		);
 		#endif
