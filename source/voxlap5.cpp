@@ -9273,10 +9273,10 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 				i = *(long *)(((uu>>16)<<2) + j);
 
 				#ifdef NOASM
-				i.a = i.a*(white.a-black.a)/256 + black.a
-				i.r = i.r*(white.r-black.r)/256 + black.r
-				i.g = i.g*(white.g-black.g)/256 + black.g
-				i.b = i.b*(white.b-black.b)/256 + black.b
+				((uint8_t *)&i)[0] = ((uint8_t *)&i)[0] * (((uint8_t *)&white)[0] - ((uint8_t *)&black)[0])/256 + ((uint8_t *)&black)[0];
+				((uint8_t *)&i)[1] = ((uint8_t *)&i)[1] * (((uint8_t *)&white)[1] - ((uint8_t *)&black)[1])/256 + ((uint8_t *)&black)[1];
+				((uint8_t *)&i)[2] = ((uint8_t *)&i)[2] * (((uint8_t *)&white)[2] - ((uint8_t *)&black)[2])/256 + ((uint8_t *)&black)[2];
+				((uint8_t *)&i)[3] = ((uint8_t *)&i)[3] * (((uint8_t *)&white)[3] - ((uint8_t *)&black)[3])/256 + ((uint8_t *)&black)[3];
 				#else
 				#ifdef __GNUC__ //gcc inline asm
 				__asm__ __volatile__
