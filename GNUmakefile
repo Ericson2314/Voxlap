@@ -24,9 +24,7 @@ GFX               =sdl
 
 # C compiler must be able to accept gcc flags
 CC               ?=gcc
-ifeq "$(CC)" "cc"
-CC                =gcc
-endif
+CXX              ?=g++
 
 # END Choices
 # -----------------------------------
