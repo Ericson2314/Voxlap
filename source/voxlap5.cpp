@@ -11072,10 +11072,8 @@ static inline void intss (point4d *dest, long src)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
-		"cvtsi2ss	%[dest], %[src]\n"
-		"shufps	%[dest], %[dest], 0\n"
-		".att_syntax prefix\n"
+		"cvtsi2ss	%[src], %[dest]\n"
+		"shufps	$0, %[dest], %[dest]\n"
 		: [dest] "=x" (dest->vec)
 		: [src]   "g" (src)
 		:
@@ -11104,9 +11102,7 @@ static inline void addps (point4d *sum, point4d *a, point4d *b)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax prefix\n"
-		"addps	%[a], %[b]\n"
-		".att_syntax prefix\n"
+		"addps	%[b], %[a]\n"
 		: [a] "=x" (sum->vec)
 		:      "0" (a->vec), [b] "x" (b->vec)
 		:
@@ -11137,9 +11133,7 @@ static inline void mulps (point4d *sum, point4d *a, point4d *b)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mulps	%[a], %[b]\n"
-		".att_syntax prefix\n"
+		"mulps	%[b], %[a]\n"
 		: [a] "=x" (sum->vec)
 		:      "0" (a->vec), [b] "x" (b->vec)
 		:
@@ -11170,9 +11164,7 @@ static inline void subps (point4d *sum, point4d *a, point4d *b)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"subps	%[a], %[b]\n"
-		".att_syntax prefix\n"
+		"subps	%[b], %[a]\n"
 		: [a] "=x" (sum->vec)
 		:      "0" (a->vec), [b] "x" (b->vec)
 		:
@@ -11203,9 +11195,7 @@ static inline void minps (point4d *sum, point4d *a, point4d *b)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"minps	%[a], %[b]\n"
-		".att_syntax prefix\n"
+		"minps	%[b], %[a]\n"
 		: [a] "=x" (sum->vec)
 		:      "0" (a->vec), [b] "x" (b->vec)
 		:
@@ -11236,9 +11226,7 @@ static inline void maxps (point4d *sum, point4d *a, point4d *b)
 	#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"maxps	%[a], %[b]\n"
-		".att_syntax prefix\n"
+		"maxps	%[b], %[a]\n"
 		: [a] "=x" (sum->vec)
 		:      "0" (a->vec), [b] "x" (b->vec)
 		:
