@@ -29,7 +29,7 @@ typedef union
 {
 	struct { float x, y, z, z2; };
 #ifdef __GNUC__
-	float vec __attribute__ ((vector_size (4)));
+	float vec __attribute__ ((vector_size (16)));
 #endif
 #ifdef _MSC_VER
 	__m128 vec;
