@@ -9324,7 +9324,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					"mov edx, p\n"
 					"lea eax, [eax*4+edx]\n"
 					"movd mm0, [eax]\n"       //mm0: [00000000AaRrGgBb]
-					//"movd mm1, i\n"  	        //mm1: [00000000AaRrGgBb]
+					//"movd mm1, i\n"           //mm1: [00000000AaRrGgBb]
 					"pand mm0, mm6\n"         //zero alpha from screen pixel
 					"punpcklbw mm0, mm7\n"    //mm0: [00Aa00Rr00Gg00Bb]
 					//"punpcklbw mm1, mm7\n"    //mm1: [00Aa00Rr00Gg00Bb]
@@ -9347,7 +9347,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					mov edx, p
 					lea eax, [eax*4+edx]
 					movd mm0, [eax]       //mm0: [00000000AaRrGgBb]
-					//movd mm1, i  	        //mm1: [00000000AaRrGgBb]
+					//movd mm1, i           //mm1: [00000000AaRrGgBb]
 					pand mm0, mm6         //zero alpha from screen pixel
 					punpcklbw mm0, mm7    //mm0: [00Aa00Rr00Gg00Bb]
 					//punpcklbw mm1, mm7    //mm1: [00Aa00Rr00Gg00Bb]
