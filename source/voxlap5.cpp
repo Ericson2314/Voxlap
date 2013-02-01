@@ -2140,15 +2140,10 @@ void hrendzsse (long sx, long sy, long p1, long plc, long incr, long j)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"push	esi\n"
-		"push	edi\n"
-	"beghasm_p3:\n"
-		"mov	eax, sx\n"
-		"mov	ecx, sy\n"
-		"mov	esi, p1\n"
-		"mov	edx, ylookup[ecx*4]\n"
-		"add	edx, frameplace\n"
+	"hrendzsse_beghasm_p3:\n"
+		"mov	%c[ylookup](,%%ecx,4), %%edx\n"
+		"add	%[frameplace], %%edx\n"
+".intel_syntax noprefix\n"
 		"lea	edi, [edx+eax*4]\n"
 		"lea	esi, [edx+esi*4]\n"
 
@@ -2157,26 +2152,32 @@ void hrendzsse (long sx, long sy, long p1, long plc, long incr, long j)
 		"cvtsi2ss	xmm4, ecx\n"
 		"movss	xmm1, xmm0\n"
 		"movss	xmm5, xmm4\n"
-		"mulss	xmm0, optistrx\n"
-		"mulss	xmm1, optistry\n"
-		"mulss	xmm4, optiheix\n"
-		"mulss	xmm5, optiheiy\n"
-		"addss	xmm0, optiaddx\n"
-		"addss	xmm1, optiaddy\n"
+".att_syntax prefix\n"
+		"mulss	%[optistrx], %%xmm0\n"
+		"mulss	%[optistry], %%xmm1\n"
+		"mulss	%[optiheix], %%xmm4\n"
+		"mulss	%[optiheiy], %%xmm5\n"
+		"addss	%[optiaddx], %%xmm0\n"
+		"addss	%[optiaddy], %%xmm1\n"
+".intel_syntax noprefix\n"
 		"addss	xmm0, xmm4\n"
 		"addss	xmm1, xmm5\n"
 
 		"mov	ecx, zbufoff\n"
-		"mov	edx, j\n"
-		"movd	mm6, plc\n"
-		"movd	mm7, incr\n"
+".att_syntax prefix\n"
+		"mov	%[j], %%edx\n"
+		"movd	%[plc], %%mm6\n"
+		"movd	%[incr], %%mm7\n"
+".intel_syntax noprefix\n"
 
 		"shufps	xmm0, xmm0, 0\n"
 		"shufps	xmm1, xmm1, 0\n"
-		"movaps	xmm2, opti4asm[2*16]\n"
-		"movaps	xmm3, opti4asm[3*16]\n"
-		"addps	xmm0, opti4asm[0*16]\n"
-		"addps	xmm1, opti4asm[1*16]\n"
+".att_syntax prefix\n"
+		"movaps	%c[opti4asm]+2*16, %%xmm2\n"
+		"movaps	%c[opti4asm]+3*16, %%xmm3\n"
+		"addps	%c[opti4asm]+0*16, %%xmm0\n"
+		"addps	%c[opti4asm]+1*16, %%xmm1\n"
+".intel_syntax noprefix\n"
 			//xmm0 =  xmm0      ^2 +  xmm1      ^2        (p)
 			//xmm2 = (xmm0+xmm2)^2 + (xmm1+xmm3)^2 - xmm0 (v)
 			//xmm1 = ...                                  (a)
@@ -2187,27 +2188,31 @@ void hrendzsse (long sx, long sy, long p1, long plc, long incr, long j)
 		"mulps	xmm2, xmm2\n"
 		"mulps	xmm3, xmm3\n"
 		"addps	xmm0, xmm1\n"
-		"movaps	xmm1, opti4asm[4*16]\n"
+".att_syntax prefix\n"
+		"movaps	%c[opti4asm]+4*16, %%xmm1\n"
+".intel_syntax noprefix\n"
 		"addps	xmm2, xmm3\n"
 		"subps	xmm2, xmm0\n"
 
 			//Do first 0-3 pixels to align unrolled loop of 4
 		"test	edi, 15\n"
-		"jz	short skip1ha\n"
+		"jz	short hrendzsse_skip1ha\n"
 
 		"test	edi, 8\n"
-		"jz	short skipshufa\n"
+		"jz	short hrendzsse_skipshufa\n"
 		"shufps	xmm0, xmm0, 0x4e\n" //rotate right by 2
-	"skipshufa:\n"
+	"hrendzsse_skipshufa:\n"
 		"test	edi, 4\n"
-		"jz	short skipshufb\n"
+		"jz	short hrendzsse_skipshufb\n"
 		"shufps	xmm0, xmm0, 0x39\n" //rotate right by 1
-	"skipshufb:\n"
+	"hrendzsse_skipshufb:\n"
 
-	"beg1ha:\n"
+	"hrendzsse_beg1ha:\n"
 		"pextrw	eax, mm6, 1\n"
 		"paddd	mm6, mm7\n"
-		"mov	eax, angstart[eax*4]\n"
+".att_syntax prefix\n"
+		"mov	%c[angstart](,%%eax,4), %%eax\n"
+".intel_syntax noprefix\n"
 		"movd	mm0, [eax+edx*8]\n"
 		"movd	[edi], mm0\n"
 		"cvtsi2ss	xmm7, [eax+edx*8+4]\n"
@@ -2217,16 +2222,16 @@ void hrendzsse (long sx, long sy, long p1, long plc, long incr, long j)
 		"movss	[edi+ecx], xmm7\n"
 		"add	edi, 4\n"
 		"cmp	edi, esi\n"
-		"jz	short endh\n"
+		"jz	short hrendzsse_endh\n"
 		"test	edi, 15\n"
-		"jnz	short beg1ha\n"
+		"jnz	short hrendzsse_beg1ha\n"
 
 		"addps	xmm0, xmm2\n"
 		"addps	xmm2, xmm1\n"
-	"skip1ha:\n"
+	"hrendzsse_skip1ha:\n"
 		"lea	eax, [edi+16]\n"    //these 3 lines re-ordered
 		"cmp	eax, esi\n"
-		"ja	short skip4h\n"
+		"ja	short hrendzsse_skip4h\n"
 
 		"movq	mm0, mm6\n"     //mm0: 0,plc
 		"paddd	mm0, mm7\n"     //mm0: 0,plc+inc
@@ -2243,20 +2248,28 @@ void hrendzsse (long sx, long sy, long p1, long plc, long incr, long j)
 			//esi:  -     ³ mm4:              z1    z0   ³ xmm4:            z3   z2
 			//edi:scroff  ³ mm5:              z3    z2   ³ xmm5:
 			//ebp:  -     ³ mm6: plc1 plc0               ³ xmm6:
-	"beg4h:\n"
+	"hrendzsse_beg4h:\n"
 			//esp:  -     ³ mm7: inc1 inc0               ³ xmm7:  z3   z2   z1   z0
 		"pextrw	eax, mm6, 1\n"
-		"mov	eax, angstart[eax*4]\n"
+".att_syntax prefix\n"
+		"mov	%c[angstart](,%%eax,4), %%eax\n"
+".intel_syntax noprefix\n"
 		"movq	mm0, [eax+edx*8]\n"
 		"pextrw	eax, mm6, 3\n"
-		"mov	eax, angstart[eax*4]\n"
+".att_syntax prefix\n"
+		"mov	%c[angstart](,%%eax,4), %%eax\n"
+".intel_syntax noprefix\n"
 		"movq	mm1, [eax+edx*8]\n"
 		"paddd	mm6, mm7\n"
 		"pextrw	eax, mm6, 1\n"
-		"mov	eax, angstart[eax*4]\n"
+".att_syntax prefix\n"
+		"mov	%c[angstart](,%%eax,4), %%eax\n"
+".intel_syntax noprefix\n"
 		"movq	mm2, [eax+edx*8]\n"
 		"pextrw	eax, mm6, 3\n"
-		"mov	eax, angstart[eax*4]\n"
+".att_syntax prefix\n"
+		"mov	%c[angstart](,%%eax,4), %%eax\n"
+".intel_syntax noprefix\n"
 		"movq	mm3, [eax+edx*8]\n"
 		"paddd	mm6, mm7\n"
 
@@ -2280,17 +2293,19 @@ void hrendzsse (long sx, long sy, long p1, long plc, long incr, long j)
 
 		"add	edi, 16\n"
 		"cmp	edi, esi\n"
-		"jbe	short beg4h\n"
+		"jbe	short hrendzsse_beg4h\n"
 		"add	esi, 16\n"
 		"cmp	edi, esi\n"
-		"jae	endh\n"
+		"jae	hrendzsse_endh\n"
 
 		"psrad	mm7, 1\n"    //Restore mm7 from incr*2 to just incr for single loop
-	"skip4h:\n"
-	"beg1h:\n"
+	"hrendzsse_skip4h:\n"
+	"hrendzsse_beg1h:\n"
 		"pextrw	eax, mm6, 1\n"
 		"paddd	mm6, mm7\n"
-		"mov	eax, angstart[eax*4]\n"
+".att_syntax prefix\n"
+		"mov	%c[angstart](,%%eax,4), %%eax\n"
+".intel_syntax noprefix\n"
 		"movd	mm0, [eax+edx*8]\n"
 		"movd	[edi], mm0\n"
 		"cvtsi2ss	xmm7, [eax+edx*8+4]\n"
@@ -2300,11 +2315,21 @@ void hrendzsse (long sx, long sy, long p1, long plc, long incr, long j)
 		"movss	[edi+ecx], xmm7\n"
 		"add	edi, 4\n"
 		"cmp	edi, esi\n"
-		"jb	short beg1h\n"
-	"endh:\n"
-		"pop	edi\n"
-		"pop	esi\n"
-		".att_syntax prefix\n"
+		"jb	short hrendzsse_beg1h\n"
+	"hrendzsse_endh:\n"
+".att_syntax prefix\n"
+		:
+		: [sx] "a" (sx), [sy] "c" (sy), [p1] "S" (p1), [plc] "g" (plc),
+		  [incr] "g" (incr), [j] "g" (j), //arguments
+
+		  [ylookup] "p" (&ylookup),
+		  [opti4asm] "p" (&opti4asm), [angstart] "p" (&angstart), //address of global vars
+
+		  [frameplace] "g" (frameplace),
+		  [optistrx] "m" (optistrx), [optistry] "m" (optistry),
+		  [optiheix] "m" (optiheix), [optiheiy] "m" (optiheiy),
+		  [optiaddx] "m" (optiaddx), [optiaddy] "m" (optiaddy) //Global Constants
+		: "edx", "edi", "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm7" //xmm6 unused
 	);
 	#endif
 	#ifdef _MSC_VER //msvc inline asm
@@ -3073,7 +3098,7 @@ void vrendzsse (long sx, long sy, long p1, long iplc, long iinc)
 		"cmp	edx, p1\n"
 		"ja	short prebeg1v\n"
 
-		"cmp	iinc, 0\n"
+		"cmp	dword ptr iinc, 0\n"
 		"jl	short beg4vn\n"
 
 	"beg4vp:\n"
