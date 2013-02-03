@@ -11277,16 +11277,12 @@ static inline void movps_3dn (point4d *dest, point4d *src)
 	*dest = *src;
 	#else
 	#ifdef __GNUC__ //gcc inline asm
-		__asm__ __volatile__
+	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, src\n"
-		"movq	mm0, [eax]\n"
-		"movq	mm1, [eax+8]\n"
-		"mov	eax, dest\n"
-		"movq	[eax], mm0\n"
-		"movq	[eax+8], mm1\n"
-		".att_syntax prefix\n"
+		""
+		: "=y" (dest->svec[0]), "=y" (dest->svec[1])
+		:  "0" (src ->svec[0]),  "1" (src ->svec[1])
+		:
 	);
 	#endif
 	#ifdef _MSC_VER //msvc inline asm
@@ -11312,14 +11308,12 @@ static inline void intss_3dn (point4d *dest, long src)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, dest\n"
-		"movd	mm0, src\n"
-		"pi2fd	mm0, mm0\n"
-		"punpckldq	mm0, mm0\n"
-		"movq	[eax], mm0\n"
-		"movq	[eax+8], mm0\n"
-		".att_syntax prefix\n"
+		"pi2fd	%[y1], %[y1]\n"
+		"punpckldq	%[y1], %[y1]\n"
+		"movq	%[y1], (%[adrs])\n"
+		: [y1] "=y" (dest->svec[0])
+		:       "0" (src), [adrs] "r" (&(dest->svec[1]))
+		:
 	);
 	#endif
 	#ifdef _MSC_VER //msvc inline asm
@@ -11348,17 +11342,11 @@ static inline void addps_3dn (point4d *sum, point4d *a, point4d *b)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"movq	mm0, [eax]\n"
-		"movq	mm1, [eax+8]\n"
-		"mov	eax, b\n"
-		"pfadd	mm0, [eax]\n"
-		"pfadd	mm1, [eax+8]\n"
-		"mov	eax, sum\n"
-		"movq	[eax], mm0\n"
-		"movq	[eax+8], mm1\n"
-		".att_syntax prefix\n"
+		"pfadd	(%[b]),  %[a1]\n"
+		"pfadd	8(%[b]), %[a2]\n"
+		: [a1] "=y" (sum->svec[0]), [a2] "=y" (sum->svec[1])
+		:       "0" (a  ->svec[0]),       "1" (a  ->svec[1]), [b] "r" (&b)
+		:
 	);
 	#endif
 	#ifdef _MSC_VER //msvc inline asm
@@ -11389,17 +11377,11 @@ static inline void mulps_3dn (point4d *sum, point4d *a, point4d *b)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"movq	mm0, [eax]\n"
-		"movq	mm1, [eax+8]\n"
-		"mov	eax, b\n"
-		"pfmul	mm0, [eax]\n"
-		"pfmul	mm1, [eax+8]\n"
-		"mov	eax, sum\n"
-		"movq	[eax], mm0\n"
-		"movq	[eax+8], mm1\n"
-		".att_syntax prefix\n"
+		"pfmul	(%[b]),  %[a1]\n"
+		"pfmul	8(%[b]), %[a2]\n"
+		: [a1] "=y" (sum->svec[0]), [a2] "=y" (sum->svec[1])
+		:       "0" (a  ->svec[0]),       "1" (a  ->svec[1]), [b] "r" (&b)
+		:
 	);
 	#endif
 	#ifdef _MSC_VER //msvc inline asm
@@ -11430,17 +11412,11 @@ static inline void subps_3dn (point4d *sum, point4d *a, point4d *b)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"movq	mm0, [eax]\n"
-		"movq	mm1, [eax+8]\n"
-		"mov	eax, b\n"
-		"pfsub	mm0, [eax]\n"
-		"pfsub	mm1, [eax+8]\n"
-		"mov	eax, sum\n"
-		"movq	[eax], mm0\n"
-		"movq	[eax+8], mm1\n"
-		".att_syntax prefix\n"
+		"pfsub	(%[b]),  %[a1]\n"
+		"pfsub	8(%[b]), %[a2]\n"
+		: [a1] "=y" (sum->svec[0]), [a2] "=y" (sum->svec[1])
+		:       "0" (a  ->svec[0]),       "1" (a  ->svec[1]), [b] "r" (&b)
+		:
 	);
 	#endif
 	#ifdef _MSC_VER //msvc inline asm
@@ -11471,17 +11447,11 @@ static inline void minps_3dn (point4d *sum, point4d *a, point4d *b)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"movq	mm0, [eax]\n"
-		"movq	mm1, [eax+8]\n"
-		"mov	eax, b\n"
-		"pfmin	mm0, [eax]\n"
-		"pfmin	mm1, [eax+8]\n"
-		"mov	eax, sum\n"
-		"movq	[eax], mm0\n"
-		"movq	[eax+8], mm1\n"
-		".att_syntax prefix\n"
+		"pfmin	(%[b]),  %[a1]\n"
+		"pfmin	8(%[b]), %[a2]\n"
+		: [a1] "=y" (sum->svec[0]), [a2] "=y" (sum->svec[1])
+		:       "0" (a  ->svec[0]),       "1" (a  ->svec[1]), [b] "r" (&b)
+		:
 	);
 	#endif
 	#ifdef _MSC_VER //msvc inline asm
@@ -11512,17 +11482,11 @@ static inline void maxps_3dn (point4d *sum, point4d *a, point4d *b)
 	#ifdef __GNUC__ //gcc inline asm
 	__asm__ __volatile__
 	(
-		".intel_syntax noprefix\n"
-		"mov	eax, a\n"
-		"movq	mm0, [eax]\n"
-		"movq	mm1, [eax+8]\n"
-		"mov	eax, b\n"
-		"pfmax	mm0, [eax]\n"
-		"pfmax	mm1, [eax+8]\n"
-		"mov	eax, sum\n"
-		"movq	[eax], mm0\n"
-		"movq	[eax+8], mm1\n"
-		".att_syntax prefix\n"
+		"pfmax	(%[b]),  %[a1]\n"
+		"pfmax	8(%[b]), %[a2]\n"
+		: [a1] "=y" (sum->svec[0]), [a2] "=y" (sum->svec[1])
+		:       "0" (a  ->svec[0]),       "1" (a  ->svec[1]), [b] "r" (&b)
+		:
 	);
 	#endif
 	#ifdef _MSC_VER //msvc inline asm

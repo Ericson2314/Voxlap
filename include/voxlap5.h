@@ -25,16 +25,20 @@
 
 typedef struct { long x, y, z; } lpoint3d;
 typedef struct { float x, y, z; } point3d;
+
 typedef union
 {
 	struct { float x, y, z, z2; };
+	float array[4];
 #ifdef __GNUC__
 	float vec __attribute__ ((vector_size (16)));
+	float svec[2] __attribute__ ((vector_size (8)));
 #endif
 #ifdef _MSC_VER
 	__m128 vec;
 #endif
 } point4d;
+
 typedef struct { double x, y, z; } dpoint3d;
 
 	//Sprite structures:
