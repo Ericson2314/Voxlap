@@ -13470,15 +13470,13 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 										#ifdef __GNUC__ //gcc inline asm
 										__asm__ __volatile__
 										(
-											".intel_syntax noprefix\n"
-											"movss	xmm0, g\n"        //xmm0=g
-											"rcpss	xmm1, xmm0\n"     //xmm1=1/g
-											"rsqrtss	xmm0, xmm0\n" //xmm0=1/sqrt(g)
-											"mulss	xmm1, xmm0\n"     //xmm1=1/(g*sqrt(g))
-											"mov	eax, i\n"
-											"subss	xmm1, lightsub[eax*4]\n"
-											"movss	g, xmm1\n"
-											".att_syntax prefix\n"
+											"rcpss	%[x0], %[x1]\n"     //xmm1=1/g
+											"rsqrtss	%[x0], %[x0]\n" //xmm0=1/sqrt(g)
+											"mulss	%[x0], %[x1]\n"     //xmm1=1/(g*sqrt(g))
+											"subss	%c[lsub](,%[i],4), %[x1]\n"
+											: [x1] "=x" (g)
+											: [x0] "x" (g), [i] "r" (i), [lsub] "p" (lightsub)
+											:
 										);
 										#endif
 										#ifdef _MSC_VER //msvc inline asm
@@ -13499,16 +13497,14 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 										#ifdef __GNUC__ //gcc inline asm
 										__asm__ __volatile__
 										(
-											".intel_syntax noprefix\n"
-											"movd mm0, g\n"
-											"pfrcp	mm1, mm0\n"
-											"pfrsqrt	mm0, mm0\n"
-											"pfmul	mm0, mm1\n"
-											"mov	eax, i\n"
-											"pfsub	mm0, lightsub[eax*4]\n"
-											"movd	g, xmm0\n"
+											"pfrcp	%[y0], %%mm1\n"
+											"pfrsqrt	%[y0], %[y0]\n"
+											"pfmul	%%mm1, %[y0]\n"
+											"pfsub	%c[lsub](,%[i],4), %[y0]\n"
 											"femms\n"
-											".att_syntax prefix\n"
+											: [y0] "+y" (g)
+											: [i]   "r" (i), [lsub] "p" (lightsub)
+											: "mm1"
 										);
 										#endif
 										#ifdef _MSC_VER //msvc inline asm
