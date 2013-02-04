@@ -9250,28 +9250,34 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 	else //Use alpha for masking
 	{
 		//Init for black/white code
-		#ifdef __GNUC__ //gcc inline asm
+		#if defined(__GNUC__) && !defined(NOASM) //gcc inline asm
 		__asm__ __volatile__
 		(
-			".intel_syntax noprefix\n"
-			"pxor mm7, mm7\n"
-			"movd mm5, white\n"
-			"movd mm4, black\n"
-			"punpcklbw mm5, mm7\n"   //mm5: [00Wa00Wr00Wg00Wb]
-			"punpcklbw mm4, mm7\n"   //mm4: [00Ba00Br00Bg00Bb]
-			"psubw mm5, mm4\n"       //mm5: each word range: -255 to 255
-			"movq mm0, mm5\n"        //if (? == -255) ? = -256;
-			"movq mm1, mm5\n"        //if (? ==  255) ? =  256;
-			"pcmpeqw mm0, mskp255\n" //if (mm0.w[#] == 0x00ff) mm0.w[#] = 0xffff
-			"pcmpeqw mm1, mskn255\n" //if (mm1.w[#] == 0xff01) mm1.w[#] = 0xffff
+			"pxor %%mm7, %%mm7\n"
+			"movd %[w], %%mm5\n"
+			"movd %[b], %%mm4\n"
+	".intel_syntax noprefix\n"
+			"punpcklbw mm5, mm7\n"    //mm5: [00Wa00Wr00Wg00Wb]
+			"punpcklbw mm4, mm7\n"    //mm4: [00Ba00Br00Bg00Bb]
+			"psubw mm5, mm4\n"        //mm5: each word range: -255 to 255
+			"movq mm0, mm5\n"         //if (? == -255) ? = -256;
+			"movq mm1, mm5\n"         //if (? ==  255) ? =  256;
+	".att_syntax prefix\n"
+			"pcmpeqw %c[skp], %%mm0\n" //if (mm0.w[#] == 0x00ff) mm0.w[#] = 0xffff
+			"pcmpeqw %c[skn], %%mm1\n" //if (mm1.w[#] == 0xff01) mm1.w[#] = 0xffff
+	".intel_syntax noprefix\n"
 			"psubw mm5, mm0\n"
 			"paddw mm5, mm1\n"
-			"psllw mm5, 4\n"         //mm5: [-WBa-WBr-WBg-WBb]
-			"movq mm6, rgbmask64\n"
-			".att_syntax prefix\n"
+			"psllw mm5, 4\n"          //mm5: [-WBa-WBr-WBg-WBb]
+	".att_syntax prefix\n"
+			"movq %c[mask], %%mm6\n"
+			:
+			: [w] "g" (white), [skp] "p" (&mskp255),
+			  [b] "g" (black), [skn] "p" (&mskn255),
+			  [mask] "p" (&rgbmask64)
+			:
 		);
-		#endif
-		#ifdef _MSC_VER //msvc inline asm
+		#elif defined(_MSC_VER) && !defined(NOASM) //msvc inline asm
 		_asm
 		{
 			pxor mm7, mm7
@@ -9289,7 +9295,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 			psllw mm5, 4         //mm5: [-WBa-WBr-WBg-WBb]
 			movq mm6, rgbmask64
 		}
-		#endif
+		#endif //no C used here
 		for(y=y0,vv=y*vi+v;y<y1;y++,vv+=vi)
 		{
 			p = ylookup[y] + frameplace; j = (vv>>16)*tp + tf;
@@ -9306,16 +9312,20 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 				#ifdef __GNUC__ //gcc inline asm
 				__asm__ __volatile__
 				(
-					".intel_syntax noprefix\n"
-					"movd mm0, i\n"           //mm1: [00000000AaRrGgBb]
+
+					"movd %[i], %%mm0\n"      //mm1: [00000000AaRrGgBb]
+			".intel_syntax noprefix\n"
 					"punpcklbw mm0, mm7\n"    //mm1: [00Aa00Rr00Gg00Bb]
 					"psllw mm0, 4\n"          //mm1: [0Aa00Rr00Gg00Bb0]
 					"pmulhw mm0, mm5\n"       //mm1: [--Aa--Rr--Gg--Bb]
 					"paddw mm0, mm4\n"        //mm1: [00Aa00Rr00Gg00Bb]
 					"movq mm1, mm0\n"
 					"packuswb mm0, mm0\n"     //mm1: [AaRrGgBbAaRrGgBb]
-					"movd i, mm0\n"
-					".att_syntax prefix\n"
+			".att_syntax prefix\n"
+					"movd %%mm0, %[i]\n"
+					: [i] "+g" (i)
+					:
+					:
 				);
 				#endif
 				#ifdef _MSC_VER //msvc inline asm
@@ -9344,9 +9354,8 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 				#ifdef __GNUC__ //gcc inline asm
 				__asm__ __volatile__
 				(
-					".intel_syntax noprefix\n"
-					"mov eax, x\n"            //mm0 = (mm1-mm0)*a + mm0
-					"mov edx, p\n"
+			".intel_syntax noprefix\n"
+					//mm0 = (mm1-mm0)*a + mm0
 					"lea eax, [eax*4+edx]\n"
 					"movd mm0, [eax]\n"       //mm0: [00000000AaRrGgBb]
 					//"movd mm1, i\n"           //mm1: [00000000AaRrGgBb]
@@ -9362,7 +9371,10 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					"paddw mm0, mm1\n"
 					"packuswb mm0, mm0\n"
 					"movd [eax], mm0\n"
-					".att_syntax prefix\n"
+			".att_syntax prefix\n"
+					:
+					: "a" (x), "d" (p)
+					:
 				);
 				#endif
 				#ifdef _MSC_VER //msvc inline asm
