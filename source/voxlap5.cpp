@@ -8703,17 +8703,6 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 	long sx0, sy0, sx1, sy1, x0, y0, x1, y1, x, y, u, v, ui, vi, uu, vv;
 	long p, i, j, a;
 
-	#if defined(__GNUC__) && !defined(NOASM) //only for gcc inline asm
-	register lpoint2d reg0 asm("mm0");
-	register lpoint2d reg1 asm("mm1");
-	register lpoint2d reg2 asm("mm2");
-	//register lpoint2d reg3 asm("mm3");
-	register lpoint2d reg4 asm("mm4");
-	register lpoint2d reg5 asm("mm5");
-	register lpoint2d reg6 asm("mm6");
-	register lpoint2d reg7 asm("mm7");
-	#endif
-
 	if (!tf) return;
 	sx0 = sx - mulshr16(tcx,xz); sx1 = sx0 + xz*tx;
 	sy0 = sy - mulshr16(tcy,yz); sy1 = sy0 + yz*ty;
@@ -8732,51 +8721,6 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 	}
 	else //Use alpha for masking
 	{
-		//Init for black/white code
-		#if defined(__GNUC__) && !defined(NOASM) //gcc inline asm
-		__asm__ __volatile__
-		(
-			"pxor	%[y7], %[y7]\n"
-			"movd	%[w], %[y5]\n"
-			"movd	%[b], %[y4]\n"
-			"punpcklbw	%[y7], %[y5]\n"   //mm5: [00Wa00Wr00Wg00Wb]
-			"punpcklbw	%[y7], %[y4]\n"   //mm4: [00Ba00Br00Bg00Bb]
-			"psubw	%[y4], %[y5]\n"       //mm5: each word range: -255 to 255
-			"movq	%[y5], %[y0]\n"       //if (? == -255) ? = -256;
-			"movq	%[y5], %[y1]\n"       //if (? ==  255) ? =  256;
-			"pcmpeqw	%c[skp], %[y0]\n" //if (mm0.w[#] == 0x00ff) mm0.w[#] = 0xffff
-			"pcmpeqw	%c[skn], %[y1]\n" //if (mm1.w[#] == 0xff01) mm1.w[#] = 0xffff
-			"psubw	%[y5], %[y0]\n"
-			"paddw	%[y5], %[y1]\n"
-			"psllw	$4, %[y5]\n"          //mm5: [-WBa-WBr-WBg-WBb]
-			"movq	%c[mask], %[y6]\n"
-			: [y0] "=y" (reg0), [y1] "=y" (reg1),
-			  [y4] "=y" (reg4), [y5] "=y" (reg5),
-			  [y6] "=y" (reg6), [y7] "=y" (reg7)
-			: [w] "g" (white), [skp] "p" (&mskp255),
-			  [b] "g" (black), [skn] "p" (&mskn255),
-			  [mask] "p" (&rgbmask64)
-			:
-		);
-		#elif defined(_MSC_VER) && !defined(NOASM) //msvc inline asm
-		_asm
-		{
-			pxor	mm7, mm7
-			movd	mm5, white
-			movd	mm4, black
-			punpcklbw	mm5, mm7 //mm5: [00Wa00Wr00Wg00Wb]
-			punpcklbw	mm4, mm7 //mm4: [00Ba00Br00Bg00Bb]
-			psubw	mm5, mm4     //mm5: each word range: -255 to 255
-			movq	mm0, mm5     //if (? == -255) ? = -256;
-			movq	mm1, mm5     //if (? ==  255) ? =  256;
-			pcmpeqw	mpeqwmm0, mskp255 //if (mm0.w[#] == 0x00ff) mm0.w[#] = 0xffff
-			pcmpeqw	mm1, mskn255 //if (mm1.w[#] == 0xff01) mm1.w[#] = 0xffff
-			psubw	mm5, mm0
-			paddw	mm5, mm1
-			psllw	mm5, 4       //mm5: [-WBa-WBr-WBg-WBb]
-			movq	mm6, rgbmask64
-		}
-		#endif //no C equivalent here
 		for(y=y0,vv=y*vi+v;y<y1;y++,vv+=vi)
 		{
 			p = ylookup[y] + frameplace; j = (vv>>16)*tp + tf;
@@ -8784,101 +8728,12 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 			{
 				i = *(long *)(((uu>>16)<<2) + j);
 
-				#ifdef NOASM
 				((uint8_t *)&i)[0] = ((uint8_t *)&i)[0] * (((uint8_t *)&white)[0] - ((uint8_t *)&black)[0])/256 + ((uint8_t *)&black)[0];
 				((uint8_t *)&i)[1] = ((uint8_t *)&i)[1] * (((uint8_t *)&white)[1] - ((uint8_t *)&black)[1])/256 + ((uint8_t *)&black)[1];
 				((uint8_t *)&i)[2] = ((uint8_t *)&i)[2] * (((uint8_t *)&white)[2] - ((uint8_t *)&black)[2])/256 + ((uint8_t *)&black)[2];
 				((uint8_t *)&i)[3] = ((uint8_t *)&i)[3] * (((uint8_t *)&white)[3] - ((uint8_t *)&black)[3])/256 + ((uint8_t *)&black)[3];
-				#else
-				#ifdef __GNUC__ //gcc inline asm
-				__asm__ __volatile__
-				(
-					"punpcklbw	%[y7], %[y0]\n" //mm1: [00Aa00Rr00Gg00Bb]
-					"psllw	$4, %[y0]\n"        //mm1: [0Aa00Rr00Gg00Bb0]
-					"pmulhw	%[y5], %[y0]\n"     //mm1: [--Aa--Rr--Gg--Bb]
-					"paddw	%[y4], %[y0]\n"     //mm1: [00Aa00Rr00Gg00Bb]
-					"movq	%[y0], %[y1]\n"
-					"packuswb	%[y0], %[y0]\n"  //mm1: [AaRrGgBbAaRrGgBb]
-					: [y0] "+y" (i),    [y1] "+y" (reg1), [y7] "+y" (reg7),
-					  [y4] "+y" (reg4), [y5] "+y" (reg5)
-					:
-					:
-				);
-				#endif
-				#ifdef _MSC_VER //msvc inline asm
-				_asm
-				{
-					movd	mm0, i       //mm1: [00000000AaRrGgBb]
-					punpcklbw	mm0, mm7 //mm1: [00Aa00Rr00Gg00Bb]
-					psllw	mm0, 4       //mm1: [0Aa00Rr00Gg00Bb0]
-					pmulhw	mm0, mm5     //mm1: [--Aa--Rr--Gg--Bb]
-					paddw	mm0, mm4     //mm1: [00Aa00Rr00Gg00Bb]
-					movq	mm1, mm0
-					packuswb	mm0, mm0 //mm1: [AaRrGgBbAaRrGgBb]
-					movd	i, mm0
-				}
-				#endif
-				#endif
-
-					//a = (((unsigned long)i)>>24);
-					//if (!a) continue;
-					//if (a == 255) { *(long *)((x<<2)+p) = i; continue; }
-				if ((unsigned long)(i+0x1000000) < 0x2000000)
-				{
-					if (i < 0) *(long *)((x<<2)+p) = i;
-					continue;
-				}
-				#ifdef __GNUC__ //gcc inline asm
-				__asm__ __volatile__
-				(
-					//mm0 = (mm1-mm0)*a + mm0
-					"lea	(%[d],%[a],4), %[a]\n"
-					"movd	(%[a]), %[y0]\n"       //mm0: [00000000AaRrGgBb]
-					//"movd	mm1, i\n"                //mm1: [00000000AaRrGgBb]
-					"pand	%[y6], %[y0]\n"        //zero alpha from screen pixel
-					"punpcklbw	%[y7], %[y0]\n"    //mm0: [00Aa00Rr00Gg00Bb]
-					//"punpcklbw	mm1, mm7\n"      //mm1: [00Aa00Rr00Gg00Bb]
-					"psubw	%[y0], %[y1]\n"        //mm1: [--Aa--Rr--Gg--Bb] range:+-255
-					"psllw	$4, %[y1]\n"           //mm1: [-Aa0-Rr0-Gg0-Bb0]
-					"pshufw	$0xff, %[y1], %[y2]\n" //mm2: [-Aa0-Aa0-Aa0-Aa0]
-					"pmulhw	%[y2], %[y1]\n"
-					//"mov	edx, a\n"                //alphalookup[i] = i*0x001000100010;
-					//"pmulhw	mm1, alphalookup[edx*8]\n"
-					"paddw	%[y1], %[y0]\n"
-					"packuswb	%[y0], %[y0]\n"
-					"movd	%[y0], (%[a])\n"
-					: [y0] "+y" (reg0), [y1] "+y" (reg1),
-					  [y2] "+y" (reg2),
-					  [y6] "+y" (reg6), [y7] "+y" (reg7)
-					: [a] "r" (x), [d] "r" (p)
-					:
-				);
-				#endif
-				#ifdef _MSC_VER //msvc inline asm
-				_asm
-				{
-					mov eax, x            //mm0 = (mm1-mm0)*a + mm0
-					mov edx, p
-					lea eax, [eax*4+edx]
-					movd mm0, [eax]       //mm0: [00000000AaRrGgBb]
-					//movd mm1, i           //mm1: [00000000AaRrGgBb]
-					pand mm0, mm6         //zero alpha from screen pixel
-					punpcklbw mm0, mm7    //mm0: [00Aa00Rr00Gg00Bb]
-					//punpcklbw mm1, mm7    //mm1: [00Aa00Rr00Gg00Bb]
-					psubw mm1, mm0        //mm1: [--Aa--Rr--Gg--Bb] range:+-255
-					psllw mm1, 4          //mm1: [-Aa0-Rr0-Gg0-Bb0]
-					pshufw mm2, mm1, 0xff //mm2: [-Aa0-Aa0-Aa0-Aa0]
-					pmulhw mm1, mm2
-					//mov edx, a            //alphalookup[i] = i*0x001000100010;
-					//pmulhw mm1, alphalookup[edx*8]
-					paddw mm0, mm1
-					packuswb mm0, mm0
-					movd [eax], mm0
-				}
-				#endif
 			}
 		}
-		clearMMX();
 	}
 }
 /**
