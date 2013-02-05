@@ -108,9 +108,6 @@ typedef struct { long col; } castdat;
 typedef struct { long col, dist; } castdat;
 #endif
 typedef struct { castdat *i0, *i1; long z0, z1, cx0, cy0, cx1, cy1; } cftype;
-typedef struct { unsigned short x, y; } uspoint2d;
-typedef struct { long x, y; } lpoint2d;
-typedef struct { float x, y; } point2d;
 #pragma pack(pop)
 
 #if (defined(USEV5ASM) && (USEV5ASM != 0)) //if true
