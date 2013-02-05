@@ -10033,17 +10033,6 @@ static void updatereflects (vx5sprite *spr)
 	float f, g, h, fx, fy, fz;
 	long i, j;
 
-	#if defined(__GNUC__) && !defined(NOASM) //only for gcc inline asm
-	register lpoint2d reg0 asm("mm0");
-	register lpoint2d reg1 asm("mm1");
-	register lpoint2d reg2 asm("mm2");
-	register lpoint2d reg3 asm("mm3");
-	//register lpoint2d reg4 asm("mm4");
-	register lpoint2d reg5 asm("mm5");
-	register lpoint2d reg6 asm("mm6");
-	//register lpoint2d reg7 asm("mm7");
-	#endif
-
 #if 0
 	//KV6 lighting calculations for: fog, white, black, intens(normal dot product), black currently not supported!
 
@@ -10102,8 +10091,6 @@ static void updatereflects (vx5sprite *spr)
 		tp.y = spr->h.x*fx + spr->h.y*fy + spr->h.z*fz;
 		tp.z = spr->f.x*fx + spr->f.y*fy + spr->f.z*fz;
 
-		f = 64.0 / sqrt(tp.x*tp.x + tp.y*tp.y + tp.z*tp.z);
-		#ifdef NOASM
 		for(i=255;i>=0;i--)
 		{
 		   ftol(univec[i].x*tp.x + univec[i].y*tp.y + univec[i].z*tp.z,&j);
@@ -10112,130 +10099,6 @@ static void updatereflects (vx5sprite *spr)
 		   ((unsigned short *)(&kv6colmul[i]))[1] = j;
 		   ((unsigned short *)(&kv6colmul[i]))[2] = j;
 		}
-		#else
-		g = ((float)((((long)fogmul)&32767)^32767))*(16.f*8.f/65536.f);
-		if (!(((vx5.kv6col&0xffff)<<8)^(vx5.kv6col&0xffff00))) //Cool way to check if R==G==B :)
-		{
-			g *= ((float)(vx5.kv6col&255))/256.f;
-				//This case saves 1 MMX multiply per iteration
-			f *= g;
-			lightlist[0][0] = (short)(tp.x*f);
-			lightlist[0][1] = (short)(tp.y*f);
-			lightlist[0][2] = (short)(tp.z*f);
-			lightlist[0][3] = (short)(g*128.f);
-			#ifdef __GNUC__ //gcc inline asm
-			__asm__ __volatile__
-			(
-			".Lnolighta:\n"
-				"movq	%c[uv](%[c]), %[y0]\n"
-				"movq	%c[uv]-8(%[c]), %[y1]\n"
-				"pmaddwd	%[y6], %[y0]\n"      //mm0: [tp.a*iunivec.a + tp.z*iunivec.z][tp.y*iunivec.y + tp.x*iunivec.x]
-				"pmaddwd	%[y6], %[y1]\n"
-				"pshufw	$0x4e, %[y0], %[y2]\n"   //Before: mm0: [ 0 ][ a ][   ][   ][ 0 ][ b ][   ][   ]
-				"pshufw	$0x4e, %[y1], %[y3]\n"
-				"paddd	%[y2], %[y0]\n"
-				"paddd	%[y3], %[y1]\n"
-				"pshufw $0x55, %[y0], %[y0]\n"
-				"pshufw	$0x55, %[y1], %[y1]\n"   //After:  mm0: [   ][   ][   ][a+b][   ][a+b][   ][a+b]
-				"movq	%[y0], %c[kvcm](%[c])\n"
-				"movq	%[y1], %c[kvcm]-8(%[c])\n"
-				"sub	$2*8, %[c]\n"
-				"jnc    .Lnolighta\n"
-				: [y0] "=y" (reg0), [y1] "=y" (reg1),
-				  [y2] "=y" (reg2), [y3] "=y" (reg3),
-				  [y6] "=y" (reg6)
-				: [c]  "r" (255*8), "4" (*(int64_t *)lightlist),
-				  [uv] "p" (iunivec), [kvcm] "p" (kv6colmul)
-				:
-			);
-			#endif
-			#ifdef _MSC_VER //msvc inline asm
-			_asm
-			{
-				movq	mm6, lightlist[0]
-				mov	ecx, 255*8
-			nolighta:
-				movq	mm0, iunivec[ecx]
-				movq	mm1, iunivec[ecx-8]
-				pmaddwd	mm0, mm6 //mm0: [tp.a*iunivec.a + tp.z*iunivec.z][tp.y*iunivec.y + tp.x*iunivec.x]
-				pmaddwd	mm1, mm6
-				pshufw	mm2, mm0, 0x4e  //Before: mm0: [ 0 ][ a ][   ][   ][ 0 ][ b ][   ][   ]
-				pshufw	mm3, mm1, 0x4e
-				paddd	mm0, mm2
-				paddd	mm1, mm3
-				pshufw	mm0, mm0, 0x55
-				pshufw	mm1, mm1, 0x55  //After:  mm0: [   ][   ][   ][a+b][   ][a+b][   ][a+b]
-				movq	kv6colmul[ecx], mm0
-				movq	kv6colmul[ecx-8], mm1
-				sub	ecx, 2*8
-				jnc	short nolighta
-			}
-			#endif
-		}
-		else
-		{
-			f *= g;
-			lightlist[0][0] = (short)(tp.x*f);
-			lightlist[0][1] = (short)(tp.y*f);
-			lightlist[0][2] = (short)(tp.z*f);
-			lightlist[0][3] = (short)(g*128.f);
-			#ifdef __GNUC__ //gcc inline asm
-			__asm__ __volatile__
-			(
-				"punpcklbw	%[vxpart], %[y5]\n"
-			".Lnolightb:\n"
-				"movq	%c[uv](%[c]), %[y0]\n"
-				"movq	%c[uv]-8(%[c]), %[y1]\n"
-				"pmaddwd	%[y6], %[y0]\n"      //mm0: [tp.a*iunivec.a + tp.z*iunivec.z][tp.y*iunivec.y + tp.x*iunivec.x]
-				"pmaddwd	%[y6], %[y1]\n"
-				"pshufw	$0x4e, %[y0], %[y2]\n"   //Before: mm0: [ 0 ][ a ][   ][   ][ 0 ][ b ][   ][   ]
-				"pshufw	$0x4e, %[y1], %[y3]\n"
-				"paddd	%[y2], %[y0]\n"
-				"paddd	%[y3], %[y1]\n"
-				"pshufw $0x55, %[y0], %[y0]\n"
-				"pshufw	$0x55, %[y1], %[y1]\n"   //After:  mm0: [   ][   ][   ][a+b][   ][a+b][   ][a+b]
-				"pmulhuw	%[y5], %[y0]\n"
-				"pmulhuw	%[y5], %[y1]\n"
-				"movq	%[y0], %c[kvcm](%[c])\n"
-				"movq	%[y1], %c[kvcm]-8(%[c])\n"
-				"sub	$2*8, %[c]\n"
-				"jnc .Lnolightb\n"
-				: [y0] "+y" (reg0), [y1] "+y" (reg1),
-				  [y2] "+y" (reg2), [y3] "+y" (reg3),
-				  [y5] "=y" (reg5), [y6] "=y" (reg6)
-				: "5" (*(int64_t *)lightlist),
-				  [c]  "r" (255*8), [vxpart] "m" (vx5.kv6col),
-				  [uv] "p" (iunivec), [kvcm] "p" (kv6colmul)
-			);
-			#endif
-			#ifdef _MSC_VER //msvc inline asm
-			_asm
-			{
-				punpcklbw	mm5, vx5.kv6col
-				movq	mm6, lightlist[0]
-				mov	ecx, 255*8
-			nolightb:
-				movq	mm0, iunivec[ecx]
-				movq	mm1, iunivec[ecx-8]
-				pmaddwd	mm0, mm6 //mm0: [tp.a*iunivec.a + tp.z*iunivec.z][tp.y*iunivec.y + tp.x*iunivec.x]
-				pmaddwd	mm1, mm6
-				pshufw	mm2, mm0, 0x4e //Before: mm0: [ 0 ][ a ][   ][   ][ 0 ][ b ][   ][   ]
-				pshufw	mm3, mm1, 0x4e
-				paddd	mm0, mm2
-				paddd	mm1, mm3
-				pshufw	mm0, mm0, 0x55
-				pshufw	mm1, mm1, 0x55 //After:  mm0: [   ][   ][   ][a+b][   ][a+b][   ][a+b]
-				pmulhuw	mm0, mm5
-				pmulhuw	mm1, mm5
-				movq	kv6colmul[ecx], mm0
-				movq	kv6colmul[ecx-8], mm1
-				sub	ecx, 2*8
-				jnc short nolightb
-			}
-			#endif
-		}
-		//NOTE: emms not necessary!
-		#endif
 	}
 	else
 	{
