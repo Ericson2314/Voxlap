@@ -11002,7 +11002,7 @@ static void updatereflects (vx5sprite *spr)
 			f = tp.x*univec[i].x + tp.y*univec[i].y + tp.z*univec[i].z + 48;
 			for(k=lightcnt-1;k>=0;k--)
 			{
-				h = lightlist[k].x*univec[i].x + lightlist[k].y*univec[i].y + lightlist[k].z*univec[i].z;
+				h = lightlist[k][0]*univec[i].x + lightlist[k][1]*univec[i].y + lightlist[k][2]*univec[i].z;
 				if (*(long *)&h < 0) f -= h;
 			}
 			if (f > 255) f = 255;
