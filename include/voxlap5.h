@@ -23,8 +23,23 @@
 	#define EXTERN_VOXLAP extern
 #endif
 
+typedef struct { unsigned short x, y; } uspoint2d;
+typedef union
+{
+	struct { long x, y; };
+        long array[2];
+#ifdef __GNUC__
+	float vec __attribute__ ((vector_size (8)));
+#endif
+#ifdef _MSC_VER
+	__m64 vec;
+#endif
+} lpoint2d;
+typedef struct { float x, y; } point2d;
+
 typedef struct { long x, y, z; } lpoint3d;
 typedef struct { float x, y, z; } point3d;
+typedef struct { double x, y, z; } dpoint3d;
 
 typedef union
 {
@@ -38,8 +53,6 @@ typedef union
 	__m128 vec;
 #endif
 } point4d;
-
-typedef struct { double x, y, z; } dpoint3d;
 
 	//Sprite structures:
 typedef struct { long col; unsigned short z; char vis, dir; } kv6voxtype;
