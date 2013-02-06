@@ -11018,37 +11018,42 @@ static void updatereflects (vx5sprite *spr)
 		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 		(
-			".intel_syntax noprefix\n"
-			"punpcklbw	mm5, vx5.kv6col\n"
-			"pxor	mm6, mm6\n"
-			"mov	edx, lightcnt\n"
-			"shl	edx, 3\n"
-			"mov	ecx, 255*8\n"
+			"punpcklbw	%[vxpart], %[y5]\n"
+			"pxor	%[y6], %[y6]\n"
+			"shl	$3, %[d]\n"
 		".Lbeglig:\n"
-			"movq	mm3, iunivec[ecx]\n"   //mm3: 256 u[i].z*256 u[i].y*256 u[i].x*256
-			"mov	eax, edx\n"
-			"movq	mm0, lightlist[edx]\n" //mm0: 48*256,0 tp.z*256 tp.y*256 tp.x*256
-			"pmaddwd	mm0, mm3\n"
-			"pshufw	mm2, mm0, 0x4e\n"
-			"paddd	mm0, mm2\n"
-			"sub	eax, 8\n"
-			"js	short .Lendlig\n"
+			"movq	%c[uv](%[c]), %[y3]\n" //mm3: 256 u[i].z*256 u[i].y*256 u[i].x*256
+			"mov	%[d], %[a]\n"
+			"movq	%c[ll](%[d]), %[y0]\n" //mm0: 48*256,0 tp.z*256 tp.y*256 tp.x*256
+			"pmaddwd	%[y3], %[y0]\n"
+			"pshufw	$0x4e, %[y0], %[y2]\n"
+			"paddd	%[y2], %[y0]\n"
+			"sub	$8, %[a]\n"
+			"js	.Lendlig\n"
 		".Lbeglig2:\n"
-			"movq	mm1, lightlist[eax]\n" //mm1: 0 tp.z*256 tp.y*256 tp.x*256
-			"pmaddwd	mm1, mm3\n"
-			"pshufw	mm2, mm1, 0x4e\n"
-			"paddd	mm1, mm2\n"
-			"pminsw	mm1, mm6\n"            //16-bits is ugly, but ok here
-			"psubd	mm0, mm1\n"
-			"sub	eax, 8\n"
-			"jns	short .Lbeglig2\n"       //mm0: 00 II ii ii 00 II ii ii
+			"movq	%c[ll](%[a]), %[y1]\n" //mm1: 0 tp.z*256 tp.y*256 tp.x*256
+			"pmaddwd	%[y3], %[y1]\n"
+			"pshufw	$0x4e, %[y1], %[y2]\n"
+			"paddd	%[y2], %[y1]\n"
+			"pminsw	%[y6], %[y1]\n"        //16-bits is ugly, but ok here
+			"psubd	%[y1], %[y0]\n"
+			"sub	$8, %[a]\n"
+			"jns	.Lbeglig2\n"           //mm0: 00 II ii ii 00 II ii ii
 		".Lendlig:\n"
-			"pshufw	mm0, mm0, 0x55\n"      //mm0: 00 II 00 II 00 II 00 II
-			"pmulhuw	mm0, mm5\n"
-			"movq	kv6colmul[ecx], mm0\n"
-			"sub	ecx, 8\n"
-			"jnc	short .Lbeglig\n"
-			".att_syntax prefix\n"
+			"pshufw	$0x55, %[y0], %[y0]\n"  //mm0: 00 II 00 II 00 II 00 II
+			"pmulhuw	%[y5], %[y0]\n"
+			"movq	%[y0], %c[kvcm](%[c])\n"
+			"sub	$8, %[c]\n"
+			"jnc	.Lbeglig\n"
+			:
+			: [y0] "y" (reg0), [y1] "y" (reg1),
+			  [y2] "y" (reg2), [y3] "y" (reg3),
+			  [y5] "y" (reg5), [y6] "y" (reg6),
+			  [c]  "r" (255*8), [d] "r" (lightcnt), [a] "r" (0),
+			  [vxpart] "m" (vx5.kv6col),
+			  [uv] "p" (iunivec), [kvcm] "p" (kv6colmul),
+			  [ll] "p" (lightlist)
+			:
 		);
 		#endif
 		#ifdef _MSC_VER //msvc inline asm
