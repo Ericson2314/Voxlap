@@ -63,21 +63,20 @@
 #include <limits.h>
 #include <stddef.h>
 
-/* Originally by Jim Meyering.  */
-/* GPL 2 or later  */
+
 static int memcasecmp (const void * const ptr0, const void * const ptr1, size_t n)
 {
 	size_t i;
+	int up0, up1;
+	int diff = 0;
 	for (i = 0; i < n; i++)
 	{
-		int Up0 = toupper((unsigned char)(((const char* const)ptr0)[i]));
-		int Up1 = toupper((unsigned char)(((const char* const)ptr1)[i]));
-		int diff = (UCHAR_MAX <= INT_MAX ? Up0 - Up1
-			    : Up0 < Up1 ? -1 : Up1 < Up0);
-		if (diff)
-			return diff;
+		up0 = toupper(((const unsigned char* const)ptr0)[i]);
+		up1 = toupper(((const unsigned char* const)ptr1)[i]);
+		diff = UCHAR_MAX <= INT_MAX ? up0 - up1 : up0 < up1 ? -1 : up1 < up0;
+		if (diff) break;
 	}
-	return 0;
+	return diff;
 }
 
 #endif
@@ -114,11 +113,11 @@ typedef unsigned __int64 uint64_t;
 	#define EXTERN_C extern
 #endif
 
-#define COSSIN(degree, cos_, sin_)	\
+#define COSSIN(degree, cos_, sin_)					\
 	do								\
-    {								\
-		sin_ = sin(degree);			\
-		cos_ = cos(degree);			\
+	{								\
+		sin_ = sin(degree);					\
+		cos_ = cos(degree);					\
 	} while(0)
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
