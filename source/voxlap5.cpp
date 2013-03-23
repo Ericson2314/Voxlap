@@ -9685,6 +9685,17 @@ void drawpicinquad (long rpic, long rbpl, long rxsiz, long rysiz,
 	long i, j, k, l, imin, imax, sx, sxe, sy, sy1, dd, uu, vv, ddi, uui, vvi;
 	long x, xi, *p, *pe, uvmax, iu, iv;
 
+	#if defined(__GNUC__) && !defined(NOASM) //only for gcc inline asm
+	register lpoint2d reg0 asm("mm0");
+	register lpoint2d reg1 asm("mm1");
+	register lpoint2d reg2 asm("mm2");
+	//register lpoint2d reg3 asm("mm3");
+	register lpoint2d reg4 asm("mm4");
+	register lpoint2d reg5 asm("mm5");
+	register lpoint2d reg6 asm("mm6");
+	register lpoint2d reg7 asm("mm7");
+	#endif
+
 	px[0] = x0; px[1] = x1; px[2] = x2; px[3] = x3;
 	py[0] = y0; py[1] = y1; py[2] = y2; py[3] = y3;
 
@@ -9803,10 +9814,10 @@ __ALIGN(16) static float dpqdistlut[MAXXDIM];
 __ALIGN(16) static float dpqmulval[4] = {0,1,2,3}, dpqfour[4] = {4,4,4,4};
 __ALIGN(8)  static float dpq3dn[4];
 void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
-						 float x0, float y0, float z0, float u0, float v0,
-						 float x1, float y1, float z1, float u1, float v1,
-						 float x2, float y2, float z2, float u2, float v2,
-						 float x3, float y3, float z3)
+				   float x0, float y0, float z0, float u0, float v0,
+				   float x1, float y1, float z1, float u1, float v1,
+				   float x2, float y2, float z2, float u2, float v2,
+				   float x3, float y3, float z3)
 {
 	point3d fp, fp2;
 	float px[6], py[6], pz[6], pu[6], pv[6], px2[4], py2[4], pz2[4], pu2[4], pv2[4];
@@ -9815,6 +9826,17 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 	long i, j, k, l, imin, imax, sx, sxe, sy, sy1;
 	long x, xi, *p, *pe, uvmax, iu, iv, n;
 	long dd, uu, vv, ddi, uui, vvi, distlutoffs;
+
+	#if defined(__GNUC__) && !defined(NOASM) //only for gcc inline asm
+	//register lpoint2d reg0 asm("xmm0");
+	//register lpoint2d reg1 asm("xmm1");
+	//register lpoint2d reg2 asm("xmm2");
+	//register lpoint2d reg3 asm("xmm3");
+	//register lpoint2d reg4 asm("xmm4");
+	//register lpoint2d reg5 asm("xmm5");
+	register lpoint2d reg6 asm("xmm6");
+	register lpoint2d reg7 asm("xmm7");
+	#endif
 
 	px2[0] = x0; py2[0] = y0; pz2[0] = z0; pu2[0] = u0; pv2[0] = v0;
 	px2[1] = x1; py2[1] = y1; pz2[1] = z1; pu2[1] = u1; pv2[1] = v1;
@@ -9938,23 +9960,25 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__ //SSE
 		(
-			".intel_syntax noprefix\n"
-			"movss xmm6, t\n"         //xmm6: -,-,-,dx*scaler
-			"shufps xmm6, xmm6, 0\n"  //xmm6: dx*scaler,dx*scaler,dx*scaler,dx*scaler
-			"movaps xmm7, xmm6\n"     //xmm7: dx*scaler,dx*scaler,dx*scaler,dx*scaler
-			"mulps xmm6, dpqmulval\n" //xmm6: dx*scaler*3,dx*scaler*2,dx*scaler*1,0
-			"mulps xmm7, dpqfour\n"   //xmm7: dx*scaler*4,dx*scaler*4,dx*scaler*4,dx*scaler*4
-			".att_syntax prefix\n"
+			                            //xmm6: -,-,-,dx*scaler
+			"shufps	$0, %[x6], %[x6]\n" //xmm6: dx*scaler,dx*scaler,dx*scaler,dx*scaler
+			"movaps	%[x6], %[x7]\n"     //xmm7: dx*scaler,dx*scaler,dx*scaler,dx*scaler
+			"mulps	%c[mulv], %[x6]\n"  //xmm6: dx*scaler*3,dx*scaler*2,dx*scaler*1,0
+			"mulps	%c[four], %[x6]\n"  //xmm7: dx*scaler*4,dx*scaler*4,dx*scaler*4,dx*scaler*4
+			:     "=x" (reg6), [x7] "=x" (reg7)
+			: [x6] "0" (t),
+			  [mulv] "p" (&dpqmulval), [four] "p" (&dpqfour)
+			:
 		);
 		#endif
 		#ifdef _MSC_VER //msvc inline asm
 		_asm //SSE
 		{
-			movss xmm6, t         //xmm6: -,-,-,dx*scaler
-			shufps xmm6, xmm6, 0  //xmm6: dx*scaler,dx*scaler,dx*scaler,dx*scaler
-			movaps xmm7, xmm6     //xmm7: dx*scaler,dx*scaler,dx*scaler,dx*scaler
-			mulps xmm6, dpqmulval //xmm6: dx*scaler*3,dx*scaler*2,dx*scaler*1,0
-			mulps xmm7, dpqfour   //xmm7: dx*scaler*4,dx*scaler*4,dx*scaler*4,dx*scaler*4
+			movss	xmm6, t         //xmm6: -,-,-,dx*scaler
+			shufps	xmm6, xmm6, 0   //xmm6: dx*scaler,dx*scaler,dx*scaler,dx*scaler
+			movaps	xmm7, xmm6      //xmm7: dx*scaler,dx*scaler,dx*scaler,dx*scaler
+			mulps	xmm6, dpqmulval //xmm6: dx*scaler*3,dx*scaler*2,dx*scaler*1,0
+			mulps	xmm7, dpqfour   //xmm7: dx*scaler*4,dx*scaler*4,dx*scaler*4,dx*scaler*4
 		}
 		#endif
 	}
@@ -10034,25 +10058,25 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 					#ifdef __GNUC__ //gcc inline asm
 					__asm__ __volatile__
 					(
-				".intel_syntax noprefix\n"
-						"mov	ecx, sxe\n"
-						"sub	ecx, sx\n"
-						"xor	eax, eax\n"
-						"lea	ecx, [ecx*4]\n"
-						"sub	eax, ecx\n"
-						"add	ecx, offset dpqdistlut\n"
+						"sub	%[c], %[a]\n"
+						"add	%[distlut], %[c]\n" //distlut not deref
 
-						"movss	xmm0, t\n" //dd+ddi*3 dd+ddi*2 dd+ddi*1 dd+ddi*0
-						"shufps	xmm0, xmm0, 0\n"
-						"addps	xmm0, xmm6\n"
+						//dd+ddi*3 dd+ddi*2 dd+ddi*1 dd+ddi*0
+						"shufps	$0, %[x0], %[x0]\n"
+						"addps	%[x6], %[x0]\n"
 					".Ldpqbegsse:\n"
-						"rcpps	xmm1, xmm0\n"
-						"addps	xmm0, xmm7\n"
-						"movaps	[eax+ecx], xmm1\n"
-						"add	eax, 16\n"
-						"jl	short .Ldpqbegsse\n"
+						"rcpps	%[x0], %[x1]\n"
+						"addps  %[x7], %[x0]\n"
+						"movaps	%[x1], (%[a],%[c])\n"
+						"add	$16, %[a]\n"
+						"jl	.Ldpqbegsse\n"
 						"femms\n"
-				".att_syntax prefix\n"
+						:
+						: [a] "r" (0), [c] "r" (4*(sxe - sx)),
+						  [distlut] "p" (&dpqdistlut),
+						  [x0] "x" (t), [x1] "x" (0),
+						  [x6] "x" (reg6), [x7] "x" (reg7)
+						:
 					);
 					#endif
 					#ifdef _MSC_VER //msvc inline asm
@@ -10083,29 +10107,27 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 					#ifdef __GNUC__ //gcc inline asm
 					__asm__ __volatile__
 					(
-				".intel_syntax noprefix\n"
-						"mov	ecx, sxe\n"
-						"sub	ecx, sx\n"
-						"xor	eax, eax\n"
-						"lea	ecx, [ecx*4]\n"
-						"sub	eax, ecx\n"
-						"add	ecx, offset dpqdistlut\n"
+						"sub	%[c], %[a]\n"
+						"add	%[distlut], %[c]\n" //distlut not deref
 
-						"movd	mm0, t\n"           //dd+ddi*1 dd+ddi*0
-						"punpckldq	mm0, mm0\n"
-						"pfadd	mm0, dpq3dn[0]\n"
-						"movq	mm7, dpq3dn[8]\n"
+						"punpckldq	%[y0], %[y0]\n"
+						"pfadd	%c[dpq],%[y0]\n"
 					".Ldpqbeg3dn:\n"
-						"pswapd	mm2, mm0\n"
-						"pfrcp	mm1, mm0\n"         //mm1: 1/mm0l 1/mm0l
-						"pfrcp	mm2, mm2\n"         //mm2: 1/mm0h 1/mm0h
-						"punpckldq	mm1, mm2\n" //mm1: 1/mm0h 1/mm0l
-						"pfadd	mm0, mm7\n"
-						"movq	[eax+ecx], mm1\n"
-						"add	eax, 8\n"
-						"jl	short .Ldpqbeg3dn\n"
+						"pswapd	%[y0], %[y2]\n"
+						"pfrcp	%[y0], %[y1]\n"     //mm1: 1/mm0l 1/mm0l
+						"pfrcp	%[y2], %[y2]\n"     //mm2: 1/mm0h 1/mm0h
+						"punpckldq	%[y2], %[y1]\n" //mm1: 1/mm0h 1/mm0l
+						"pfadd	%[y7], %[y0]\n"
+						"movq	%[y0], (%[a],%[c])\n"
+						"add	$8, %[a]\n"
+						"jl	.Ldpqbeg3dn\n"
 						"femms\n"
-				".att_syntax prefix\n"
+						:
+						: [a] "r" (0), [c] "r" (4*(sxe - sx)),
+						  [distlut] "p" (&dpqdistlut), [dpq] "p" (&dpq3dn), //(lpoint2d*)
+						  [y1] "y" (0), [y2] "y" (0),
+						  [y0] "y" (t), [y7] "y" (dpq3dn[8])
+						:
 					);
 					#endif
 					#ifdef _MSC_VER //msvc inline asm
@@ -10126,7 +10148,7 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 						pswapd	mm2, mm0
 						pfrcp	mm1, mm0         //mm1: 1/mm0l 1/mm0l
 						pfrcp	mm2, mm2         //mm2: 1/mm0h 1/mm0h
-						punpckldq	mm1, mm2 //mm1: 1/mm0h 1/mm0l
+						punpckldq	mm1, mm2     //mm1: 1/mm0h 1/mm0l
 						pfadd	mm0, mm7
 						movq	[eax+ecx], mm1
 						add	eax, 8
