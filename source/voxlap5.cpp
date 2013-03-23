@@ -11753,10 +11753,11 @@ static void kv6draw (vx5sprite *spr)
 		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 		(
-			".intel_syntax noprefix\n"
-			"movq	mm6, qsum0\n"
-			"movq	mm7, qsum1\n"
-			".att_syntax prefix\n"
+			"movq	%c[q0], %%mm6\n"
+			"movq	%c[q1], %%mm7\n"
+			:
+			: [q0] "p" (&qsum0), [q1] "p" (&qsum1)
+			:
 		);
 		#endif
 		#ifdef _MSC_VER //msvc inline asm
@@ -11864,10 +11865,11 @@ static void kv6draw (vx5sprite *spr)
 		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 		(
-			".intel_syntax noprefix\n"
-			"movq	mm6, qsum0\n"
-			"movq	mm7, qsum1\n"
-			".att_syntax prefix\n"
+			"movq	%c[q0], %%mm6\n"
+			"movq	%c[q1], %%mm7\n"
+			:
+			: [q0] "p" (&qsum0), [q1] "p" (&qsum1)
+			:
 		);
 		#endif
 		#ifdef _MSC_VER //msvc inline asm
