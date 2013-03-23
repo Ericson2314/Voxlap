@@ -10029,92 +10029,113 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 				iu = iv*rbpl + (iu<<2);
 
 				t *= scaler;
-				#ifdef __GNUC__ //gcc inline asm
-				__asm__ __volatile__
-				(
-					".intel_syntax noprefix\n"
-					"mov	ecx, sxe\n"
-					"sub	ecx, sx\n"
-					"xor	eax, eax\n"
-					"lea	ecx, [ecx*4]\n"
-					"sub	eax, ecx\n"
-					"add	ecx, offset dpqdistlut\n"
 
-					"test dword ptr cputype, 1 shl 25\n"
-					"jz short .Ldpqpre3dn\n"
+				if (cputype&(1<<25)) {
+					#ifdef __GNUC__ //gcc inline asm
+					__asm__ __volatile__
+					(
+				".intel_syntax noprefix\n"
+						"mov	ecx, sxe\n"
+						"sub	ecx, sx\n"
+						"xor	eax, eax\n"
+						"lea	ecx, [ecx*4]\n"
+						"sub	eax, ecx\n"
+						"add	ecx, offset dpqdistlut\n"
 
-					"movss	xmm0, t\n" //dd+ddi*3 dd+ddi*2 dd+ddi*1 dd+ddi*0
-					"shufps	xmm0, xmm0, 0\n"
-					"addps	xmm0, xmm6\n"
-				".Ldpqbegsse:\n"
-					"rcpps	xmm1, xmm0\n"
-					"addps	xmm0, xmm7\n"
-					"movaps	[eax+ecx], xmm1\n"
-					"add	eax, 16\n"
-					"jl	short .Ldpqbegsse\n"
-					"jmp	short .Ldpqendit\n"
+						"movss	xmm0, t\n" //dd+ddi*3 dd+ddi*2 dd+ddi*1 dd+ddi*0
+						"shufps	xmm0, xmm0, 0\n"
+						"addps	xmm0, xmm6\n"
+					".Ldpqbegsse:\n"
+						"rcpps	xmm1, xmm0\n"
+						"addps	xmm0, xmm7\n"
+						"movaps	[eax+ecx], xmm1\n"
+						"add	eax, 16\n"
+						"jl	short .Ldpqbegsse\n"
+						"femms\n"
+				".att_syntax prefix\n"
+					);
+					#endif
+					#ifdef _MSC_VER //msvc inline asm
+					_asm
+					{
+						mov	ecx, sxe
+						sub	ecx, sx
+						xor	eax, eax
+						lea	ecx, [ecx*4]
+						sub	eax, ecx
+						add	ecx, offset dpqdistlut
 
-				".Ldpqpre3dn:\n"
-					"movd	mm0, t\n" //dd+ddi*1 dd+ddi*0
-					"punpckldq	mm0, mm0\n"
-					"pfadd	mm0, dpq3dn[0]\n"
-					"movq	mm7, dpq3dn[8]\n"
-				".Ldpqbeg3dn:\n"
-					"pswapd	mm2, mm0\n"
-					"pfrcp	mm1, mm0\n"     //mm1: 1/mm0l 1/mm0l
-					"pfrcp	mm2, mm2\n"     //mm2: 1/mm0h 1/mm0h
-					"punpckldq	mm1, mm2\n" //mm1: 1/mm0h 1/mm0l
-					"pfadd	mm0, mm7\n"
-					"movq	[eax+ecx], mm1\n"
-					"add	eax, 8\n"
-					"jl	short .Ldpqbeg3dn\n"
-					"femms\n"
-				".Ldpqendit:\n"
-					".att_syntax prefix\n"
-				);
-				#endif
-				#ifdef _MSC_VER //msvc inline asm
-				_asm
-				{
-					mov	ecx, sxe
-					sub	ecx, sx
-					xor	eax, eax
-					lea	ecx, [ecx*4]
-					sub	eax, ecx
-					add	ecx, offset dpqdistlut
-
-					test	cputype, 1 shl 25
-					jz	short dpqpre3dn
-
-					movss	xmm0, t //dd+ddi*3 dd+ddi*2 dd+ddi*1 dd+ddi*0
-					shufps	xmm0, xmm0, 0
-					addps	xmm0, xmm6
-				dpqbegsse:
-					rcpps	xmm1, xmm0
-					addps	xmm0, xmm7
-					movaps	[eax+ecx], xmm1
-					add	eax, 16
-					jl	short dpqbegsse
-					jmp	short dpqendit
-
-				dpqpre3dn:
-					movd	mm0, t //dd+ddi*1 dd+ddi*0
-					punpckldq	mm0, mm0
-					pfadd	mm0, dpq3dn[0]
-					movq	mm7, dpq3dn[8]
-				dpqbeg3dn:
-					pswapd	mm2, mm0
-					pfrcp	mm1, mm0     //mm1: 1/mm0l 1/mm0l
-					pfrcp	mm2, mm2     //mm2: 1/mm0h 1/mm0h
-					punpckldq	mm1, mm2 //mm1: 1/mm0h 1/mm0l
-					pfadd	mm0, mm7
-					movq	[eax+ecx], mm1
-					add	eax, 8
-					jl	short dpqbeg3dn
-					femms
-				dpqendit:
+						movss	xmm0, t //dd+ddi*3 dd+ddi*2 dd+ddi*1 dd+ddi*0
+						shufps	xmm0, xmm0, 0
+						addps	xmm0, xmm6
+					dpqbegsse:
+						rcpps	xmm1, xmm0
+						addps	xmm0, xmm7
+						movaps	[eax+ecx], xmm1
+						add	eax, 16
+						jl	short dpqbegsse
+						femms
+					}
+					#endif
 				}
-				#endif
+				else
+				{
+					#ifdef __GNUC__ //gcc inline asm
+					__asm__ __volatile__
+					(
+				".intel_syntax noprefix\n"
+						"mov	ecx, sxe\n"
+						"sub	ecx, sx\n"
+						"xor	eax, eax\n"
+						"lea	ecx, [ecx*4]\n"
+						"sub	eax, ecx\n"
+						"add	ecx, offset dpqdistlut\n"
+
+						"movd	mm0, t\n"           //dd+ddi*1 dd+ddi*0
+						"punpckldq	mm0, mm0\n"
+						"pfadd	mm0, dpq3dn[0]\n"
+						"movq	mm7, dpq3dn[8]\n"
+					".Ldpqbeg3dn:\n"
+						"pswapd	mm2, mm0\n"
+						"pfrcp	mm1, mm0\n"         //mm1: 1/mm0l 1/mm0l
+						"pfrcp	mm2, mm2\n"         //mm2: 1/mm0h 1/mm0h
+						"punpckldq	mm1, mm2\n" //mm1: 1/mm0h 1/mm0l
+						"pfadd	mm0, mm7\n"
+						"movq	[eax+ecx], mm1\n"
+						"add	eax, 8\n"
+						"jl	short .Ldpqbeg3dn\n"
+						"femms\n"
+				".att_syntax prefix\n"
+					);
+					#endif
+					#ifdef _MSC_VER //msvc inline asm
+					_asm
+					{
+						mov	ecx, sxe
+						sub	ecx, sx
+						xor	eax, eax
+						lea	ecx, [ecx*4]
+						sub	eax, ecx
+						add	ecx, offset dpqdistlut
+
+						movd	mm0, t           //dd+ddi*1 dd+ddi*0
+						punpckldq	mm0, mm0
+						pfadd	mm0, dpq3dn[0]
+						movq	mm7, dpq3dn[8]
+					dpqbeg3dn:
+						pswapd	mm2, mm0
+						pfrcp	mm1, mm0         //mm1: 1/mm0l 1/mm0l
+						pfrcp	mm2, mm2         //mm2: 1/mm0h 1/mm0h
+						punpckldq	mm1, mm2 //mm1: 1/mm0h 1/mm0l
+						pfadd	mm0, mm7
+						movq	[eax+ecx], mm1
+						add	eax, 8
+						jl	short dpqbeg3dn
+						femms
+					}
+					#endif
+				}
+
 				distlutoffs = ((long)dpqdistlut)-((long)p);
 				do
 				{
