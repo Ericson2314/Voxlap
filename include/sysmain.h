@@ -10,6 +10,9 @@
 
 #pragma once
 
+#include <cstdlib>
+#include <cstdlib>
+
 #if !defined(SYSMAIN_C) && !defined(__cplusplus) && !defined(SYSMAIN)
 #error "Cannot link C frontend to C++ Backend"
 #endif
@@ -61,6 +64,12 @@ typedef struct { long x, y; char c, r0, g0, b0, a0, rn, gn, bn, an; } validmodet
 extern validmodetype curvidmodeinfo;
 extern long xres, yres, colbits, fullscreen, maxpages;
 extern PALETTEENTRY pal[256];
+
+extern void initopengl_withpbo(int *);
+void updatePixels(void*, int);
+bool initSharedMem();
+void clearSharedMem();
+
 extern long startdirectdraw (long *, long *, long *, long *);
 extern void stopdirectdraw ();
 extern void nextpage ();

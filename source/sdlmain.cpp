@@ -8,10 +8,14 @@
 #undef max
 #undef min
 
+#define GL_GLEXT_PROTOTYPES
+
 #include <SDL/SDL.h>
+#include "SDL/SDL_opengl.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+
 	//need this for unused inline function in ksnippits
 #include <math.h>
 
@@ -30,6 +34,50 @@
 	#include <unistd.h>
 	#include <sys/mman.h>
 #endif
+
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+#else
+#include <GL/glut.h>
+#endif
+
+
+
+#include "glext.h"
+
+GLuint pboIds[2];
+GLuint textureId;
+GLubyte* imageData = 0;// pointer to texture buffer
+
+
+#ifdef _WIN32
+PFNGLGENBUFFERSARBPROC pglGenBuffersARB = 0;                     // VBO Name Generation Procedure
+PFNGLBINDBUFFERARBPROC pglBindBufferARB = 0;                     // VBO Bind Procedure
+PFNGLBUFFERDATAARBPROC pglBufferDataARB = 0;                     // VBO Data Loading Procedure
+PFNGLBUFFERSUBDATAARBPROC pglBufferSubDataARB = 0;               // VBO Sub Data Loading Procedure
+PFNGLDELETEBUFFERSARBPROC pglDeleteBuffersARB = 0;               // VBO Deletion Procedure
+PFNGLGETBUFFERPARAMETERIVARBPROC pglGetBufferParameterivARB = 0; // return various parameters of VBO
+PFNGLMAPBUFFERARBPROC pglMapBufferARB = 0;                       // map VBO procedure
+PFNGLUNMAPBUFFERARBPROC pglUnmapBufferARB = 0;                   // unmap VBO procedure
+#define glGenBuffersARB           pglGenBuffersARB
+#define glBindBufferARB           pglBindBufferARB
+#define glBufferDataARB           pglBufferDataARB
+#define glBufferSubDataARB        pglBufferSubDataARB
+#define glDeleteBuffersARB        pglDeleteBuffersARB
+#define glGetBufferParameterivARB pglGetBufferParameterivARB
+#define glMapBufferARB            pglMapBufferARB
+#define glUnmapBufferARB          pglUnmapBufferARB
+#endif
+
+bool has_pbo = false;
+bool gl_init = false;
+
+const int    IMAGE_WIDTH    = 640;
+const int    IMAGE_HEIGHT   = 480;
+const int    CHANNEL_COUNT  = 4;
+const int    DATA_SIZE      = IMAGE_WIDTH * IMAGE_HEIGHT * CHANNEL_COUNT;
+const GLenum PIXEL_FORMAT   = GL_BGRA;
+
 
 #ifndef NOSOUND
 #ifdef USEKZ
@@ -238,7 +286,7 @@ long getvalidmodelist (validmodetype **davalidmodelist)
 	int cd[5] = { 8,15,16,24,32 }, i, j;
 	SDL_Rect **modes;
 	SDL_PixelFormat pf = { NULL, 8, 1, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0 };
-	
+
 	if (!validmodecnt) {
 		for (i=0;i<5;i++) {
 			pf.BitsPerPixel = cd[i];
@@ -269,7 +317,7 @@ void updatepalette (long start, long danum)
 {
 	SDL_Color pe[256];
 	int i,j;
-	
+
 	if (!sdlsurf) return;
 
 	for (i=0,j=danum; j>0; i++,j--) {
@@ -284,31 +332,252 @@ void updatepalette (long start, long danum)
 void stopdirectdraw()
 {
 	if (!surflocked) return;
-	if (sdlsurf && SDL_MUSTLOCK(sdlsurf)) SDL_UnlockSurface(sdlsurf);
+
+
+
+	if (has_pbo)
+	{
+
+        glUnmapBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB); // release pointer to mapping buffer
+        glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+        glBindTexture(GL_TEXTURE_2D, textureId);
+        glColor4f(1, 1, 1, 1);
+        glBegin(GL_QUADS);
+        glNormal3f(0, 0, 1);
+        glTexCoord2f(0.0f, 0.0f);   glVertex3f(1.0f, 1.0f, 0.0f);
+        glTexCoord2f(1.0f, 0.0f);   glVertex3f( -1.0f, 1.0f, 0.0f);
+        glTexCoord2f(1.0f, 1.0f);   glVertex3f( -1.0f,  -1.0f, 0.0f);
+        glTexCoord2f(0.0f, 1.0f);   glVertex3f(1.0f,  -1.0f, 0.0f);
+        glEnd();
+
+        // unbind texture
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+	}else{
+        if (sdlsurf && SDL_MUSTLOCK(sdlsurf)) SDL_UnlockSurface(sdlsurf);
+	}
 	surflocked = 0;
+}
+void updatePixels(void* dst, int size)
+{
+    static int color = 0x00000000;
+
+    if(!dst)
+        return;
+
+    int* ptr = (int*)(GLubyte*)dst;
+
+    // copy 4 bytes at once
+    for(int i = 0; i < IMAGE_HEIGHT; ++i)
+    {
+        for(int j = 0; j < IMAGE_WIDTH; ++j)
+        {
+            *ptr = color;
+           ++ptr;
+        }
+        color += 23;   // add an arbitary number (no meaning)
+    }
+    ++color;            // scroll down
 }
 
 long startdirectdraw(long *vidplc, long *dabpl, long *daxres, long *dayres)
 {
 	if (surflocked) stopdirectdraw();
 
-	if (SDL_LockSurface(sdlsurf) < 0) return 0;
-	
-	*vidplc = (long)sdlsurf->pixels; *dabpl = sdlsurf->pitch;
-	*daxres = sdlsurf->w; *dayres = sdlsurf->h; surflocked = 1;
+    static int index = 0;
+    int nextIndex = 0;
+
+	if (!has_pbo )
+	{
+	     if (SDL_LockSurface(sdlsurf) < 0) return 0;
+	    *dabpl = sdlsurf->pitch;
+        *daxres = sdlsurf->w;
+        *dayres = sdlsurf->h;
+        *vidplc = (long)sdlsurf->pixels;
+
+	}else{
+
+        *daxres = sdlsurf->w;
+        *dayres = sdlsurf->h;
+        *dabpl = sdlsurf->pitch;
+
+        index = (index + 1) % 2;
+        nextIndex = (index + 1) % 2;
+	        // bind the texture and PBO
+        glBindTexture(GL_TEXTURE_2D, textureId );
+        glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pboIds[index]);
+
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, IMAGE_WIDTH, IMAGE_HEIGHT, PIXEL_FORMAT, GL_UNSIGNED_BYTE, 0);
+        glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pboIds[nextIndex]);
+
+        glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, DATA_SIZE, 0, GL_STREAM_DRAW_ARB);
+
+
+        GLubyte* ptr = (GLubyte*)glMapBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, GL_WRITE_ONLY_ARB);
+        *vidplc = (long)ptr;
+
+
+        if(ptr)
+        {
+            // update data directly on the mapped buffer
+            //updatePixels(ptr, DATA_SIZE);
+            //glUnmapBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB);
+        }
+        //*vidplc = (long)sdlsurf->pixels;
+	}
+
+
+    surflocked = 1;
 	return 1;
 }
 
 void nextpage()
 {
 	if (!sdlsurf) return;
-	if (surflocked) stopdirectdraw();
-	SDL_Flip(sdlsurf);
+	//if (surflocked) stopdirectdraw();
+	if (has_pbo)
+	{
+
+        SDL_GL_SwapBuffers();
+	}else{
+        SDL_Flip(sdlsurf);
+	}
 }
 
 long clearscreen(long fillcolor)
 {
-	return SDL_FillRect(sdlsurf, NULL, fillcolor) == 0;
+	return 0;//SDL_FillRect(sdlsurf, NULL, fillcolor) == 0;
+}
+
+
+void initopengl_withpbo(uint32_t * surfbits)
+{
+    *surfbits |= SDL_OPENGL;
+    *surfbits |= SDL_HWACCEL;
+
+    SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 8 );
+    SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 8 );
+    SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 8 );
+    SDL_GL_SetAttribute( SDL_GL_ALPHA_SIZE, 0 );
+    SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 0 );
+    SDL_GL_SetAttribute( SDL_GL_ACCELERATED_VISUAL, 1 );
+    SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
+    SDL_GL_SetAttribute( SDL_GL_SWAP_CONTROL, 0 );
+
+}
+
+void init_opengl_extensions()
+{
+    initSharedMem();
+
+    glShadeModel(GL_FLAT);                      // shading mathod: GL_SMOOTH or GL_FLAT
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4);      // 4-byte pixel alignment
+
+    // enable /disable features
+    //@glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+    //glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+    //glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
+    glEnable(GL_DEPTH_TEST);
+    //@glEnable(GL_LIGHTING);
+    glDisable(GL_LIGHTING);
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_CULL_FACE);
+
+    glGenTextures(1, &textureId);
+    glBindTexture(GL_TEXTURE_2D, textureId);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8_EXT
+                 , IMAGE_WIDTH
+                 , IMAGE_HEIGHT
+                 , 0
+                 , PIXEL_FORMAT
+                 , GL_UNSIGNED_BYTE
+                 , (GLvoid*)imageData);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    /* Get function pointer */
+    #ifdef _WIN32
+    glGenBuffersARB =           (PFNGLGENBUFFERSARBPROC)            wglGetProcAddress("glGenBuffersARB");
+    glBindBufferARB =           (PFNGLBINDBUFFERARBPROC)            wglGetProcAddress("glBindBufferARB");
+    glBufferDataARB =           (PFNGLBUFFERDATAARBPROC)            wglGetProcAddress("glBufferDataARB");
+    glBufferSubDataARB =        (PFNGLBUFFERSUBDATAARBPROC)         wglGetProcAddress("glBufferSubDataARB");
+    glDeleteBuffersARB =        (PFNGLDELETEBUFFERSARBPROC)         wglGetProcAddress("glDeleteBuffersARB");
+    glGetBufferParameterivARB = (PFNGLGETBUFFERPARAMETERIVARBPROC)  wglGetProcAddress("glGetBufferParameterivARB");
+    glMapBufferARB =            (PFNGLMAPBUFFERARBPROC)             wglGetProcAddress("glMapBufferARB");
+    glUnmapBufferARB =          (PFNGLUNMAPBUFFERARBPROC)           wglGetProcAddress("glUnmapBufferARB");
+
+    // check once again PBO extension
+    if(glGenBuffersARB && glBindBufferARB && glBufferDataARB && glBufferSubDataARB &&
+       glMapBufferARB && glUnmapBufferARB && glDeleteBuffersARB && glGetBufferParameterivARB)
+    {
+        has_pbo = true;
+    }else{
+        has_pbo = false;
+    }
+    #endif
+    fprintf(stdout, "Screen BPP: %d\n", SDL_GetVideoSurface()->format->BitsPerPixel);
+
+    fprintf( stdout, "hw_available: %d\n", SDL_GetVideoInfo()->hw_available );
+    fprintf( stdout, "blit_hw: %d\n", SDL_GetVideoInfo()->blit_hw );
+    fprintf( stdout, "blit_hw_A: %d\n", SDL_GetVideoInfo()->blit_hw_A );
+    fprintf( stdout, "video_mem: %d\n", SDL_GetVideoInfo()->video_mem );
+
+
+	fprintf( stdout, "Vendor     : %s\n", glGetString( GL_VENDOR ) );
+	fprintf( stdout, "Renderer   : %s\n", glGetString( GL_RENDERER ) );
+	fprintf( stdout, "Version    : %s\n", glGetString( GL_VERSION ) );
+
+    if (has_pbo)
+    {
+        fprintf(stdout, "Video card supports GL_ARB_pixel_buffer_object.\n");
+    } else {
+        fprintf(stderr, "****NO video card support for GL_ARB_pixel_buffer_object.****\n");
+    }
+
+	fprintf( stdout, "Extensions : %s\n", glGetString( GL_EXTENSIONS ) );
+	fprintf( stdout, "\n");
+    if (has_pbo)
+    {
+        glGenBuffersARB(2, pboIds);
+        fprintf(stdout, "Created 2 pixel buffer objects: %d and %d of size: %d \n", pboIds[0],pboIds[1], DATA_SIZE );
+        glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pboIds[0]);
+        glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, DATA_SIZE, 0, GL_STREAM_DRAW_ARB);
+        glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pboIds[1]);
+        glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, DATA_SIZE, 0, GL_STREAM_DRAW_ARB);
+        glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
+    }
+    gl_init = true;
+}
+
+bool initSharedMem()
+{
+
+    // allocate texture buffer
+    imageData = new GLubyte[DATA_SIZE];
+    memset(imageData, 0, DATA_SIZE);
+    return true;
+}
+
+void clearSharedMem()
+{
+    // deallocate texture buffer
+    delete [] imageData;
+    imageData = 0;
+
+    // clean up texture
+    glDeleteTextures(1, &textureId);
+
+    // clean up PBOs
+    if( has_pbo )
+    {
+        glDeleteBuffersARB(2, pboIds);
+    }
 }
 
 long initdirectdraw(long daxres, long dayres, long dacolbits)
@@ -322,19 +591,40 @@ long initdirectdraw(long daxres, long dayres, long dacolbits)
 		SDL_ShowCursor(SDL_ENABLE);
 	}
 #endif
-	
+
 	xres = daxres; yres = dayres; colbits = dacolbits;
 
+	//surfbits = BASICSURFBITS;
+	//surfbits |= SDL_HWPALETTE;
+	//surfbits |= SDL_HWSURFACE;
+	if (fullscreen) surfbits |= SDL_FULLSCREEN;
+	//else if (progresiz) surfbits |= SDL_RESIZABLE;
+
+#ifndef NOGL_PBO
+    // Map an opengl PBO to use as a write buffer, instead of SDL framebuffer
+    initopengl_withpbo( &surfbits );
+    sdlsurf = SDL_SetVideoMode(daxres, dayres, 0, surfbits);
+#else
 	surfbits = BASICSURFBITS;
 	surfbits |= SDL_HWPALETTE;
-	if (fullscreen) surfbits |= SDL_FULLSCREEN;
-	else if (progresiz) surfbits |= SDL_RESIZABLE;
+	surfbits |= SDL_HWSURFACE;
 
-	sdlsurf = SDL_SetVideoMode(daxres, dayres, dacolbits, surfbits);
+    sdlsurf = SDL_SetVideoMode(daxres, dayres, dacolbits, surfbits);
+#endif
+
 	if (!sdlsurf) {
 		fputs("video init failed!",stderr);
 		return 0;
 	}
+
+#ifndef NOGL_PBO
+    // For PBO extension
+    if (gl_init)
+    {
+        clearSharedMem();
+    }
+    init_opengl_extensions();
+#endif
 
 	// FIXME: should I?
 	xres = sdlsurf->w;
@@ -354,7 +644,7 @@ long initdirectdraw(long daxres, long dayres, long dacolbits)
 	curvidmodeinfo.bn = 8 - sdlsurf->format->Bloss;
 	curvidmodeinfo.a0 = sdlsurf->format->Ashift;
 	curvidmodeinfo.an = 8 - sdlsurf->format->Aloss;
-	
+
 	if (colbits == 8) updatepalette(0,256);
 
 #ifndef NOINPUT
@@ -399,7 +689,7 @@ void readkeyboard ()
 void readmouse (float *fmousx, float *fmousy, long *bstatus)
 {
 	if (!mouse_acquire) { *fmousx = *fmousy = 0; *bstatus = 0; return; }
-	
+
 	*fmousx = (float)mousex;
 	*fmousy = (float)mousey;
 	*bstatus = gbstatus;
@@ -470,7 +760,7 @@ int KSoundBuffer_Lock(KSoundBuffer *ksb, long wroffs, long wrlen,
 		void **ptr1, unsigned long *len1, void **ptr2, unsigned long *len2, long flags)
 {
 	if (!ksb || !ptr1 || !len1 || !ptr2 || !len2) return KS_NOTOK;
-	
+
 	if (flags & KSBLOCK_FROMWRITECURSOR) {
 		wroffs = ksb->writecur;
 	} else {
@@ -501,7 +791,7 @@ int KSoundBuffer_Lock(KSoundBuffer *ksb, long wroffs, long wrlen,
 int KSoundBuffer_GetCurrentPosition(KSoundBuffer *ksb, unsigned long *play, unsigned long *write)
 {
 	if (!ksb) return KS_NOTOK;
-	
+
 	if (play) {
 		// FIXME: Can't determine this since SDL calls us via a callback!
 		*play = ksb->writecur - 0;
@@ -510,7 +800,7 @@ int KSoundBuffer_GetCurrentPosition(KSoundBuffer *ksb, unsigned long *play, unsi
 	if (write) {
 		*write = ksb->writecur;
 	}
-	
+
 	return KS_OK;
 }
 
@@ -1445,9 +1735,9 @@ void playsoundupdate (void *optr, void *nptr)
 void sdlmixcallback(void *userdata, uint8_t *stream, int len)
 {
 	long amt;
-	
+
 	if (!streambuf) return;
-	
+
 	// copy over the normal kensound mixing buffer
 	amt = MIN(streambuf->buflen - streambuf->writecur, len);
 	memcpy(stream, &((uint8_t*)streambuf->buf)[ streambuf->writecur ], amt);
@@ -1459,7 +1749,7 @@ void sdlmixcallback(void *userdata, uint8_t *stream, int len)
 		memcpy(stream, &((uint8_t*)streambuf->buf)[ streambuf->writecur ], len);
 		streambuf->writecur += len;
 	}
-	
+
 	// mix in the umixer buffers
 }
 
@@ -1468,7 +1758,7 @@ static void kensoundclose ()
 	numrendersnd = 0;
 
 	if (streambuf) SDL_CloseAudio();
-	
+
 	if (audhashbuf)
 	{
 		long i;
@@ -1590,7 +1880,7 @@ void evilquit (const char *str) //Evil because this function makes awful assumpt
 void setacquire (long mouse, long kbd)
 {
 	SDL_GrabMode g;
-	
+
 	// SDL doesn't let the mouse and keyboard be grabbed independantly
 	if ((mouse || kbd) != mouse_acquire) {
 		g = SDL_WM_GrabInput( (mouse || kbd) ? SDL_GRAB_ON : SDL_GRAB_OFF );
@@ -1611,7 +1901,7 @@ void setmouseout (void (*in)(long,long), long x, long y)
 #endif
 
 static unsigned char keytranslation[SDLK_LAST] = {
-	0, 0, 0, 0, 0, 0, 0, 0, 14, 15, 0, 0, 0, 28, 0, 0, 0, 0, 0, 89, 0, 0, 0, 
+	0, 0, 0, 0, 0, 0, 0, 0, 14, 15, 0, 0, 0, 28, 0, 0, 0, 0, 0, 89, 0, 0, 0,
 	0, 0, 0, 0, 1, 0, 0, 0, 0, 57, 2, 40, 4, 5, 6, 8, 40, 10, 11, 9, 13, 51,
 	12, 52, 53, 11, 2, 3, 4, 5, 6, 7, 8, 9, 10, 39, 39, 51, 13, 52, 53, 3, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -1725,7 +2015,7 @@ static void sdlmsgloop(void)
 						case SDL_BUTTON_MIDDLE: i = 2; break;
 					}
 					if (i<0) break;
-					
+
 					if (ev.type == SDL_MOUSEBUTTONDOWN) {
 						ext_mbstatus[i] = 1|2;
 						gbstatus |= 1<<i;
@@ -1843,11 +2133,11 @@ int main(int argc, char **argv)
 {
 	uint32_t sdlinitflags;
 	int i;
-	
+
 	cputype = getcputype();
 	if ((cputype&((1<<0)+(1<<4))) != ((1<<0)+(1<<4)))
 		{ fputs("Sorry, this program requires FPU&RDTSC support (>=Pentium)", stderr); return(-1); }
-	
+
 	sdlinitflags = SDL_INIT_TIMER;
 #ifndef NOINPUT
 	for(i=0;i<256;i++) keystatus[i] = 0;
@@ -1860,9 +2150,9 @@ int main(int argc, char **argv)
 	sdlinitflags |= SDL_INIT_AUDIO;
 #endif
 
-	if (SDL_Init(sdlinitflags) < 0) { fputs("Failure initialising SDL.",stderr); return -1; }
+	if (SDL_Init(sdlinitflags) < 0) { fputs("Failure initialising SDL.", stderr); return -1; }
 	atexit(SDL_Quit);   // In case we exit() somewhere
-	
+
 	initklock();
 
 	if (initapp(argc, argv) < 0) return -1;
@@ -1873,6 +2163,8 @@ int main(int argc, char **argv)
 		SDL_Quit();
 		return 0;
 	}
+
+
 #endif
 
 #ifndef NOSOUND
@@ -1886,6 +2178,9 @@ int main(int argc, char **argv)
 		else SDL_WaitEvent(NULL);
 		breath();
 	}
+
+	if ( gl_init )
+        clearSharedMem();
 
 	return quitparam;
 }

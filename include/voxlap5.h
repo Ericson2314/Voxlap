@@ -2,12 +2,12 @@
 // This file has been modified from Ken Silverman's original release
 
 #pragma once
-
+#include <xmmintrin.h>
 #define MAXXDIM 1024
 #define MAXYDIM 768
 #define PI 3.141592653589793
-#define VSID 1024   //Maximum .VXL dimensions in both x & y direction
-#define MAXZDIM 256 //Maximum .VXL dimensions in z direction (height)
+#define VSID 512   //Maximum .VXL dimensions in both x & y direction
+#define MAXZDIM 64 //Maximum .VXL dimensions in z direction (height)
 
 #pragma pack(push,1)
 
@@ -32,7 +32,7 @@ typedef union
 	float vec __attribute__ ((vector_size (8)));
 #endif
 #ifdef _MSC_VER
-	__m64 vec;
+	__declspec(align(16)) __m64 vec;
 #endif
 } lpoint2d;
 typedef struct { float x, y; } point2d;
@@ -196,7 +196,7 @@ struct vx5_interface
 struct vx5_interface vx5;
 #else
 extern struct vx5_interface vx5;
-#endif 
+#endif
 
 	//Initialization functions:
 extern long initvoxlap ();
