@@ -361,6 +361,27 @@ void stopdirectdraw()
 	}
 	surflocked = 0;
 }
+void updatePixels(void* dst, int size)
+{
+    static int color = 0x00000000;
+
+    if(!dst)
+        return;
+
+    int* ptr = (int*)(GLubyte*)dst;
+
+    // copy 4 bytes at once
+    for(int i = 0; i < IMAGE_HEIGHT; ++i)
+    {
+        for(int j = 0; j < IMAGE_WIDTH; ++j)
+        {
+            *ptr = color;
+           ++ptr;
+        }
+        color += 23;   // add an arbitary number (no meaning)
+    }
+    ++color;            // scroll down
+}
 
 long startdirectdraw(long *vidplc, long *dabpl, long *daxres, long *dayres)
 {
@@ -448,7 +469,12 @@ void init_opengl_extensions()
     glShadeModel(GL_FLAT);                      // shading mathod: GL_SMOOTH or GL_FLAT
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);      // 4-byte pixel alignment
 
+    // enable /disable features
+    //@glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+    //glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+    //glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
     glEnable(GL_DEPTH_TEST);
+    //@glEnable(GL_LIGHTING);
     glDisable(GL_LIGHTING);
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_CULL_FACE);
@@ -524,6 +550,7 @@ void init_opengl_extensions()
 
 bool initSharedMem()
 {
+
     // allocate texture buffer
     imageData = new GLubyte[DATA_SIZE];
     memset(imageData, 0, DATA_SIZE);
