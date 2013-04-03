@@ -3,6 +3,11 @@
 
 #pragma once
 
+// For SSE2 byte-vectors
+#ifdef _MSC_VER
+#include <xmmintrin.h>
+#endif
+
 #define MAXXDIM 1024
 #define MAXYDIM 768
 #define PI 3.141592653589793
@@ -23,35 +28,56 @@
 	#define EXTERN_VOXLAP extern
 #endif
 
-typedef struct { unsigned short x, y; } uspoint2d;
-typedef union
-{
-	struct { long x, y; };
-        long array[2];
-#ifdef __GNUC__
-	float vec __attribute__ ((vector_size (8)));
-#endif
-#ifdef _MSC_VER
-	__m64 vec;
-#endif
-} lpoint2d;
-typedef struct { float x, y; } point2d;
-
+// 3 dimensional points don't have power of 2 vector
 typedef struct { long x, y, z; } lpoint3d;
 typedef struct { float x, y, z; } point3d;
 typedef struct { double x, y, z; } dpoint3d;
 
 typedef union
 {
+	struct { unsigned short x, y; };
+	short array[2];
+	#ifdef __GNUC__
+	short vec __attribute__ ((vector_size (4)));
+	#endif
+	#ifdef _MSC_VER
+	__ALIGN(16) __m32 vec;
+	#endif
+} uspoint2d;
+typedef union
+{
+	struct { long x, y; };
+	long array[2];
+	#ifdef __GNUC__
+	long vec __attribute__ ((vector_size (8)));
+	#endif
+	#ifdef _MSC_VER
+	__ALIGN(16) __m64 vec;
+	#endif
+} lpoint2d;
+typedef union
+{
+	struct { float x, y; };
+	float array[2];
+	#ifdef __GNUC__
+	float vec __attribute__ ((vector_size (8)));
+	#endif
+	#ifdef _MSC_VER
+	__ALIGN(16) __m64 vec;
+	#endif
+} point2d;
+typedef union
+{
 	struct { float x, y, z, z2; };
 	float array[4];
-#ifdef __GNUC__
+	#ifdef __GNUC__
 	float vec __attribute__ ((vector_size (16)));
 	float svec[2] __attribute__ ((vector_size (8)));
-#endif
-#ifdef _MSC_VER
-	__m128 vec;
-#endif
+	#endif
+	#ifdef _MSC_VER
+	__ALIGN(16) __m128 vec;
+	__ALIGN(16) __m64 svec[2];
+	#endif
 } point4d;
 
 	//Sprite structures:
