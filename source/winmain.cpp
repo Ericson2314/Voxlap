@@ -93,7 +93,7 @@ long ActiveApp = 1, alwaysactive = 0;
 long xres = 640, yres = 480, colbits = 32, fullscreen = 0, maxpages = 8;
 
 	// Note! Without clipper blit is faster but only with software bliter
-//#define NO_CLIPPER
+#define NO_CLIPPER
 
 //======================== CPU detection code begins ========================
 
@@ -140,7 +140,7 @@ void cpuid (long, long *);
 
 static _inline long testflag (long c)
 {
-	_asm
+	__asm
 	{
 		mov ecx, c
 		pushfd
@@ -161,7 +161,7 @@ static _inline long testflag (long c)
 
 static _inline void cpuid (long a, long *s)
 {
-	_asm
+	__asm
 	{
 		push ebx
 		push esi
@@ -212,7 +212,7 @@ __int64 rdtsc64 ();
 #endif
 #ifdef _MSC_VER
 
-static __forceinline __int64 rdtsc64 () { _asm rdtsc }
+static __forceinline __int64 rdtsc64 () { __asm rdtsc }
 
 #endif
 
@@ -420,7 +420,7 @@ void kblit32 (long rplc, long rbpl, long rxsiz, long rysiz,
 					//      lpal[*(unsigned char *)(rplc+y*rbpl+x)];
 				if (cputype&(1<<22)) //MMX+
 				{
-					_asm
+					__asm
 					{
 						push ebx
 						push esi
@@ -480,7 +480,7 @@ endall8_16:       sub rysiz, 1 ;/
 				}
 				else
 				{
-					_asm
+					__asm
 					{
 						push ebx
 						push esi
@@ -551,7 +551,7 @@ endall8_16b:      sub rysiz, 1 ;/
 					//      *(long *)(wplc+y*wbpl+(x<<2)) = lpal[*(unsigned char *)(rplc+y*rbpl+x)];
 				if (cputype&(1<<22)) //MMX+
 				{
-					_asm
+					__asm
 					{
 						push ebx
 						push esi
@@ -600,7 +600,7 @@ endall8_32:       sub rysiz, 1 ;/
 				}
 				else
 				{
-					_asm
+					__asm
 					{
 						push ebx
 						push esi
@@ -658,7 +658,7 @@ endall8_32b:      sub rysiz, 1 ;/
 				rxsiz &= ~7; if (rxsiz <= 0) return;
 				if (cputype&(1<<22)) //MMX+
 				{
-					_asm
+					__asm
 					{
 						push ebx
 						push esi
@@ -807,7 +807,7 @@ endall8_32b:      sub rysiz, 1 ;/
 				}
 				else
 				{
-					_asm
+					__asm
 					{
 						push ebx
 						push esi
@@ -959,7 +959,7 @@ endall8_32b:      sub rysiz, 1 ;/
 			case 15:
 				if (cputype&(1<<22)) //MMX+
 				{
-					_asm
+					__asm
 					{
 						push ebx
 						push esi
@@ -1026,7 +1026,7 @@ endall8_32b:      sub rysiz, 1 ;/
 				}
 				else
 				{
-					_asm
+					__asm
 					{
 						push ebx
 						push esi
@@ -1094,7 +1094,7 @@ endall8_32b:      sub rysiz, 1 ;/
 			case 16:
 				if (cputype&(1<<22)) //MMX+
 				{
-					_asm
+					__asm
 					{
 						push ebx
 						push esi
@@ -1162,7 +1162,7 @@ endall8_32b:      sub rysiz, 1 ;/
 				}
 				else
 				{
-					_asm
+					__asm
 					{
 						push ebx
 						push esi
@@ -1234,7 +1234,7 @@ endall8_32b:      sub rysiz, 1 ;/
 				rxsiz &= ~3; if (rxsiz <= 0) return;
 				if (cputype&(1<<22)) //MMX+
 				{
-					_asm
+					__asm
 					{
 						push ebx
 						push edi
@@ -1297,7 +1297,7 @@ endall8_32b:      sub rysiz, 1 ;/
 				}
 				else
 				{
-					_asm
+					__asm
 					{
 						push ebx
 						push edi
@@ -1361,7 +1361,7 @@ endall8_32b:      sub rysiz, 1 ;/
 			case 32:
 				if (cputype&(1<<22)) //MMX+
 				{
-					_asm
+					__asm
 					{
 						push ebx
 						push esi
@@ -1406,7 +1406,7 @@ endall8_32b:      sub rysiz, 1 ;/
 				}
 				else
 				{
-					_asm
+					__asm
 					{
 						push ebx
 						push esi
@@ -1489,8 +1489,8 @@ validmodetype curvidmodeinfo;
 #endif
 #ifdef _MSC_VER
 
-static _inline long bsf (long a) { _asm bsf eax, a } //is it safe to assume eax is return value?
-static _inline long bsr (long a) { _asm bsr eax, a } //is it safe to assume eax is return value?
+static _inline long bsf (long a) { __asm bsf eax, a } //is it safe to assume eax is return value?
+static _inline long bsr (long a) { __asm bsr eax, a } //is it safe to assume eax is return value?
 
 #endif
 
@@ -1902,7 +1902,7 @@ long initdirectdraw (long daxres, long dayres, long dacolbits)
 									if (!IDirectDrawSurface_GetPixelFormat(ddsurf[0],&ddpf)) //colbits = ddpf.dwRGBBitCount;
 									{
 										grabmodeinfo(daxres,dayres,&ddpf,&curvidmodeinfo);
-	
+
 											//If mode is 555 color (and not 565), use 15-bit emulation code...
 										if ((colbits != 16) && (ncolbits == 16)
 																	&& (curvidmodeinfo.r0 == 10) && (curvidmodeinfo.rn == 5)
@@ -2257,7 +2257,7 @@ long clearscreen (long fillcolor)
 		long c = ((xres*yres+7)&~7)*((colbits+7)>>3); c >>= 3;
 		if (cputype&(1<<25)) //SSE
 		{
-			_asm
+			__asm
 			{
 				mov edx, ddrawemulbuf
 				mov ecx, c
@@ -2272,7 +2272,7 @@ long clearscreen (long fillcolor)
 		}
 		else if (cputype&(1<<23)) //MMX
 		{
-			_asm
+			__asm
 			{
 				mov edx, ddrawemulbuf
 				mov ecx, c
@@ -2288,12 +2288,12 @@ long clearscreen (long fillcolor)
 		else
 		{
 			long q[2]; q[0] = q[1] = fillcolor;
-			_asm
+			__asm
 			{
 				mov edx, ddrawemulbuf
 				mov ecx, c
   clear32c: fild qword ptr q
-				fistp qword ptr [edx] ;NOTE: fist doesn't have a 64-bit form!
+				fistp qword ptr [edx]
 				add edx, 8
 				sub ecx, 1
 				jnz short clear32c
@@ -2329,7 +2329,7 @@ long clearscreen (long fillcolor)
 				j = (i>>3);
 				if (cputype&(1<<25)) //SSE
 				{
-					_asm
+					__asm
 					{
 						mov edx, p
 						mov ecx, j
@@ -2344,7 +2344,7 @@ long clearscreen (long fillcolor)
 				}
 				else if (cputype&(1<<23)) //MMX
 				{
-					_asm
+					__asm
 					{
 						mov edx, p
 						mov ecx, j
@@ -2360,12 +2360,12 @@ long clearscreen (long fillcolor)
 				else
 				{
 					long q[2]; q[0] = q[1] = fillcolor;
-					_asm
+					__asm
 					{
 						mov edx, p
 						mov ecx, j
 		  clear32f: fild qword ptr q
-						fistp qword ptr [edx] ;NOTE: fist doesn't have a 64-bit form!
+						fistp qword ptr [edx]
 						add edx, 8
 						sub ecx, 1
 						jnz short clear32f
@@ -2377,7 +2377,7 @@ long clearscreen (long fillcolor)
 				if (i&2) { *(short *)x = (short)fillcolor; x += 2; }
 				if (i&1) { *(char  *)x =  (char)fillcolor;         }
 			}
-			if (cputype&(1<<25)) _asm emms //SSE
+			if (cputype&(1<<25)) __asm emms //SSE
 		}
 		else
 		{
@@ -3093,7 +3093,7 @@ static int kensoundinit (LPDIRECTSOUND dsound, int samprate, int numchannels, in
 
 static __forceinline long mulshr16 (long a, long d)
 {
-	_asm
+	__asm
 	{
 		mov eax, a
 		imul d
@@ -3103,7 +3103,7 @@ static __forceinline long mulshr16 (long a, long d)
 
 static __forceinline long mulshr32 (long a, long d)
 {
-	_asm
+	__asm
 	{
 		mov eax, a
 		imul d
@@ -3164,7 +3164,7 @@ static void rendersamps (long dasnd, long ispos, long isinc, long ivolsc, long i
 		//+p[3] +p[2] +p[1] +p[0] = s1
 	if (cputype&(1<<23)) //MMX
 	{
-		_asm
+		__asm
 		{
 			push ebx
 			push esi
@@ -3274,7 +3274,7 @@ static void audclipcopy (long *lptr, short *dptr, long nsamp)
 	if (cputype&(1<<23)) //MMX
 	{
 #if 0
-		_asm
+		__asm
 		{
 			mov eax, lptr
 			mov edx, dptr
@@ -3289,7 +3289,7 @@ static void audclipcopy (long *lptr, short *dptr, long nsamp)
 			jnz short begc0
 		}
 #else
-		_asm //Same as above, but does 8-byte aligned writes instead of 4
+		__asm //Same as above, but does 8-byte aligned writes instead of 4
 		{
 			mov eax, lptr
 			mov edx, dptr
@@ -3380,7 +3380,7 @@ static void kensoundbreath (long minleng)
 			if (rendersnd[j].flags&KSND_3D)
 			{
 				float f, g, h;
-				
+
 				n = (signed long)(leng>>gshiftval);
 
 				f = (rendersnd[j].p.x-audiopos.x)*(rendersnd[j].p.x-audiopos.x)+(rendersnd[j].p.y-audiopos.y)*(rendersnd[j].p.y-audiopos.y)+(rendersnd[j].p.z-audiopos.z)*(rendersnd[j].p.z-audiopos.z);
@@ -3464,10 +3464,10 @@ static void kensoundbreath (long minleng)
 				(*(long *)(rendersnd[j].ssnd-16))--; numrendersnd--;
 				if (j != numrendersnd) rendersnd[j] = rendersnd[numrendersnd];
 			}
-			if (cputype&(1<<23)) _asm emms //MMX
+			if (cputype&(1<<23)) __asm emms //MMX
 		}
 		for(m=0;m<2;m++) if (w[m]) audclipcopy(lptr[m],(short *)w[m],l[m]>>gshiftval);
-		if (cputype&(1<<23)) _asm emms //MMX
+		if (cputype&(1<<23)) __asm emms //MMX
 		IDirectSoundBuffer_Unlock(streambuf,w[0],l[0],w[1],l[1]);
 	}
 
@@ -3647,7 +3647,7 @@ void playsound (const char *filnam, long volperc, float frqmul, void *pos, long 
 	long i, j, k, m, ispos, ispos0, ispos1, isinc, ivolsc, ivolsc0, ivolsc1, newsnd, *lptr[2], numsamps;
 	short *coefilt;
 	float f, g, h;
-	
+
 	if (!dsound) return;
 	ENTERMUTX;
 	if (!streambuf) { LEAVEMUTX; return; }
@@ -3728,7 +3728,7 @@ void playsound (const char *filnam, long volperc, float frqmul, void *pos, long 
 			}
 		}
 	for(m=0;m<2;m++) if (w[m]) audclipcopy(lptr[m],(short *)w[m],l[m]>>gshiftval);
-	if (cputype&(1<<23)) _asm emms //MMX
+	if (cputype&(1<<23)) __asm emms //MMX
 	IDirectSoundBuffer_Unlock(streambuf,w[0],l[0],w[1],l[1]);
 
 		//Save params to continue playing later (when both L&R channels haven't played through)
@@ -3868,7 +3868,7 @@ void initdirectsound ()
 			//(dsound)->Release(lpds);
 			if (dsrval != S_OK) { dsound = NULL; return; }
 		}
-	}   
+	}
 #else
 	if (DirectSoundCreate(0,&dsound,0) != DS_OK) { MessageBox(ghwnd,"DirectSoundCreate","ERROR",MB_OK); exit(0); }
 #endif
@@ -4514,7 +4514,7 @@ void fpuinit (long);
 static long fpuasm[2];
 static _inline void fpuinit (long a)
 {
-	_asm
+	__asm
 	{
 		mov eax, a
 		fninit

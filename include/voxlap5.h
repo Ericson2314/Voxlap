@@ -11,8 +11,8 @@
 #define MAXXDIM 1024
 #define MAXYDIM 768
 #define PI 3.141592653589793
-#define VSID 1024   //Maximum .VXL dimensions in both x & y direction
-#define MAXZDIM 256 //Maximum .VXL dimensions in z direction (height)
+#define VSID 512   //Maximum .VXL dimensions in both x & y direction
+#define MAXZDIM 64 //Maximum .VXL dimensions in z direction (height)
 
 #pragma pack(push,1)
 
@@ -222,7 +222,7 @@ struct vx5_interface
 struct vx5_interface vx5;
 #else
 extern struct vx5_interface vx5;
-#endif 
+#endif
 
 	//Initialization functions:
 extern long initvoxlap ();
