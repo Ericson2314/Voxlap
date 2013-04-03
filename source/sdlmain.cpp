@@ -361,27 +361,6 @@ void stopdirectdraw()
 	}
 	surflocked = 0;
 }
-void updatePixels(void* dst, int size)
-{
-    static int color = 0x00000000;
-
-    if(!dst)
-        return;
-
-    int* ptr = (int*)(GLubyte*)dst;
-
-    // copy 4 bytes at once
-    for(int i = 0; i < IMAGE_HEIGHT; ++i)
-    {
-        for(int j = 0; j < IMAGE_WIDTH; ++j)
-        {
-            *ptr = color;
-           ++ptr;
-        }
-        color += 23;   // add an arbitary number (no meaning)
-    }
-    ++color;            // scroll down
-}
 
 long startdirectdraw(long *vidplc, long *dabpl, long *daxres, long *dayres)
 {
@@ -418,17 +397,7 @@ long startdirectdraw(long *vidplc, long *dabpl, long *daxres, long *dayres)
 
         GLubyte* ptr = (GLubyte*)glMapBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, GL_WRITE_ONLY_ARB);
         *vidplc = (long)ptr;
-
-
-        if(ptr)
-        {
-            // update data directly on the mapped buffer
-            //updatePixels(ptr, DATA_SIZE);
-            //glUnmapBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB);
-        }
-        //*vidplc = (long)sdlsurf->pixels;
 	}
-
 
     surflocked = 1;
 	return 1;
@@ -437,10 +406,10 @@ long startdirectdraw(long *vidplc, long *dabpl, long *daxres, long *dayres)
 void nextpage()
 {
 	if (!sdlsurf) return;
-	//if (surflocked) stopdirectdraw();
+	if (surflocked) stopdirectdraw();
+
 	if (has_pbo)
 	{
-
         SDL_GL_SwapBuffers();
 	}else{
         SDL_Flip(sdlsurf);
@@ -449,9 +418,12 @@ void nextpage()
 
 long clearscreen(long fillcolor)
 {
-	return 0;//SDL_FillRect(sdlsurf, NULL, fillcolor) == 0;
+    #ifndef NOGL_PBO
+	return 0;
+	#else
+	SDL_FillRect(sdlsurf, NULL, fillcolor) == 0;
+	#endif
 }
-
 
 void initopengl_withpbo(uint32_t * surfbits)
 {
@@ -476,12 +448,7 @@ void init_opengl_extensions()
     glShadeModel(GL_FLAT);                      // shading mathod: GL_SMOOTH or GL_FLAT
     glPixelStorei(GL_UNPACK_ALIGNMENT, 4);      // 4-byte pixel alignment
 
-    // enable /disable features
-    //@glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-    //glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-    //glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
     glEnable(GL_DEPTH_TEST);
-    //@glEnable(GL_LIGHTING);
     glDisable(GL_LIGHTING);
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_CULL_FACE);
@@ -557,7 +524,6 @@ void init_opengl_extensions()
 
 bool initSharedMem()
 {
-
     // allocate texture buffer
     imageData = new GLubyte[DATA_SIZE];
     memset(imageData, 0, DATA_SIZE);
@@ -594,11 +560,8 @@ long initdirectdraw(long daxres, long dayres, long dacolbits)
 
 	xres = daxres; yres = dayres; colbits = dacolbits;
 
-	//surfbits = BASICSURFBITS;
-	//surfbits |= SDL_HWPALETTE;
-	//surfbits |= SDL_HWSURFACE;
 	if (fullscreen) surfbits |= SDL_FULLSCREEN;
-	//else if (progresiz) surfbits |= SDL_RESIZABLE;
+	else if (progresiz) surfbits |= SDL_RESIZABLE;
 
 #ifndef NOGL_PBO
     // Map an opengl PBO to use as a write buffer, instead of SDL framebuffer
