@@ -2,10 +2,13 @@
 // This file has been modified from Ken Silverman's original release
 
 #pragma once
-
+#include "xmmintrin.h"
 // For SSE2 byte-vectors
 #ifdef _MSC_VER
-#include <xmmintrin.h>
+
+    #ifndef __ALIGN
+        #define __ALIGN(num) __declspec(align(num))
+    #endif
 #endif
 
 #define MAXXDIM 1024
@@ -41,9 +44,11 @@ typedef union
 	short vec __attribute__ ((vector_size (4)));
 	#endif
 	#ifdef _MSC_VER
-	__ALIGN(16) __m32 vec;
+	//__ALIGN(16) __m32 vec;
+	unsigned short vec;
 	#endif
 } uspoint2d;
+
 typedef union
 {
 	struct { long x, y; };
@@ -222,7 +227,7 @@ struct vx5_interface
 struct vx5_interface vx5;
 #else
 extern struct vx5_interface vx5;
-#endif 
+#endif
 
 	//Initialization functions:
 extern long initvoxlap ();
