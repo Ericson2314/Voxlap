@@ -71,25 +71,26 @@ char *sptr[(VSID*VSID*4)/3];
 }
 #endif
 static long *vbuf = 0, *vbit = 0, vbiti;
-	//WARNING: loaddta uses last 2MB of vbuf; vbuf:[VOXSIZ>>2], vbit:[VOXSIZ>>7]
-	//WARNING: loadpng uses last 4MB of vbuf; vbuf:[VOXSIZ>>2], vbit:[VOXSIZ>>7]
+/**
+	\warning : loaddta uses last 2MB of vbuf; vbuf:[VOXSIZ>>2], vbit:[VOXSIZ>>7]
+	\warning : loadpng uses last 4MB of vbuf; vbuf:[VOXSIZ>>2], vbit:[VOXSIZ>>7]
 
-//                     ÚÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄÂÄÄÄÄÄÄÄÄ¿
-//        vbuf format: ³   0:   ³   1:   ³   2:   ³   3:   ³
-//ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄÅÄÄÄÄÄÄÄÄ´
-//³      First header: ³ nextptr³   z1   ³   z1c  ³  dummy ³
-//³           Color 1: ³    b   ³    g   ³    r   ³ intens ³
-//³           Color 2: ³    b   ³    g   ³    r   ³ intens ³
-//³             ...    ³    b   ³    g   ³    r   ³ intens ³
-//³           Color n: ³    b   ³    g   ³    r   ³ intens ³
-//³ Additional header: ³ nextptr³   z1   ³   z1c  ³   z0   ³
-//ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÁÄÄÄÄÄÄÄÄÙ
-//  nextptr: add this # <<2 to index to get to next header (0 if none)
-//       z1: z floor (top of floor color list)
-//      z1c: z bottom of floor color list MINUS 1! - needed to calculate
-//             slab size with slng() and used as a separator for fcol/ccol
-//       z0: z ceiling (bottom of ceiling color list)
-
+    ╔══════════════════════════════╤════════╤════════╤════════╗
+    ║       vbuf format: │   0:    │   1:   │   2:   │   3:   ║
+    ╠════════════════════╪═════════╪════════╪════════╪════════╣
+    ║      First header: │ nextptr │   z1   │   z1c  │  dummy ║
+    ║           Color 1: │    b    │    g   │    r   │ intens ║
+    ║           Color 2: │    b    │    g   │    r   │ intens ║
+    ║             ...    │    b    │    g   │    r   │ intens ║
+    ║           Color n: │    b    │    g   │    r   │ intens ║
+    ║ Additional header: │ nextptr │   z1   │   z1c  │   z0   ║
+    ╚════════════════════╧═════════╧════════╧════════╧════════╝
+      nextptr: add this # <<2 to index to get to next header (0 if none)
+           z1: z floor (top of floor color list)
+          z1c: z bottom of floor color list MINUS 1! - needed to calculate
+                 slab size with slng() and used as a separator for fcol/ccol
+           z0: z ceiling (bottom of ceiling color list)
+*/
 	//Memory management variables:
 #define MAXCSIZ 1028
 char tbuf[MAXCSIZ];
@@ -229,14 +230,14 @@ EXTERN_C void dep_protect_start();
 EXTERN_C void dep_protect_end();
 #endif
 
-/* if (a < 0) return(0); else if (a > b) return(b); else return(a); */
+/** if (a < 0) return(0); else if (a > b) return(b); else return(a); */
 static inline long lbound0 (long a, long b) //b MUST be >= 0
 {
 	if ((unsigned long)a <= b) return(a);
 	return((~(a>>31))&b);
 }
 
-/* if (a < b) return(b); else if (a > c) return(c); else return(a); */
+/** if (a < b) return(b); else if (a > c) return(c); else return(a); */
 static inline long lbound (long a, long b, long c) //c MUST be >= b
 {
 	c -= b;
@@ -283,13 +284,13 @@ static inline void ucossin (unsigned long a, float *cosin)
 	cosin[1] = usintab[a                 ].x*f+usintab[a                 ].y;
 }
 
-/**
- * Draws 4x6 font on screen (very fast!)
- * @param x x of top-left corner
- * @param y y of top-left corner
- * @param fcol foreground color (32-bit RGB format)
- * @param bcol background color (32-bit RGB format) or -1 for transparent
- * @param fmt string - same syntax as printf
+/** Draws 4x6 font on screen (very fast!)
+ *
+ *  @param x x of top-left corner
+ *  @param y y of top-left corner
+ *  @param fcol foreground color (32-bit RGB format)
+ *  @param bcol background color (32-bit RGB format) or -1 for transparent
+ *  @param fmt string - same syntax as printf
  */
 void print4x6 (long x, long y, long fcol, long bcol, const char *fmt, ...)
 {
@@ -329,13 +330,13 @@ void print4x6 (long x, long y, long fcol, long bcol, const char *fmt, ...)
 			if ((*c) == 9) { for(i=16;i<48;i+=4) *(long *)(x+i) = bcol; x += 32; }
 		}
 }
-/**
- * Draws 6x8 font on screen (very fast!)
- * @param x x of top-left corner
- * @param y y of top-left corner
- * @param fcol foreground color (32-bit RGB format)
- * @param bcol background color (32-bit RGB format) or -1 for transparent
- * @param fmt string - same syntax as printf
+/** Draws 6x8 font on screen (very fast!)
+ *
+ *  @param x x of top-left corner
+ *  @param y y of top-left corner
+ *  @param fcol foreground color (32-bit RGB format)
+ *  @param bcol background color (32-bit RGB format) or -1 for transparent
+ *  @param fmt string - same syntax as printf
  */
 void print6x8 (long x, long y, long fcol, long bcol, const char *fmt, ...)
 {
@@ -387,8 +388,7 @@ long floorcolfunc (lpoint3d *p)
 	return(*(long *)&v[4]);
 }
 
-/**
-*   QUESS: Slab length
+/** @note Slab length
 */
 static long slng (const char *s)
 {
@@ -441,6 +441,7 @@ allocnothere:;
 	evilquit("voxalloc: vbuf full"); return(0);
 }
 
+/** Returns 0 if voxel(x,y,z) is air, or 1 if it is solid */
 long isvoxelsolid (long x, long y, long z)
 {
 	char *v;
