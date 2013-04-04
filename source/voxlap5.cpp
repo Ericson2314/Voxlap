@@ -32,16 +32,16 @@
 	//SYSMAIN Preprocessor stuff
 //#define SYSMAIN_C //if sysmain is compiled as C
 #include "sysmain.h"
-
+#include "voxlap5.h"
 	//Voxlap Preprocessor stuff
 #define VOXLAP5
 				//We never want to define C bindings if this is compiled as C++.
 #undef VOXLAP_C	//Putting this here just in case.
-#include "voxlap5.h"
+
 
 	//mmxcolor* now defined here
 #include "voxflash.h"
-
+#include "kfonts.h"
 	//KPlib Preprocessor stuff
 //#define KPLIB_C  //if kplib is compiled as C
 #include "kplib.h"
@@ -8217,7 +8217,7 @@ long kv6frameplace, kv6bytesperline;
 float scisdist;
 int64_t kv6colmul[256], kv6coladd[256];
 
-#ifdef USEV5ASM && !defined(NOASM)
+#if defined(USEV5ASM) && !defined(NOASM)
 EXTERN_C void drawboundcubesseinit ();
 EXTERN_C void drawboundcubesse (kv6voxtype *, long);
 EXTERN_C void drawboundcube3dninit ();
@@ -8554,7 +8554,7 @@ static void updatereflects (vx5sprite *spr)
 		lightlist[lightcnt][1] = (short)((sprh.x*fx + sprh.y*fy + sprh.z*fz)*hh);
 		lightlist[lightcnt][2] = (short)((sprf.x*fx + sprf.y*fy + sprf.z*fz)*hh);
 		lightlist[lightcnt][3] = (short)(hh*(48/16.0));
-        #elif defined(__GNUC__) && !defined(NOASM)
+        #if defined(__GNUC__) && !defined(NOASM)
 		__asm__ __volatile__
 		(
 			"punpcklbw	%[vxpart], %[y5]\n"
