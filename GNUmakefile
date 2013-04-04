@@ -45,7 +45,7 @@ CC_Release        =-O3
 LDFLAGS           =-o $(@) -m32 $($(LNK)_FLAGS) $(LD_$(build))
 LD_Debug          =-ggdb -Wall -Wextra -Wno-unused-variable -Wno-unused-parameter -Wno-unused-but-set-variable
 LD_Release        =-O3
-LDLIBS            =$($(GFX)_LDLIBS)
+LDLIBS            =$($(GFX)_LDLIBS) -lGL -lGLU -lglut
 
 CCX              ?=$(CC)
 CXXFLAGS          =$(CFLAGS)

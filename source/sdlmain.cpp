@@ -11,7 +11,15 @@
 #define GL_GLEXT_PROTOTYPES
 
 #include <SDL/SDL.h>
-#include "SDL/SDL_opengl.h"
+
+	//OpenGL headers
+#include <SDL/SDL_opengl.h>
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+#else
+#include <GL/glut.h>
+#endif
+#include <GL/glext.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,16 +42,6 @@
 	#include <unistd.h>
 	#include <sys/mman.h>
 #endif
-
-#ifdef __APPLE__
-#include <GLUT/glut.h>
-#else
-#include <GL/glut.h>
-#endif
-
-
-
-#include "glext.h"
 
 GLuint pboIds[2];
 GLuint textureId;
