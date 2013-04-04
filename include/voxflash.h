@@ -2,6 +2,10 @@
 
 #include "voxlap5.h"
 
+#if defined(_MSC_VER) && !defined(NOASM)
+	#pragma warning(disable:4799)
+#endif
+
 EXTERN_VOXLAP int64_t flashbrival;
 
 #ifdef __WATCOMC__
