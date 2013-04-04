@@ -10769,13 +10769,11 @@ static void updatereflects (vx5sprite *spr)
 		#ifdef __GNUC__ //gcc inline asm
 		__asm__ __volatile__
 		(
-			".intel_syntax noprefix\n"
-			"movq	mm0, fogcol\n"
-			"paddd	mm0, mm0\n"
-			"pmulhuw	mm0, fogmul\n"
-			"movq	kv6coladd[0], mm0\n"
-			"emms\n"
-			".att_syntax prefix\n"
+			"paddd	%[m64], %[m64]\n"
+			"pmulhuw	%[mul], %[m64]\n"
+			: [m64] "=y" (*(lpoint2d *)kv6coladd)
+			: "0" (fogcol), [mul] "m" (fogmul)
+			:
 		);
 		#endif
 		#ifdef _MSC_VER //msvc inline asm
