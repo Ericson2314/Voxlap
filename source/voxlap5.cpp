@@ -6453,7 +6453,7 @@ void drawpoint3d (float x0, float y0, float z0, long col)
 
 /**
  * Transform & Project a 3D point to a 2D screen coordinate. This could be
- * used for flat sprites (those cardboard-cutouts from old games)
+ * used for billboard sprites.
  *
  * @param x VXL location to transform & project
  * @param y VXL location to transform & project
@@ -7767,20 +7767,20 @@ static long umulmip[9] =
 	,(long)536870912    // 0b00100000000000000000000000000000
 };
 
-/**
- * Generate 1 more mip-level for a .KV6 sprite. This function generates a
- * lower MIP level only if kv6->lowermip is NULL, and kv6->xsiz,
- * kv6->ysiz, and kv6->zsiz are all >= 3. When these conditions are
- * true, it will generate a new .KV6 sprite with half the resolution in
- * all 3 dimensions. It will set kv6->lowermip so it points to the newly
- * generated .KV6 object. You can use freekv6() to de-allocate all levels
- * of the .KV6 object.
+/** Generate 1 more mip-level for a .KV6 sprite.
+ *  This function generates a
+ *  lower MIP level only if kv6->lowermip is NULL, and kv6->xsiz,
+ *  kv6->ysiz, and kv6->zsiz are all >= 3. When these conditions are
+ *  true, it will generate a new .KV6 sprite with half the resolution in
+ *  all 3 dimensions. It will set kv6->lowermip so it points to the newly
+ *  generated .KV6 object. You can use freekv6() to de-allocate all levels
+ *  of the .KV6 object.
  *
- * To generate all mip levels use this pseudo-code:
- * for(kv6data *tempkv6=mykv6;tempkv6=genmipkv6(tempkv6););
+ *  To generate all mip levels use this pseudo-code:
+ *  for(kv6data *tempkv6=mykv6;tempkv6=genmipkv6(tempkv6););
  *
- * @param kv6 pointer to current MIP-level
- * @return pointer to newly generated half-size MIP-level
+ *  @param kv6 pointer to current MIP-level
+ *  @return pointer to newly generated half-size MIP-level
  */
 kv6data *genmipkv6 (kv6data *kv6)
 {
@@ -7919,7 +7919,9 @@ void savekv6 (const char *filnam, kv6data *kv)
 	}
 }
 
-	//NOTE: should make this inline to getkv6!
+/** @note should make this inline to getkv6!
+    \Warning  This can evilquit when misaligned malloc happens.
+*/
 static kv6data *loadkv6 (const char *filnam)
 {
 	FILE *fil;
@@ -9745,7 +9747,7 @@ static void kfadraw (vx5sprite *s)
 	}
 }
 
-//--------------------------- KFA sprite code ends ---------------------------
+
 
 /** Draw a .KV6/.KFA voxel sprite to the screen.
  *  Position & orientation are
@@ -10437,6 +10439,8 @@ long meltspans (vx5sprite *spr, vspans *lst, long lstnum, lpoint3d *offs)
 	return(cw);
 }
 
+//--------------------------- KFA sprite code ends ---------------------------
+
 static void setlighting (long x0, long y0, long z0, long x1, long y1, long z1, long lval)
 {
 	long i, x, y;
@@ -10460,7 +10464,7 @@ static void setlighting (long x0, long y0, long z0, long x1, long y1, long z1, l
 		}
 }
 
-	//Updates Lighting, Mip-mapping, and Floating objects list
+/** Updates Lighting, Mip-mapping, and Floating objects list */
 typedef struct { long x0, y0, z0, x1, y1, z1, csgdel; } bboxtyp;
 #define BBOXSIZ 256
 static bboxtyp bbox[BBOXSIZ];
@@ -10507,9 +10511,20 @@ void updatebbox (long x0, long y0, long z0, long x1, long y1, long z1, long csgd
 	if (bboxnum >= BBOXSIZ) updatevxl();
 }
 
+/** An array of the lights available */
 static long lightlst[MAXLIGHTS];
 static float lightsub[MAXLIGHTS];
-	//Re-calculates lighting byte #4 of all voxels inside bounding box
+
+/** Re-calculates lighting byte #4 of all voxels inside bounding box
+ *  Takes 6 longs ( which should be 2 vectors ) representing min and max extents
+ *  of an AABB.
+ *  @param x0
+ *  @param y0
+ *  @param z0
+ *  @param x1
+ *  @param y1
+ *  @param z1
+*/
 void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 {
 	point3d tp;
@@ -10678,7 +10693,16 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 //Step 1: Call checkfloatinbox after every "deleting" set* call
 //Step 2: Call dofalls(); at a constant rate in movement code
 
-	//Adds all slabs inside box (inclusive) to "float check" list
+/** Adds all slabs inside box (inclusive) to "float check" list
+ *  Takes 6 longs ( which should be 2 vectors ) representing min and max extents
+ *  of an AABB.
+ *  @param x0
+ *  @param y0
+ *  @param z0
+ *  @param x1
+ *  @param y1
+ *  @param z1
+*/
 void checkfloatinbox (long x0, long y0, long z0, long x1, long y1, long z1)
 {
 	long x, y;
@@ -10726,8 +10750,11 @@ long isnewfloatingot (long f)
 	}
 }
 
-	//removes a & adds b while preserving index; used only by meltfall(...)
-	//Must do nothing if 'a' not in hash
+/** removes a & adds b while preserving index; used only by meltfall(...)
+ *  \Warning Must do nothing if 'a' not in hash
+ *  @param a ( x coordinate ? )
+ *  @param b ( y coordinate ? )
+*/
 void isnewfloatingchg (long a, long b)
 {
 	long ov, v, i, j;
