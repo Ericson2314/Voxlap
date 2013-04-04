@@ -18,7 +18,7 @@ USEV5ASM               =1
 !IFDEF _ASMNAME
 AsmName                =$(_ASMNAME)
 !ELSE
-AsmName                =masm
+AsmName                =nasm
 !ENDIF
 
 !IFNDEF BUILD
@@ -43,13 +43,14 @@ CXX                    =cl   #for Micrsoft Compiler
 LNK                    =link #for Microsfoft Linker
 
 # Flags
-CXXFLAGS               =/Fo$(@R) /fp:fast /arch:SSE2 /c /J $(CXX_MODE) $(GFX_CFLAGS) $(Random_Macros) /I $(locINC) # for Micrsoft Compiler(cl)
-CXX_Debug              =$(GFX_CXX_Debug) /ZI /Fdbinaries\ /GZ /RTCsuc /Od
+CXXFLAGS               =/Fo$(@R) /fp:fast /arch:SSE2 /c /J $(CXX_MODE) $(GFX_CFLAGS) $(Random_Macros) /EHsc /I $(locINC) # for Micrsoft Compiler(cl)
+CXX_Debug              =$(GFX_CXX_Debug) /ZI /Fdbinaries\ /Gz /RTCsuc /Od
 CXX_Release            =$(GFX_CXX_Release) /Ox
 
-LNKFLAGS               =/out:$(@) /SUBSYSTEM:WINDOWS $(LNK_MODE)# for Microsfoft Linker (link)
+LNKFLAGS               =/out:$(@) /SUBSYSTEM:WINDOWS $(EXCLUDE_DEF_LIB) $(LNK_MODE)# for Microsfoft Linker (link)
 LNK_Debug              =/DEBUG
 LNK_Release            =
+EXCLUDE_DEF_LIB        =/NODEFAULTLIB:msvcrt.lib
 
 # END Micrososft Visual C Macros
 # -----------------------------------
@@ -88,10 +89,12 @@ GFX_LIBS               =ddraw.lib dinput.lib dxguid.lib
 
 GFX_CXX_Debug          =/MLd
 GFX_CXX_Release        =/ML
+
 !ELSE IF "$(GFX)"=="sdl"
 #GFX_CFLAGS             =-D SYSMAIN_C -D KPLIB_C
 #C_TYPE                 =/TC
 GFX_LIBS               =SDL.lib SDLmain.lib
+
 
 GFX_CXX_Debug          =/MDd
 GFX_CXX_Release        =/MD
@@ -171,7 +174,7 @@ lab6_res:
 $(locBIN)/slab6.res:               $(locSRC)/slab6.rc $(locSRC)/slab6.ico
 	rc -r /fo $(locBIN)/slab6.res  $(locSRC)/slab6.rc
 
-# Secondary Objects                 
+# Secondary Objects
 voxlap:                            $(locSRC)/voxlap5.cpp
 $(locBIN)/voxlap5$(OBJSuf):        $(locSRC)/voxlap5.cpp $(locINC)/voxlap5.h
 	$(CXX) $(CXXFLAGS)             $(locSRC)/voxlap5.cpp
