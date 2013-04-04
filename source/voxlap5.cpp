@@ -416,7 +416,7 @@ void voxdealloc (const char *v)
 #endif
 }
 
-	//Note: danum MUST be a multiple of 4!
+/** @note  danum MUST be a multiple of 4! */
 char *voxalloc (long danum)
 {
 	long i, badcnt, p0, p1, vend;
@@ -456,7 +456,7 @@ long isvoxelsolid (long x, long y, long z)
 	}
 }
 
-	//Returns 1 if any voxels in range (x,y,z0) to (x,y,z1-1) are solid, else 0
+/** Returns 1 if any voxels in range (x,y,z0) to (x,y,z1-1) are solid, else 0 */
 long anyvoxelsolid (long x, long y, long z0, long z1)
 {
 	char *v;
@@ -474,7 +474,7 @@ long anyvoxelsolid (long x, long y, long z0, long z1)
 	}
 }
 
-	//Returns 1 if any voxels in range (x,y,z0) to (x,y,z1-1) are empty, else 0
+/** Returns 1 if any voxels in range (x,y,z0) to (x,y,z1-1) are empty, else 0 */
 long anyvoxelempty (long x, long y, long z0, long z1)
 {
 	char *v;
@@ -492,7 +492,7 @@ long anyvoxelempty (long x, long y, long z0, long z1)
 	}
 }
 
-	//Returns z of first solid voxel under (x,y,z). Returns z if in solid.
+/** Returns z of first solid voxel under (x,y,z). Returns z if in solid. */
 long getfloorz (long x, long y, long z)
 {
 	char *v;
@@ -509,10 +509,10 @@ long getfloorz (long x, long y, long z)
 	return(z);
 }
 
-	//Returns:
-	//   0: air
-	//   1: unexposed solid
-	//else: address to color in vbuf (this can never be 0 or 1)
+/** Given xyz coordinate
+ *  Returns: 0: air   1: unexposed solid  or address to color in vbuf
+ *  @note this can never be 0 or 1)
+ */
 long getcube (long x, long y, long z)
 {
 	long ceilnum;
@@ -612,6 +612,7 @@ long compilestack (long *uind, long *n0, long *n1, long *n2, long *n3, char *cbu
 	return(n);
 }
 
+/** Expand compressed span data, in to uncompressed bitmap */
 static inline void expandbit256 (void *s, void *d)
 {
 	#ifdef NOASM
@@ -790,7 +791,7 @@ void expandbitstack (long x, long y, int64_t *bind)
 	if ((x|y)&(~(VSID-1))) { clearbuf((void *)bind,8,0L); return; }
 	expandbit256(sptr[y*VSID+x],(void *)bind);
 }
-
+/** Expands compiled voxel info to 32-bit uind[?] */
 void expandstack (long x, long y, long *uind)
 {
 	long z, topz;
@@ -798,7 +799,7 @@ void expandstack (long x, long y, long *uind)
 
 	if ((x|y)&(~(VSID-1))) { clearbuf((void *)uind,MAXZDIM,0); return; }
 
-		//Expands compiled voxel info to 32-bit uind[?]
+
 	v = sptr[y*VSID+x]; z = 0;
 	while (1)
 	{
@@ -1058,6 +1059,7 @@ deletez:;
 #endif
 }
 
+/** add b to *a and clamp to maximum char val of 255 */
 static inline void addusb (char *a, long b)
 {
 	(*a) += b; if ((*a) < b) (*a) = 255;
@@ -1245,6 +1247,7 @@ fdeletez:;
 }
 
 #if (ESTNORMRAD == 2)
+/** Used by estnorn */
 static signed char bitnum[32] =
 {
 	0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,
@@ -1255,6 +1258,7 @@ static signed char bitnum[32] =
 //   0,-2,-1,-3, 0,-2,-1,-3, 1,-1, 0,-2, 1,-1, 0,-2,
 //   2, 0, 1,-1, 2, 0, 1,-1, 3, 1, 2, 0, 3, 1, 2, 0
 //};
+/** Used by estnorn */
 static long bitsnum[32] =
 {
 	0        ,1-(2<<16),1-(1<<16),2-(3<<16),
@@ -1718,9 +1722,14 @@ void hline (float x0, float y0, float x1, float y1, long *ix0, long *ix1)
 	else ftol(x1,ix1);
 	if ((*ix0) < iwx0) (*ix0) = iwx0;
 	if ((*ix0) > iwx1) (*ix0) = iwx1; //(*ix1) = MIN(MAX(*ix1,wx0),wx1);
-	gline(labs((*ix1)-(*ix0)),(float)(*ix0),((*ix0)-x1)*dyx + y1,
-									  (float)(*ix1),((*ix1)-x1)*dyx + y1);
+	gline(
+        labs((*ix1)-(*ix0))
+        ,(float)(*ix0),((*ix0)-x1)*dyx + y1
+        ,(float)(*ix1),((*ix1)-x1)*dyx + y1
+    );
 }
+
+
 
 void vline (float x0, float y0, float x1, float y1, long *iy0, long *iy1)
 {
@@ -7092,6 +7101,9 @@ void drawpicinquad (long rpic, long rbpl, long rxsiz, long rysiz,
 __ALIGN(16) static float dpqdistlut[MAXXDIM];
 __ALIGN(16) static float dpqmulval[4] = {0,1,2,3}, dpqfour[4] = {4,4,4,4};
 __ALIGN(8)  static float dpq3dn[4];
+/** Draw a textured wuad using voxels, given 3 points (4th is calculated)
+ *  and their UV coordinates, plus an optional pointer to a bitmap.
+*/
 void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 				   float x0, float y0, float z0, float u0, float v0,
 				   float x1, float y1, float z1, float u1, float v1,
@@ -7236,7 +7248,7 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 	scaler = 1.f/scaler; t = dx*scaler;
 	if (cputype&(1<<25))
 	{
-		#ifdef __GNUC__ //gcc inline asm
+		#if defined( __GNUC__ )
 		__asm__ __volatile__ //SSE
 		(
 			                            //xmm6: -,-,-,dx*scaler
@@ -7249,8 +7261,7 @@ void drawpolyquad (long rpic, long rbpl, long rxsiz, long rysiz,
 			  [mulv] "p" (&dpqmulval), [four] "p" (&dpqfour)
 			:
 		);
-		#endif
-		#ifdef _MSC_VER //msvc inline asm
+		#elif defined(_MSC_VER)
 		_asm //SSE
 		{
 			movss	xmm6, t         //xmm6: -,-,-,dx*scaler
