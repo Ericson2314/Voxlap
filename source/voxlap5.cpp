@@ -29,34 +29,35 @@
 	#endif
 #endif
 
-	//SYSMAIN Preprocessor stuff
+/** SYSMAIN Preprocessor stuff */
 //#define SYSMAIN_C //if sysmain is compiled as C
 #include "sysmain.h"
 #include "voxlap5.h"
-	//Voxlap Preprocessor stuff
+
+/** Voxlap Preprocessor stuff */
 #define VOXLAP5
-				//We never want to define C bindings if this is compiled as C++.
+
+/** We never want to define C bindings if this is compiled as C++. */
 #undef VOXLAP_C	//Putting this here just in case.
 
-
-	//mmxcolor* now defined here
+//mmxcolor* now defined here
 #include "voxflash.h"
 
-	//KPlib Preprocessor stuff
+/** KPlib Preprocessor stuff */
 //#define KPLIB_C  //if kplib is compiled as C
 #include "kplib.h"
 #include "kfonts.h"
 #include "kcolors.h"
 
-#define USEZBUFFER 1                 //Should a Z-Buffer be Used?
-//#define NOASM                  //Instructs compiler to use C(++) alternatives
+#define USEZBUFFER 1                //Should a Z-Buffer be Used?
+//#define NOASM                     //Instructs compiler to use C(++) alternatives
 #define PREC (256*4096)
 #define CMPPREC (256*4096)
 #define FPREC (256*4096)
-//#define USEV5ASM 1                 //now done via makefile
+
 #define SCISDIST 1.0
-#define GOLDRAT 0.3819660112501052 //Golden Ratio: 1 - 1/((sqrt(5)+1)/2)
-#define ESTNORMRAD 2               //Specially optimized for 2: DON'T CHANGE unless testing!
+#define GOLDRAT 0.3819660112501052  /** Golden Ratio: 1 - 1/((sqrt(5)+1)/2) */
+#define ESTNORMRAD 2                /** \warning Specially optimized for 2: DON'T CHANGE unless testing! */
 
 EXTERN_SYSMAIN void breath ();
 EXTERN_SYSMAIN void evilquit (const char *);
@@ -71,11 +72,12 @@ char *sptr[(VSID*VSID*4)/3];
 }
 #endif
 static long *vbuf = 0, *vbit = 0, vbiti;
-/**
+/** voxel buffer format
+
 	\warning : loaddta uses last 2MB of vbuf; vbuf:[VOXSIZ>>2], vbit:[VOXSIZ>>7]
 	\warning : loadpng uses last 4MB of vbuf; vbuf:[VOXSIZ>>2], vbit:[VOXSIZ>>7]
 
-    ╔══════════════════════════════╤════════╤════════╤════════╗
+    ╔════════════════════╤═════════╤════════╤════════╤════════╗
     ║       vbuf format: │   0:    │   1:   │   2:   │   3:   ║
     ╠════════════════════╪═════════╪════════╪════════╪════════╣
     ║      First header: │ nextptr │   z1   │   z1c  │  dummy ║
@@ -91,13 +93,14 @@ static long *vbuf = 0, *vbit = 0, vbiti;
                  slab size with slng() and used as a separator for fcol/ccol
            z0: z ceiling (bottom of ceiling color list)
 */
-	//Memory management variables:
+
+/** Memory management variables: */
 #define MAXCSIZ 1028
 char tbuf[MAXCSIZ];
 long tbuf2[MAXZDIM*3];
 long templongbuf[MAXZDIM];
 
-static char nullst = 0; //nullst always NULL string
+static char nullst = 0; /** @note warning nullst always NULL string */
 
 #define SETSPHMAXRAD 256
 static double logint[SETSPHMAXRAD];
@@ -105,7 +108,7 @@ static float tempfloatbuf[SETSPHMAXRAD];
 static long factr[SETSPHMAXRAD][2];
 
 #pragma pack(push,1)
-	//Rendering variables:
+/** Render related variables: */
 #if (USEZBUFFER == 0)
 typedef struct { long col; } castdat;
 #else
@@ -120,7 +123,8 @@ typedef struct { castdat *i0, *i1; long z0, z1, cx0, cy0, cx1, cy1; } cftype;
 #else
 	cftype cfasm[256];
 #endif
-	//Screen related variables:
+
+/** Display related variables: */
 static long xres_voxlap, yres_voxlap, bytesperline, frameplace, xres4_voxlap;
 long ylookup[MAXYDIM+1];
 
@@ -134,24 +138,24 @@ static char *gstartv;
 long backtag, backedup = -1, bacx0, bacy0, bacx1, bacy1;
 char *bacsptr[262144];
 
-	//Flash variables
+/** Flash lighting variables */
 #define LOGFLASHVANG 9
 static lpoint2d gfc[(1<<LOGFLASHVANG)*8];
 static long gfclookup[8] = {4,7,2,5,0,3,6,1}, flashcnt = 0;
 int64_t flashbrival;
 
-	//Norm flash variables
-#define GSIZ 512  //NOTE: GSIZ should be 1<<x, and must be <= 65536
+/** Normal flash lighting variables */
+#define GSIZ 512  /** @note GSIZ should be 1<<x, and <b>Must</b> be <= 65536 */
 static long bbuf[GSIZ][GSIZ>>5], p2c[32], p2m[32];      //bbuf: 2.0K
 static uspoint2d ffx[((GSIZ>>1)+2)*(GSIZ>>1)], *ffxptr; // ffx:16.5K
 static long xbsox = -17, xbsoy, xbsof;
-static int64_t xbsbuf[25*5+1]; //need few bits before&after for protection
+static int64_t xbsbuf[25*5+1]; /** @note need few bits before&after for protection */
 
-	//Look tables for expandbitstack256:
+/** Look tables for expandbitstack256: */
 static long xbsceil[32], xbsflor[32]; //disabling mangling for inline asm
 
 	//float detection & falling code variables...
-	//WARNING: VLSTSIZ,FSTKSIZ,FLCHKSIZ can all have bounds errors! :(
+/** @warning VLSTSIZ,FSTKSIZ,FLCHKSIZ can all have bounds errors! :( */
 #define VLSTSIZ 65536 //Theoretically should be at least: VOXSIZ\8
 #define LOGHASHEAD 12
 #define FSTKSIZ 8192
@@ -162,10 +166,11 @@ lpoint3d fstk[FSTKSIZ]; //Note .z is actually used as a pointer, not z!
 #define FLCHKSIZ 4096
 lpoint3d flchk[FLCHKSIZ]; long flchkcnt = 0;
 
-	//Opticast global variables:
-	//radar: 320x200 requires  419560*2 bytes (area * 6.56*2)
-	//radar: 400x300 requires  751836*2 bytes (area * 6.27*2)
-	//radar: 640x480 requires 1917568*2 bytes (area * 6.24*2)
+/** Opticast global variables
+ *  radar: 320x200 requires  419560*2 bytes (area * 6.56*2)
+ *  radar: 400x300 requires  751836*2 bytes (area * 6.27*2)
+ *  radar: 640x480 requires 1917568*2 bytes (area * 6.24*2)
+ */
 #define SCPITCH 256
 long *radar = 0, *radarmem = 0;
 #if (USEZBUFFER == 1)
@@ -176,14 +181,14 @@ static castdat *angstart[MAXXDIM*4], *gscanptr;
 static float cmprecip[CMPRECIPSIZ], wx0, wy0, wx1, wy1;
 static long iwx0, iwy0, iwx1, iwy1;
 static point3d gcorn[4];
-		 point3d ginor[4]; //Should be static, but... necessary for stupid pingball hack :/
+		 point3d ginor[4]; /** @note Should be static, but... necessary for stupid pingball hack :/ */
 static long lastx[MAX(MAXYDIM,VSID)], uurendmem[MAXXDIM*2+8], *uurend;
 
 void mat0(point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *);
 void mat1(point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *);
 void mat2(point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *);
 
-	//Parallaxing sky variables:
+/** Parallaxing sky variables */
 static long skypic = 0, nskypic = 0, skybpl, skyysiz, skycurlng, skycurdir;
 static float skylngmul;
 static point2d *skylng = 0;
@@ -218,14 +223,13 @@ long zbufoff;
 #define gi0 (((long *)&gi)[0])
 #define gi1 (((long *)&gi)[1])
 
-
-	//Ken Silverman knows how to use EMMS
+/** @note Ken Silverman knows how to use EMMS */
 #if defined(_MSC_VER) && !defined(NOASM)
 	#pragma warning(disable:4799)
 #endif
 
 #if (defined(USEV5ASM) && (USEV5ASM != 0))
-/** TODO: still having issues with these in MSVC build */
+/** @todo still having issues with these in MSVC build */
 EXTERN_C void dep_protect_start();
 EXTERN_C void dep_protect_end();
 #endif
@@ -1259,7 +1263,7 @@ static signed char bitnum[32] =
 //   0,-2,-1,-3, 0,-2,-1,-3, 1,-1, 0,-2, 1,-1, 0,-2,
 //   2, 0, 1,-1, 2, 0, 1,-1, 3, 1, 2, 0, 3, 1, 2, 0
 //};
-/** Used by estnorn */
+/** Lookup table Used by estnorn */
 static long bitsnum[32] =
 {
 	0        ,1-(2<<16),1-(1<<16),2-(3<<16),
@@ -1271,7 +1275,7 @@ static long bitsnum[32] =
 	2+(3<<16),3+(1<<16),3+(2<<16),4,
 	3+(3<<16),4+(1<<16),4+(2<<16),5
 };
-static float fsqrecip[5860]; //75*75 + 15*15 + 3*3 = 5859 is max value (5*5*5 box)
+static float fsqrecip[5860]; /** 75*75 + 15*15 + 3*3 = 5859 is max value (5*5*5 box) */
 #endif
 
 void estnorm (long x, long y, long z, point3d *fp)
@@ -1715,14 +1719,17 @@ void hline (float x0, float y0, float x1, float y1, long *ix0, long *ix1)
 
 	dyx = (y1-y0) * grd; //grd = 1/(x1-x0)
 
-		  if (y0 < wy0) ftol((wy0-y0)/dyx+x0,ix0);
-	else if (y0 > wy1) ftol((wy1-y0)/dyx+x0,ix0);
+	if (y0 < wy0){
+	    ftol((wy0-y0)/dyx+x0,ix0);
+	}
+	else if (y0 > wy1){ ftol((wy1-y0)/dyx+x0,ix0);
+	}
 	else ftol(x0,ix0);
 		  if (y1 < wy0) ftol((wy0-y0)/dyx+x0,ix1);
 	else if (y1 > wy1) ftol((wy1-y0)/dyx+x0,ix1);
 	else ftol(x1,ix1);
-	if ((*ix0) < iwx0) (*ix0) = iwx0;
-	if ((*ix0) > iwx1) (*ix0) = iwx1; //(*ix1) = MIN(MAX(*ix1,wx0),wx1);
+	if ((*ix0) < iwx0){ (*ix0) = iwx0; }
+	if ((*ix0) > iwx1){ (*ix0) = iwx1; }//(*ix1) = MIN(MAX(*ix1,wx0),wx1);
 	gline(
         labs((*ix1)-(*ix0))
         ,(float)(*ix0),((*ix0)-x1)*dyx + y1
@@ -1916,11 +1923,11 @@ void setcamera (dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo,
 	}
 }
 
-/**
- * Render VXL screen (this is where it all happens!)
- * Make sure you have .VXL loaded in memory by using one of the loadnul(),
- * loadvxl(), loadbsp(), loaddta() functions.
- * Also make sure to call setcamera() and setvoxframebuffer() before this.
+/** Render VXL screen (this is where it all happens!)
+ *
+ *  Make sure you have .VXL loaded in memory by using one of the loadnul(),
+ *  loadvxl(), loadbsp(), loaddta() functions.
+ *  Also make sure to call setcamera() and setvoxframebuffer() before this.
  */
 void opticast ()
 {
@@ -2164,8 +2171,8 @@ void opticast ()
 	//7: down   (12)
 	//setsideshades(0,0,0,0,0,0);
 	//setsideshades(0,28,8,24,12,12);
-/**
- * Shade offset for each face of the cube: useful for editing
+/** Shade offset for each face of the cube: useful for editing
+ *
  * @param sto top face (z minimum) shade offset
  * @param sbo bottom face (z maximum) shade offset
  * @param sle left face (x minimum) shade offset
@@ -7765,6 +7772,7 @@ void equivecinit (long n)
 }
 
 //EQUIVEC code ends -------------------------------------------------------
+
 /** Bitmask for multiplying npix at 9 mip levels */
 static long umulmip[9] =
 {
@@ -7905,7 +7913,7 @@ kv6data *genmipkv6 (kv6data *kv6)
 	kv6->lowermip = nkv6;
 	return(nkv6);
 }
-/**
+/** Save .KV6 sprites to disk.
  * This could be a handy function for debugging I suppose. Use it to save
  * .KV6 sprites to disk.
  *
