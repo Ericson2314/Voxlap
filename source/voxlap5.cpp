@@ -206,10 +206,48 @@ float scisdist;
 int64_t kv6colmul[256], kv6coladd[256];
 
 //Rendering
+
+
 static float optistrx, optistry, optiheix, optiheiy, optiaddx, optiaddy;
 
 static int64_t foglut[2048] FORCE_NAME("foglut"), fogcol;
 static long ofogdist = -1;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+char ptfaces16[43][8] =
+{
+    {0, 0, 0,  0,  0, 0, 0,0} , {4, 0,32,96, 64, 0,32,0} , {4,16,80,112,48, 16,80,0} , {0,0,0,0,0,0,0,0} ,
+    {4,64,96,112, 80,64,96,0} , {6, 0,32,96,112,80,64,0} , {6,16,80, 64,96,112,48,0} , {0,0,0,0,0,0,0,0} ,
+    {4, 0,16, 48, 32, 0,16,0} , {6, 0,16,48, 32,96,64,0} , {6, 0,16, 80,112,48,32,0} , {0,0,0,0,0,0,0,0} ,
+    {0, 0, 0,  0,  0, 0, 0,0} , {0, 0, 0, 0,  0, 0, 0,0} , {0, 0, 0,  0,  0, 0, 0,0} , {0,0,0,0,0,0,0,0} ,
+    {4, 0,64, 80, 16, 0,64,0} , {6, 0,32,96, 64,80,16,0} , {6, 0,64, 80,112,48,16,0} , {0,0,0,0,0,0,0,0} ,
+    {6, 0,64, 96,112,80,16,0} , {6, 0,32,96,112,80,16,0} , {6, 0,64, 96,112,48,16,0} , {0,0,0,0,0,0,0,0} ,
+    {6, 0,64, 80, 16,48,32,0} , {6,16,48,32, 96,64,80,0} , {6, 0,64, 80,112,48,32,0} , {0,0,0,0,0,0,0,0} ,
+    {0, 0, 0,  0,  0, 0, 0,0} , {0, 0, 0, 0,  0, 0, 0,0} , {0, 0, 0,  0,  0, 0, 0,0} , {0,0,0,0,0,0,0,0} ,
+    {4,32,48,112, 96,32,48,0} , {6, 0,32,48,112,96,64,0} , {6,16,80,112, 96,32,48,0} , {0,0,0,0,0,0,0,0} ,
+    {6,32,48,112, 80,64,96,0} , {6, 0,32,48,112,80,64,0} , {6,16,80, 64, 96,32,48,0} , {0,0,0,0,0,0,0,0} ,
+    {6, 0,16, 48,112,96,32,0} , {6, 0,16,48,112,96,64,0} , {6, 0,16, 80,112,96,32,0}
+};
+
+
+#ifdef __cplusplus
+}
+#endif
+
+//static void initboundcubescr (long dafram, long dabpl, long x, long y, long dabpp)
+//{
+//   qsum1[3] = qsum1[1] = 0x7fff-y; qsum1[2] = qsum1[0] = 0x7fff-x;
+//   qbplbpp[1] = dabpl; qbplbpp[0] = ((dabpp+7)>>3);
+//   kv6frameplace = dafram; kv6bytesperline = dabpl;
+//}
+
+static __ALIGN(8) short lightlist[MAXLIGHTS+1][4];
+
+/** Related to fog functions */
+static int64_t all32767 FORCE_NAME("all32767") = 0x7fff7fff7fff7fff;
 
 void (*hrend)(long,long,long,long,long,long);
 void (*vrend)(long,long,long,long,long);
@@ -302,7 +340,11 @@ static long gmaxscandist;
 
 //long reax, rebx, recx, redx, resi, redi, rebp, resp, remm[16];
 
-
+#if (defined(USEV5ASM) && (USEV5ASM != 0))
+/** @todo still having issues with these in MSVC build */
+EXTERN_C void dep_protect_start();
+EXTERN_C void dep_protect_end();
+#endif
 
 EXTERN_C void grouscanasm (long);
 #if (USEZBUFFER == 1)
@@ -317,12 +359,6 @@ long zbufoff;
 /** @note Ken Silverman knows how to use EMMS */
 #if defined(_MSC_VER) && !defined(NOASM)
 	#pragma warning(disable:4799)
-#endif
-
-#if (defined(USEV5ASM) && (USEV5ASM != 0))
-/** @todo still having issues with these in MSVC build */
-EXTERN_C void dep_protect_start();
-EXTERN_C void dep_protect_end();
 #endif
 
 /** if (a < 0) return(0); else if (a > b) return(b); else return(a); */
@@ -2867,12 +2903,13 @@ long cansee (point3d *p0, point3d *p1, lpoint3d *hit)
 	}
 	hit->x = a.x; hit->y = a.y; hit->z = a.z; return(!cnt);
 }
-
-	//  p: start position
-	//  d: direction
-	//  h: coordinate of voxel hit (if any)
-	//ind: pointer to surface voxel's 32-bit color (0 if none hit)
-	//dir: 0-5: last direction moved upon hit (-1 if inside solid)
+/**
+ *  @param p start position
+ *  @param d direction
+ *  @param h coordinate of voxel hit (if any)
+ *  @param ind pointer to surface voxel's 32-bit color (0 if none hit)
+ *  @param dir 0-5: last direction moved upon hit (-1 if inside solid)
+*/
 void hitscan (dpoint3d *p, dpoint3d *d, lpoint3d *h, long **ind, long *dir)
 {
 	long ixi, iyi, izi, dx, dy, dz, dxi, dyi, dzi, z0, z1, minz;
@@ -2972,14 +3009,15 @@ void hitscan (dpoint3d *p, dpoint3d *d, lpoint3d *h, long **ind, long *dir)
 		}
 	}
 }
-
-	// p0: start position
-	// v0: direction
-	//spr: pointer of sprite to test collision with
-	//  h: coordinate of voxel hit in sprite coordinates (if any)
-	//ind: pointer to voxel hit (kv6voxtype) (0 if none hit)
-	//vsc:  input: max multiple/fraction of v0's length to scan (1.0 for |v0|)
-	//     output: multiple/fraction of v0's length of hit point
+/**
+ *  @param p0: start position
+ *  @param v0: direction
+ *  @param spr: pointer of sprite to test collision with
+ *  @param h: coordinate of voxel hit in sprite coordinates (if any)
+ *  @param ind: pointer to voxel hit (kv6voxtype) (0 if none hit)
+ *  @param vsc:  input: max multiple/fraction of v0's length to scan (1.0 for |v0|)
+ *  @return multiple/fraction of v0's length of hit point
+ */
 void sprhitscan (dpoint3d *p0, dpoint3d *v0, vx5sprite *spr, lpoint3d *h, kv6voxtype **ind, float *vsc)
 {
 	kv6voxtype *vx[4];
@@ -3300,7 +3338,7 @@ void expandrle (long x, long y, long *uind)
 	}
 	uind[i-1] = MAXZDIM;
 }
-
+/**
 	//Inputs:  n0[<=MAXZDIM]: rle buffer of column to compress
 	//         n1-4[<=MAXZDIM]: neighboring rle buffers
 	//         top,bot,top,bot,... (ends when bot == MAXZDIM)
@@ -3308,6 +3346,7 @@ void expandrle (long x, long y, long *uind)
 	//            If originally unexposed, calls vx5.colfunc(.)
 	//Outputs: cbuf[MAXCSIZ]: compressed output buffer
 	//Returns: n: length of compressed buffer (in bytes)
+ */
 long compilerle (long *n0, long *n1, long *n2, long *n3, long *n4, char *cbuf, long px, long py)
 {
 	long i, ia, ze, zend, onext, dacnt, n, *ic;
@@ -3509,16 +3548,17 @@ void scumline ()
 		while (v[0]) { v += v[0]*4; vx5.globalmass += v[3]-v[1]; }
 	}
 }
-
-	//x: x on voxel map
-	//y: y on voxel map
-	//z0: highest z on column
-	//z1: lowest z(+1) on column
-	//nbuf: buffer of color data from nbuf[z0] to nbuf[z1-1];
-	//           -3: don't modify voxel
-	//           -2: solid voxel (unexposed): to be calculated in compilestack
-	//           -1: write air voxel
-	//   0-16777215: write solid voxel (exposed)
+/** Set column xy to nbuf[z0] to nbuf[z1-1]
+ *  @param x x on voxel map
+ *  @param y y on voxel map
+ *  @param z0 highest z on column
+ *  @param z1 lowest z(+1) on column
+ *  @param nbuf buffer of color data from nbuf[z0] to nbuf[z1-1];
+ *	-3: don't modify voxel
+ *	-2: solid voxel (unexposed): to be calculated in compilestack
+ *	-1: write air voxel
+ *	0-16777215: write solid voxel (exposed)
+ */
 void scum (long x, long y, long z0, long z1, long *nbuf)
 {
 	long z, *mptr;
@@ -3572,7 +3612,7 @@ void scumfinish ()
 	}
 	scumline(); scoy = 0x80000000;
 }
-
+/**
 	//Example of how to use this code:
 	//vx5.colfunc = curcolfunc; //0<x0<x1<VSID, 0<y0<y1<VSID, 0<z0<z1<256,
 	//clearbuf((void *)&templongbuf[z0],z1-z0,-1); //Ex: set all voxels to air
@@ -3580,7 +3620,7 @@ void scumfinish ()
 	//   for(x=x0;x<x1;x++)
 	//      if (rand()&8) scum(x,y,z0,z1,templongbuf));
 	//scumfinish(); //MUST call this when done!
-
+*/
 void scum2line ()
 {
 	long i, j, k, x, y, x0, x1, *mptr, *uptr;
@@ -3653,10 +3693,11 @@ void scum2line ()
 		while (v[0]) { v += v[0]*4; vx5.globalmass += v[3]-v[1]; }
 	}
 }
-
-	//x: x on voxel map
-	//y: y on voxel map
-	//Returns pointer to rle column (x,y)
+/**
+ *  @param x: x on voxel map
+ *  @param y: y on voxel map
+ *  @return pointer to rle column (x,y)
+ */
 long *scum2 (long x, long y)
 {
 	long *mptr;
@@ -5260,42 +5301,6 @@ EXTERN_C void drawboundcubesse (kv6voxtype *, long);
 EXTERN_C void drawboundcube3dninit ();
 EXTERN_C void drawboundcube3dn (kv6voxtype *, long);
 #endif
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-char ptfaces16[43][8] =
-{
-    {0, 0, 0,  0,  0, 0, 0,0} , {4, 0,32,96, 64, 0,32,0} , {4,16,80,112,48, 16,80,0} , {0,0,0,0,0,0,0,0} ,
-    {4,64,96,112, 80,64,96,0} , {6, 0,32,96,112,80,64,0} , {6,16,80, 64,96,112,48,0} , {0,0,0,0,0,0,0,0} ,
-    {4, 0,16, 48, 32, 0,16,0} , {6, 0,16,48, 32,96,64,0} , {6, 0,16, 80,112,48,32,0} , {0,0,0,0,0,0,0,0} ,
-    {0, 0, 0,  0,  0, 0, 0,0} , {0, 0, 0, 0,  0, 0, 0,0} , {0, 0, 0,  0,  0, 0, 0,0} , {0,0,0,0,0,0,0,0} ,
-    {4, 0,64, 80, 16, 0,64,0} , {6, 0,32,96, 64,80,16,0} , {6, 0,64, 80,112,48,16,0} , {0,0,0,0,0,0,0,0} ,
-    {6, 0,64, 96,112,80,16,0} , {6, 0,32,96,112,80,16,0} , {6, 0,64, 96,112,48,16,0} , {0,0,0,0,0,0,0,0} ,
-    {6, 0,64, 80, 16,48,32,0} , {6,16,48,32, 96,64,80,0} , {6, 0,64, 80,112,48,32,0} , {0,0,0,0,0,0,0,0} ,
-    {0, 0, 0,  0,  0, 0, 0,0} , {0, 0, 0, 0,  0, 0, 0,0} , {0, 0, 0,  0,  0, 0, 0,0} , {0,0,0,0,0,0,0,0} ,
-    {4,32,48,112, 96,32,48,0} , {6, 0,32,48,112,96,64,0} , {6,16,80,112, 96,32,48,0} , {0,0,0,0,0,0,0,0} ,
-    {6,32,48,112, 80,64,96,0} , {6, 0,32,48,112,80,64,0} , {6,16,80, 64, 96,32,48,0} , {0,0,0,0,0,0,0,0} ,
-    {6, 0,16, 48,112,96,32,0} , {6, 0,16,48,112,96,64,0} , {6, 0,16, 80,112,96,32,0}
-};
-
-
-#ifdef __cplusplus
-}
-#endif
-
-//static void initboundcubescr (long dafram, long dabpl, long x, long y, long dabpp)
-//{
-//   qsum1[3] = qsum1[1] = 0x7fff-y; qsum1[2] = qsum1[0] = 0x7fff-x;
-//   qbplbpp[1] = dabpl; qbplbpp[0] = ((dabpp+7)>>3);
-//   kv6frameplace = dafram; kv6bytesperline = dabpl;
-//}
-
-static __ALIGN(8) short lightlist[MAXLIGHTS+1][4];
-
-/** Related to fog functions */
-static int64_t all32767 FORCE_NAME("all32767") = 0x7fff7fff7fff7fff;
 
 static void updatereflects (vx5sprite *spr)
 {
