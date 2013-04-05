@@ -1,8 +1,16 @@
+#ifndef CPU_DETECT_H
+#define CPU_DETECT_H
+#include <stdio.h>
 /**
  *  Moved this CPU / FPU code here 'cause it's generic, and doesn't just belong to just SDLMain or Winmain
  */
-
 #include "sysmain.h"
+
+//for code_rwx_unlock only
+#ifndef _WIN32
+	#include <unistd.h>
+	#include <sys/mman.h>
+#endif
 
 //======================== CPU detection code begins ========================
 
@@ -129,16 +137,27 @@ static inline void fpuinit (long a)
 	#endif
 }
 
-void code_rwx_unlock ( void * dep_protect_start, void * dep_protect_end)
+static void code_rwx_unlock ( void * dep_protect_start, void * dep_protect_end)
 {
 #ifdef _WIN32
-#ifndef PAGE_EXECUTE_READWRITE
-#define PAGE_EXECUTE_READWRITE 0x40
-#endif
-	unsigned long oldprotectcode;
-	VirtualProtect((void *)dep_protect_start, ((size_t)dep_protect_end - (size_t)dep_protect_start), PAGE_EXECUTE_READWRITE, &oldprotectcode);
+    #ifndef PAGE_EXECUTE_READWRITE
+    #define PAGE_EXECUTE_READWRITE 0x40
+    #endif
+    unsigned long oldprotectcode;
+    VirtualProtect((void *)dep_protect_start, ((size_t)dep_protect_end - (size_t)dep_protect_start), PAGE_EXECUTE_READWRITE, &oldprotectcode);
 #else
-	size_t floorptr = (size_t)dep_protect_start & -sysconf(_SC_PAGE_SIZE);
-	mprotect((void *)floorptr, ((size_t)dep_protect_end - (size_t)floorptr), PROT_READ|PROT_WRITE);
+    size_t floorptr = (size_t)dep_protect_start & -sysconf(_SC_PAGE_SIZE);
+    mprotect((void *)floorptr, ((size_t)dep_protect_end - (size_t)floorptr), PROT_READ|PROT_WRITE);
 #endif
+
 }
+static int check_fpu_rdtsc()
+{
+	cputype = getcputype();
+	if ((cputype&((1<<0)+(1<<4))) != ((1<<0)+(1<<4)))
+		{ fputs("Sorry, this program requires FPU&RDTSC support (>=Pentium)", stderr); return(-1); }
+    else
+        return 0; // A okay
+}
+
+#endif //CPU_DETECT_H

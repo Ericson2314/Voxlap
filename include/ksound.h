@@ -1,15 +1,22 @@
-	//Ken Silverman knows how to use EMMS
+//Sound:
+#define KSND_3D 1 //Use LOGICAL OR (|) to combine flags
+#define KSND_MOVE 2
+#define KSND_LOOP 4
+#define KSND_LOPASS 8
+#define KSND_MEM 16
+
+/** @note Ken Silverman knows how to use EMMS */
 #if defined(_MSC_VER) && !defined(NOASM)
 	#pragma warning(disable:4799)
 #endif
 #ifndef ENTERMUTX
     #define ENTERMUTX LockAudio()
-    /* a do nothing stub */
+    /* a do nothing stub, which will not do nothing if SDL is used */
     void LockAudio(){}
 #endif
 #ifndef LEAVEMUTX
     #define LEAVEMUTX UnlockAudio()
-    /* a do nothing stub */
+    /* a do nothing stub, which will not do nothing if SDL is used */
     void UnlockAudio(){}
 #endif
 
@@ -28,8 +35,6 @@ typedef struct __attribute__ ((packed)) tWAVEFORMATEX
 	short cbSize;
 } WAVEFORMATEX;
 
-#define WAVE_FORMAT_PCM 1
-
 typedef struct {
 	void *buf;
 	long buflen;
@@ -42,33 +47,10 @@ typedef struct {
 	WAVEFORMATEX *lpwfxFormat;
 } KSBufferDesc;
 
-
-#define KS_OK 0
-#define KS_NOTOK -1
-//--------------------------------------------------------------------------------------------------
 typedef struct { float x, y, z; } point3d;
-#include <math.h>
 
-	//Internal streaming buffer variables:
-#define SNDSTREAMSIZ 16384 //(16384) Keep this a power of 2!
-#define MINBREATHREND 256  //(256) Keep this high to avoid clicks, but much smaller than SNDSTREAMSIZ!
-#define LSAMPREC 10        //(11) No WAV file can have more than 2^(31-LSAMPREC) samples
-#define MAXPLAYINGSNDS 256 //(256)
-#define VOLSEPARATION 1.f  //(1.f) Range: 0 to 1, .5 good for headphones, 1 good for speakers
-#define EARSEPARATION 8.f  //(8.f) Used for L/R sample shifting
-#define SNDMINDIST 32.f    //(32.f) Shortest distance where volume is max / volume scale factor
-#define SNDSPEED 4096.f    //(4096.f) Speed of sound in units per second
-#define NUMCOEF 4          //(4) # filter coefficients (4 and 8 are good choices)
-#define LOGCOEFPREC 5      //(5) number of fractional bits of precision: 5 is ok
-#define COEFRANG 32757     //(32757) DON'T make this > 32757 (not a typo) or else it'll overflow
-#define KSND_3D 1
-#define KSND_MOVE 2
-#define KSND_LOOP 4
-#define KSND_LOPASS 8
-#define KSND_MEM 16
-#define KSND_LOOPFADE 32    //for internal use only
-
-typedef struct //For sounds longer than SNDSTREAMSIZ
+/** For sounds longer than SNDSTREAMSIZ */
+typedef struct
 {
 	point3d *ptr; //followstat (-1 means not 3D sound, 0 means 3D sound but don't follow, else follow 3D!)
 	point3d p;    //current position
@@ -84,23 +66,58 @@ typedef struct //For sounds longer than SNDSTREAMSIZ
 	short *coefilt; //pointer to coef (for low pass filter, etc...)
 } rendersndtyp;
 
+	//Internal streaming buffer variables:
+#define SNDSTREAMSIZ 16384 //(16384) Keep this a power of 2!
+#define MINBREATHREND 256  //(256) Keep this high to avoid clicks, but much smaller than SNDSTREAMSIZ!
+#define LSAMPREC 10        //(11) No WAV file can have more than 2^(31-LSAMPREC) samples
+#define MAXPLAYINGSNDS 256 //(256)
+#define VOLSEPARATION 1.f  //(1.f) Range: 0 to 1, .5 good for headphones, 1 good for speakers
+#define EARSEPARATION 8.f  //(8.f) Used for L/R sample shifting
+#define SNDMINDIST 32.f    //(32.f) Shortest distance where volume is max / volume scale factor
+#define SNDSPEED 4096.f    //(4096.f) Speed of sound in units per second
+#define NUMCOEF 4          //(4) # filter coefficients (4 and 8 are good choices) Affects audio quality
+#define LOGCOEFPREC 5      //(5) number of fractional bits of precision: 5 is ok
+#define COEFRANG 32757     //(32757) DON'T make this > 32757 (not a typo) or else it'll overflow
+#define KSND_3D 1
+#define KSND_MOVE 2
+#define KSND_LOOP 4
+#define KSND_LOPASS 8
+#define KSND_MEM 16
+#define KSND_LOOPFADE 32            //for internal use only
+#define WAVE_FORMAT_PCM 1
+#define PI 3.14159265358979323
+#define KS_OK 0
+#define KS_NOTOK -1
+#define AUDHASHINITSIZE 8192
+#define AUDHASHEADSIZE 256          //must be power of 2, used by audcalchash
+#define KSBLOCK_FROMWRITECURSOR 1   // use by ksoundbufferlock
+#define KSBLOCK_ENTIREBUFFER 2      // use by ksoundbufferlock
+#define MAXUMIXERS 256
+#define UMIXERBUFSIZ 65536
+
 static rendersndtyp rendersnd[MAXPLAYINGSNDS];
 static long numrendersnd = 0;
-
 KSoundBuffer *streambuf = 0;
-	//format: (used by audplay* to cache filenames&files themselves)
-	//[index to next hashindex or -1][index to last filnam][ptr to snd_buf][char snd_filnam[?]\0]
-#define AUDHASHINITSIZE 8192
+//format: (used by audplay* to cache filenames&files themselves)
+//[index to next hashindex or -1][index to last filnam][ptr to snd_buf][char snd_filnam[?]\0]
 static char *audhashbuf = 0;
-#define AUDHASHEADSIZE 256 //must be power of 2
 static long audhashead[AUDHASHEADSIZE], audhashpos, audlastloadedwav, audhashsiz;
-
 static point3d audiopos, audiostr, audiohei, audiofor;
 static float rsamplerate;
 static long lsnd[SNDSTREAMSIZ>>1], samplerate, numspeakers, bytespersample, oplaycurs = 0;
 static char gshiftval = 0;
 static short __ALIGN(16) coef[NUMCOEF<<LOGCOEFPREC]; //Sound re-scale filter coefficients
 static short __ALIGN(16) coeflopass[NUMCOEF<<LOGCOEFPREC]; //Sound re-scale filter coefficients
+static long umixernum = 0;
+
+typedef struct
+{
+	KSoundBuffer *streambuf;
+	long samplerate, numspeakers, bytespersample, oplaycurs;
+	void (*mixfunc)(void *dasnd, long danumbytes);
+} umixertyp;
+static umixertyp umixer[MAXUMIXERS];
+
 
 int KSound_CreateSoundBuffer(KSBufferDesc *dsbdesc, KSoundBuffer **ksb)
 {
@@ -138,8 +155,7 @@ int KSoundBuffer_Release(KSoundBuffer *ksb)
 	return KS_OK;
 }
 
-#define KSBLOCK_FROMWRITECURSOR 1
-#define KSBLOCK_ENTIREBUFFER 2
+
 int KSoundBuffer_Lock(KSoundBuffer *ksb, long wroffs, long wrlen,
 		void **ptr1, unsigned long *len1, void **ptr2, unsigned long *len2, long flags)
 {
@@ -187,18 +203,6 @@ int KSoundBuffer_GetCurrentPosition(KSoundBuffer *ksb, unsigned long *play, unsi
 
 	return KS_OK;
 }
-
-//--------------------------------------------------------------------------------------------------
-#define MAXUMIXERS 256
-#define UMIXERBUFSIZ 65536
-typedef struct
-{
-	KSoundBuffer *streambuf;
-	long samplerate, numspeakers, bytespersample, oplaycurs;
-	void (*mixfunc)(void *dasnd, long danumbytes);
-} umixertyp;
-static umixertyp umixer[MAXUMIXERS];
-static long umixernum = 0;
 
 long umixerstart (void damixfunc (void *, long), long dasamprate, long danumspeak, long dabytespersamp)
 {
@@ -274,8 +278,11 @@ void umixerbreathe ()
 	}
 }
 
-
-	//Same as: stricmp(st0,st1) except: '/' == '\'
+/** Same as: stricmp(st0,st1) except: '/' == '\' @note case insensitive
+ *  @param st0 String to compare
+ *  @param st1 String to compare
+ *  @return -1 or 0
+*/
 static long filnamcmp (const char *st0, const char *st1)
 {
 	long i;
@@ -293,6 +300,10 @@ static long filnamcmp (const char *st0, const char *st1)
 	return(-1);
 }
 
+/** Make a hash of an audio filename so we can load from memory in future calls
+ *  @param *st Pointer to string that is being hashed
+ *  @return Pointer to position of item in hash
+*/
 static long audcalchash (const char *st)
 {
 	long i, hashind;
@@ -308,6 +319,7 @@ static long audcalchash (const char *st)
 	return(hashind&(AUDHASHEADSIZE-1));
 }
 
+/** Make sure string fits in audhashbuf */
 static long audcheckhashsiz (long siz)
 {
 	long i;
@@ -327,7 +339,7 @@ static long audcheckhashsiz (long siz)
 	return(1);
 }
 
-#define PI 3.14159265358979323
+/** Generate polynomial filter - fewer divides algo. (See PIANO.C for derivation) */
 static void initfilters ()
 {
 	float f, f2, f3, f4, fcoef[NUMCOEF];
@@ -359,18 +371,20 @@ static void initfilters ()
 			f2 *= (cos((f+f)/(float)NUMCOEF)*.5+.5); //Hanning
 			fcoef[j] = f2; f3 += f2;
 		}
-		f3 = COEFRANG/f3; //NOTE: Enabling this code makes it LESS continuous!
+		f3 = COEFRANG/f3; /** @note Enabling this code makes it LESS continuous! */
 		for(j=0;j<NUMCOEF;j++) coeflopass[i*NUMCOEF+j] = (short)(fcoef[j]*f3);
 	}
 }
 
-	//   ssnd: source sound
-	//  ispos: sub-sample counter
-	//  isinc: sub-sample increment per destination sample
-	// ivolsc: 31-bit volume scale
-	//ivolsci: 31-bit ivolsc increment per destination sample
-	//   lptr: 32-bit sound pointer (step by 8 because rendersamps only renders 1 channel!)
-	//  nsamp: number of destination samples to render
+/** Render samples
+ *  @param ssnd source sound
+ *  @param ispos sub-sample counter
+ *  @param isinc sub-sample increment per destination sample
+ *  @param ivolsc 31-bit volume scale
+ *  @param ivolsci 31-bit ivolsc increment per destination sample
+ *  @param lptr 32-bit sound pointer (step by 8 because rendersamps only renders 1 channel!)
+ *  @param nsamp number of destination samples to render
+ */
 static void rendersamps (long dasnd, long ispos, long isinc, long ivolsc, long ivolsci, long *lptr, long nsamp, short *coefilt)
 {
 	long i, j, k;
@@ -523,9 +537,11 @@ static void rendersampsloop (long dasnd, long ispos, long isinc, long ivolsc, lo
 	*(long *)(dasnd+(numsamps<<1)+4) = 0;
 }
 
-	//  lptr: 32-bit sound pointer
-	//  dptr: 16-bit destination pointer
-	// nsamp: number of destination samples to render
+/** Copy an audio clip from lptr to dptr of length nsamp
+ *  @param lptr 32-bit sound pointer
+ *  @param dptr 16-bit destination pointer
+ *  @param nsamp number of destination samples to render
+ */
 static void audclipcopy (long *lptr, short *dptr, long nsamp)
 {
 	if (cputype&(1<<23)) //MMX
@@ -546,7 +562,7 @@ static void audclipcopy (long *lptr, short *dptr, long nsamp)
 			jnz short begc0
 		}
 #else
-		#ifdef __GNUC__ //gcc inline asm
+		#if defined(__GNUC__)
 		__asm__ __volatile__ (
 			"testl $4, %%edx\n"
 			"leal (%%edx,%%ecx,4), %%edx\n"
@@ -574,8 +590,7 @@ static void audclipcopy (long *lptr, short *dptr, long nsamp)
 			"3:\n"   // endc:
 			: "+a" (lptr), "+d" (dptr), "+c" (nsamp) : : "memory","cc"
 		);
-		#endif
-		#ifdef _MSC_VER //msvc inline asm
+		#elif defined(_MSC_VER)
 		_asm //Same as above, but does 8-byte aligned writes instead of 4
 		{
 			mov eax, lptr
@@ -614,12 +629,28 @@ static void audclipcopy (long *lptr, short *dptr, long nsamp)
 	}
 }
 
+/** Set listener location (for 3D sounds)
+ *  Position unit vector
+ *  @param iposx
+ *  @param iposy
+ *  @param iposz
+ *
+ *  FORWARD unit vector of listener
+ *  @param iposx
+ *  @param iposy
+ *  @param iposz
+ *
+ *  DOWN unit vector of listener
+ *  @param iheix
+ *  @param iheiy
+ *  @param iheiz
+ */
 void setears3d (float iposx, float iposy, float iposz,
 					 float iforx, float ifory, float iforz,
 					 float iheix, float iheiy, float iheiz)
 {
 	float f;
-	ENTERMUTX;
+	ENTERMUTX; /** @note do nothing unless SDL is the build type */
 	f = 1.f/sqrt(iheix*iheix+iheiy*iheiy+iheiz*iheiz); //Make audiostr same magnitude as audiofor
 	audiopos.x = iposx; audiopos.y = iposy; audiopos.z = iposz;
 	audiofor.x = iforx; audiofor.y = ifory; audiofor.z = iforz;
@@ -627,12 +658,13 @@ void setears3d (float iposx, float iposy, float iposz,
 	audiostr.x = (iheiy*iforz - iheiz*ifory)*f;
 	audiostr.y = (iheiz*iforx - iheix*iforz)*f;
 	audiostr.z = (iheix*ifory - iheiy*iforx)*f;
-	LEAVEMUTX;
+	LEAVEMUTX; /** @note do nothing unless SDL is the build type */
 }
 
-	//Because of 3D position calculations, it is better to render sound in sync with the movement
-	//   and not at random times. In other words, call kensoundbreath with lower "minleng" values
-	//   when calling from breath() than from other places, such as kensoundthread()
+/** @note Because of 3D position calculations, it is better to render sound in sync with the movement
+ *  and not at random times. In other words, call kensoundbreath with lower "minleng" values
+ *  when calling from breath() than from other places, such as kensoundthread()
+ */
 static void kensoundbreath (long minleng)
 {
 	void *w[2];
@@ -763,7 +795,7 @@ static void kensoundbreath (long minleng)
 	oplaycurs = playcurs;
 }
 
-	//Returns pointer to sound data; loads file if not already loaded.
+/** Returns pointer to sound data; loads file if not already loaded. */
 long audgetfilebufptr (const char *filnam)
 {
 	WAVEFORMATEX wft;
@@ -863,12 +895,14 @@ long audgetfilebufptr (const char *filnam)
 	}
 	else
 	{
+
+		if (!(newsnd = (long)malloc(16+i+8)))
 #ifndef USEKZ
-		if (!(newsnd = (long)malloc(16+i+8))) { fclose(fil); return(0); }
+		{ fclose(fil); return(0); }
 		fread((void *)(newsnd+16),leng,1,fil);
 		fclose(fil);
 #else
-		if (!(newsnd = (long)malloc(16+i+8))) { kzclose(); return(0); }
+		{ kzclose(); return(0); }
 		kzread((void *)(newsnd+16),leng);
 		kzclose();
 #endif
@@ -898,7 +932,7 @@ long audgetfilebufptr (const char *filnam)
 	return(newsnd);
 }
 
-/**
+/** Play a sound
  *  filnam: ASCIIZ string of filename (can be inside .ZIP file if USEKZ is enabled)
  *  Filenames are compared with a hash, and samples are cached, so don't worry about speed!
  *  volperc: volume scale (0 is silence, 100 is max volume)
@@ -1032,7 +1066,7 @@ void playsound (const char *filnam, long volperc, float frqmul, void *pos, long 
 	LEAVEMUTX;
 }
 
-/**
+/** Modify a sound already in use
  *	Use this function to update a pointer location (if you need to move things around in memory)
  *	special cases: if (optr== 0) changes all pointers
  *	               if (nptr== 0) changes KSND_MOVE to KSND_3D
@@ -1046,7 +1080,7 @@ void playsound (const char *filnam, long volperc, float frqmul, void *pos, long 
 void playsoundupdate (void *optr, void *nptr)
 {
 	long i;
-	ENTERMUTX;
+	ENTERMUTX;  /** @note Do nothing unless using SDL */
 	for(i=numrendersnd-1;i>=0;i--)
 	{
 		if ((rendersnd[i].ptr != (point3d *)optr) && (optr)) continue;
@@ -1059,5 +1093,5 @@ void playsoundupdate (void *optr, void *nptr)
 			if (nptr) rendersnd[i].flags |= KSND_LOOPFADE; //nptr == {-1}
 		}
 	}
-	LEAVEMUTX;
+	LEAVEMUTX; /** @note Do nothing unless using SDL */
 }

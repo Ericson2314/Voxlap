@@ -21,7 +21,7 @@ You may use this code for non-commercial purposes as long as credit is maintaine
 	//are in include path
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-
+#include <stdlib.h>
 #ifndef NODRAW
 #define DIRECTDRAW_VERSION 0x0300
 #include <ddraw.h>
@@ -40,6 +40,8 @@ You may use this code for non-commercial purposes as long as credit is maintaine
 //#define KPLIB_C  //if kplib is compiled as C
 #include "kplib.h"
 #endif
+#include "cpu_detect.h"
+
 #define DSOUNDINITCOM 1 //0=Link DSOUND.DLL, 1=Use COM interface to init DSOUND
 #ifndef USEKENSOUND
 #define USEKENSOUND 1   //0=playsound undefined (umixer only), 1=Ken's fancy sound renderer, 2=Standard Directsound secondary buffers
@@ -97,156 +99,10 @@ long xres = 640, yres = 480, colbits = 32, fullscreen = 0, maxpages = 8;
 
 //======================== CPU detection code begins ========================
 
-long cputype = 0;
+
 static OSVERSIONINFO osvi;
 
-#ifdef __WATCOMC__
-
-long testflag (long);
-#pragma aux testflag =\
-	"pushfd"\
-	"pop eax"\
-	"mov ebx, eax"\
-	"xor eax, ecx"\
-	"push eax"\
-	"popfd"\
-	"pushfd"\
-	"pop eax"\
-	"xor eax, ebx"\
-	"mov eax, 1"\
-	"jne menostinx"\
-	"xor eax, eax"\
-	"menostinx:"\
-	parm nomemory [ecx]\
-	modify exact [eax ebx]\
-	value [eax]
-
-void cpuid (long, long *);
-#pragma aux cpuid =\
-	".586"\
-	"cpuid"\
-	"mov dword ptr [esi], eax"\
-	"mov dword ptr [esi+4], ebx"\
-	"mov dword ptr [esi+8], ecx"\
-	"mov dword ptr [esi+12], edx"\
-	parm [eax][esi]\
-	modify exact [eax ebx ecx edx]\
-	value
-
-#endif
-#ifdef _MSC_VER
-
-#pragma warning(disable:4799) //I know how to use EMMS
-
-static _inline long testflag (long c)
-{
-	_asm
-	{
-		mov ecx, c
-		pushfd
-		pop eax
-		mov edx, eax
-		xor eax, ecx
-		push eax
-		popfd
-		pushfd
-		pop eax
-		xor eax, edx
-		mov eax, 1
-		jne menostinx
-		xor eax, eax
-		menostinx:
-	}
-}
-
-static _inline void cpuid (long a, long *s)
-{
-	_asm
-	{
-		push ebx
-		push esi
-		mov eax, a
-		cpuid
-		mov esi, s
-		mov dword ptr [esi+0], eax
-		mov dword ptr [esi+4], ebx
-		mov dword ptr [esi+8], ecx
-		mov dword ptr [esi+12], edx
-		pop esi
-		pop ebx
-	}
-}
-
-#endif
-
-	//Bit numbers of return value:
-	//0:FPU, 4:RDTSC, 15:CMOV, 22:MMX+, 23:MMX, 25:SSE, 26:SSE2, 30:3DNow!+, 31:3DNow!
-static long getcputype ()
-{
-	long i, cpb[4], cpid[4];
-	if (!testflag(0x200000)) return(0);
-	cpuid(0,cpid); if (!cpid[0]) return(0);
-	cpuid(1,cpb); i = (cpb[3]&~((1<<22)|(1<<30)|(1<<31)));
-	cpuid(0x80000000,cpb);
-	if (((unsigned long)cpb[0]) > 0x80000000)
-	{
-		cpuid(0x80000001,cpb);
-		i |= (cpb[3]&(1<<31));
-		if (!((cpid[1]^0x68747541)|(cpid[3]^0x69746e65)|(cpid[2]^0x444d4163))) //AuthenticAMD
-			i |= (cpb[3]&((1<<22)|(1<<30)));
-	}
-	if (i&(1<<25)) i |= (1<<22); //SSE implies MMX+ support
-	return(i);
-}
-
-//========================= CPU detection code ends =========================
-
-//================== Fast & accurate TIMER FUNCTIONS begins ==================
-
-#if 0
-#ifdef __WATCOMC__
-
-__int64 rdtsc64 ();
-#pragma aux rdtsc64 = "rdtsc" value [edx eax] modify nomemory parm nomemory;
-
-#endif
-#ifdef _MSC_VER
-
-static __forceinline __int64 rdtsc64 () { _asm rdtsc }
-
-#endif
-
-static __int64 pertimbase, rdtimbase, nextimstep;
-static double perfrq, klockmul, klockadd;
-
-void initklock ()
-{
-	__int64 q;
-	QueryPerformanceFrequency((LARGE_INTEGER *)&q);
-	perfrq = (double)q;
-	rdtimbase = rdtsc64();
-	QueryPerformanceCounter((LARGE_INTEGER *)&pertimbase);
-	nextimstep = 4194304; klockmul = 0.000000001; klockadd = 0.0;
-}
-
-void readklock (double *tim)
-{
-	__int64 q = rdtsc64()-rdtimbase;
-	if (q > nextimstep)
-	{
-		__int64 p;
-		double d;
-		QueryPerformanceCounter((LARGE_INTEGER *)&p);
-		d = klockmul; klockmul = ((double)(p-pertimbase))/(((double)q)*perfrq);
-		klockadd += (d-klockmul)*((double)q);
-		do { nextimstep <<= 1; } while (q > nextimstep);
-	}
-	(*tim) = ((double)q)*klockmul + klockadd;
-}
-#else
-
-static __int64 klocksub;
-static double klockmul;
+#include "ktimer.h"
 
 void initklock ()
 {
@@ -262,10 +118,6 @@ void readklock (double *tim)
 	QueryPerformanceCounter((LARGE_INTEGER *)&q);
 	(*tim) = ((double)(q-klocksub))*klockmul;
 }
-
-#endif
-
-//=================== Fast & accurate TIMER FUNCTIONS ends ===================
 
 //DirectDraw VARIABLES & CODE---------------------------------------------------------------
 #ifndef NODRAW
@@ -365,7 +217,7 @@ static long d3dinit (HWND hwnd)
 #endif
 	return(0);
 }
-#endif
+#endif //USED3D4FULL
 
 PALETTEENTRY pal[256];
 long ddrawuseemulation = 0;
@@ -1476,7 +1328,7 @@ static long cantlockprimary = 0; //FUKFUKFUKFUK
 
   //The official DirectDraw method for retrieving video modes!
 #define MAXVALIDMODES 256
-typedef struct { long x, y; char c, r0, g0, b0, a0, rn, gn, bn, an; } validmodetype;
+//typedef struct { long x, y; char c, r0, g0, b0, a0, rn, gn, bn, an; } validmodetype;
 static validmodetype validmodelist[MAXVALIDMODES];
 static long validmodecnt = 0;
 validmodetype curvidmodeinfo;
@@ -1902,7 +1754,7 @@ long initdirectdraw (long daxres, long dayres, long dacolbits)
 									if (!IDirectDrawSurface_GetPixelFormat(ddsurf[0],&ddpf)) //colbits = ddpf.dwRGBBitCount;
 									{
 										grabmodeinfo(daxres,dayres,&ddpf,&curvidmodeinfo);
-	
+
 											//If mode is 555 color (and not 565), use 15-bit emulation code...
 										if ((colbits != 16) && (ncolbits == 16)
 																	&& (curvidmodeinfo.r0 == 10) && (curvidmodeinfo.rn == 5)
@@ -3380,7 +3232,7 @@ static void kensoundbreath (long minleng)
 			if (rendersnd[j].flags&KSND_3D)
 			{
 				float f, g, h;
-				
+
 				n = (signed long)(leng>>gshiftval);
 
 				f = (rendersnd[j].p.x-audiopos.x)*(rendersnd[j].p.x-audiopos.x)+(rendersnd[j].p.y-audiopos.y)*(rendersnd[j].p.y-audiopos.y)+(rendersnd[j].p.z-audiopos.z)*(rendersnd[j].p.z-audiopos.z);
@@ -3647,7 +3499,7 @@ void playsound (const char *filnam, long volperc, float frqmul, void *pos, long 
 	long i, j, k, m, ispos, ispos0, ispos1, isinc, ivolsc, ivolsc0, ivolsc1, newsnd, *lptr[2], numsamps;
 	short *coefilt;
 	float f, g, h;
-	
+
 	if (!dsound) return;
 	ENTERMUTX;
 	if (!streambuf) { LEAVEMUTX; return; }
@@ -3868,7 +3720,7 @@ void initdirectsound ()
 			//(dsound)->Release(lpds);
 			if (dsrval != S_OK) { dsound = NULL; return; }
 		}
-	}   
+	}
 #else
 	if (DirectSoundCreate(0,&dsound,0) != DS_OK) { MessageBox(ghwnd,"DirectSoundCreate","ERROR",MB_OK); exit(0); }
 #endif
@@ -4485,7 +4337,7 @@ void arg2filename (const char *oarg, const char *ext, char *narg)
 	strlwr(narg);
 	if (!strstr(narg,ext)) strcat(narg,ext);
 }
-
+/*
 #ifdef __WATCOMC__
 
 	//Precision: bits 8-9:, Rounding: bits 10-11:
@@ -4532,17 +4384,17 @@ void code_rwx_unlock ( void * dep_protect_start, void * dep_protect_end)
 	unsigned long oldprotectcode;
 	VirtualProtect((void *)dep_protect_start, ((size_t)dep_protect_end - (size_t)dep_protect_start), PAGE_EXECUTE_READWRITE, &oldprotectcode);
 }
-
+*/
 int WINAPI WinMain (HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdshow)
 {
 	long i, j, k, inquote, argc;
 	char *argv[MAX_PATH>>1];
 
 	ghinst = hinst; ghpinst = hpinst; gcmdline = cmdline; gncmdshow = ncmdshow;
+	/** Exit with message if cputype unsupported */
+    if ( check_fpu_rdtsc() == -1)
+        return -1;
 
-	cputype = getcputype();
-	if (cputype&((1<<0)+(1<<4)) != ((1<<0)+(1<<4)))
-		{ MessageBox(0,"Sorry, this program requires FPU&RDTSC support (>=Pentium)",prognam,MB_OK); return(-1); }
 	osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
 	GetVersionEx(&osvi);
 
@@ -4694,7 +4546,7 @@ int WINAPI WinMain (HINSTANCE hinst, HINSTANCE hpinst, LPSTR cmdline, int ncmdsh
 	if (dsound)
 	{
 		hmutx = CreateMutex(0,0,0);
-		_beginthread(kensoundthread,0,0);
+		beginthread(kensoundthread,0,0);
 	}
 #endif
 	breath();

@@ -3,8 +3,8 @@
  * By Jonathon Fowler                                                                             *
  **************************************************************************************************/
 
-// This file has been modified from Ken Silverman's original release
-	//min & max failsafe
+// This file has been HEAVILY modified from Ken Silverman's original release
+// min & max failsafe
 #undef max
 #undef min
 
@@ -12,26 +12,19 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-	//need this for unused inline function in ksnippits
-#include <math.h>
-
-	//Ericson2314's dirty porting tricks
-#include "porthacks.h"
+#include <math.h>       //need this for unused inline function in ksnippits
+#include "porthacks.h"  //Ericson2314's dirty porting tricks
 
 	//Ken's short, general-purpose to-be-inlined functions mainly consisting of inline assembly are now here
 #include "ksnippits.h"
+#include "cpu_detect.h"
 
+/** @warning compiler exit point on error */
 #ifndef __i386__
 #error i386 targets only.
 #endif
 
-#include "cpu_detect.h"
 
-	//for code_rwx_unlock only
-#ifndef _WIN32
-	#include <unistd.h>
-	#include <sys/mman.h>
-#endif
 
 #ifndef NOSOUND
 
@@ -73,21 +66,7 @@ long xres = 640, yres = 480, colbits = 8, fullscreen = 1, maxpages = 8;
 
 //================== Fast & accurate TIMER FUNCTIONS begins ==================
 
-static MUST_INLINE uint64_t rdtsc64(void)
-{
-	#ifdef __GNUC__ //gcc inline asm
-	uint64_t q;
-	__asm__ __volatile__ ("rdtsc" : "=A" (q) : : "cc");
-	return q;
-	#endif
-	#ifdef _MSC_VER //msvc inline asm
-	_asm rdtsc
-	#endif
-}
-
-static uint32_t pertimbase;
-static uint64_t rdtimbase, nextimstep;
-static double perfrq, klockmul, klockadd;
+#include "ktimer.h"
 
 void initklock ()
 {
@@ -130,7 +109,7 @@ static validmodetype validmodelist[MAXVALIDMODES];
 static long validmodecnt = 0;
 validmodetype curvidmodeinfo;
 
-
+/** Add valid modes to list */
 static void gvmladd(long x, long y, char c)
 {
 	if (validmodecnt == MAXVALIDMODES) return;
@@ -141,6 +120,7 @@ static void gvmladd(long x, long y, char c)
 	validmodecnt++;
 }
 
+/** Get list of valid display modes */
 long getvalidmodelist (validmodetype **davalidmodelist)
 {
 	int cd[5] = { 8,15,16,24,32 }, i, j;
@@ -281,7 +261,7 @@ long changeres(long daxres, long dayres, long dacolbits, long dafullscreen)
 	return initdirectdraw(daxres, dayres, dacolbits);
 }
 
-#endif
+#endif //NODRAW
 
 //SDL Input VARIABLES & CODE--------------------------------------------------
 char keystatus[256];
@@ -319,7 +299,8 @@ void readmouse (float *fmousx, float *fmousy, long *bstatus)
 
 //--------------------------------------------------------------------------------------------------
 #ifndef NOSOUND
-/* callback must match calling convention specified by caller */
+
+/** callback must match calling convention specified by caller */
 void __cdecl sdlmixcallback(void *userdata, uint8_t *stream, int len)
 {
 	long amt;
@@ -432,7 +413,6 @@ static int kensoundinit (int samprate, int numchannels, int bytespersamp)
 	return(0);
 }
 
-
 #endif //NOSOUND
 
 void setvolume (long percentmax)
@@ -440,9 +420,7 @@ void setvolume (long percentmax)
 	//Dummy function to get rid of linking error for game.cpp
 }
 
-
 //Quitting routines ----------------------------------------------------------
-
 void quitloop ()
 {
 	SDL_Event ev;
@@ -485,7 +463,7 @@ void setmouseout (void (*in)(long,long), long x, long y)
 
 	SDL_WarpMouse(x,y);
 }
-#endif
+#endif //NOINPUT
 
 static unsigned char keytranslation[SDLK_LAST] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 14, 15, 0, 0, 0, 28, 0, 0, 0, 0, 0, 89, 0, 0, 0,
@@ -675,9 +653,9 @@ int main(int argc, char **argv)
 	uint32_t sdlinitflags;
 	int i;
 
-	cputype = getcputype();
-	if ((cputype&((1<<0)+(1<<4))) != ((1<<0)+(1<<4)))
-		{ fputs("Sorry, this program requires FPU&RDTSC support (>=Pentium)", stderr); return(-1); }
+	/** Exit with message if cputype unsupported */
+    if ( check_fpu_rdtsc() == -1)
+        return -1;
 
 	sdlinitflags = SDL_INIT_TIMER;
 #ifndef NOINPUT
