@@ -1,5 +1,5 @@
-#ifndef CPU_DETECT_H
-#define CPU_DETECT_H
+#pragma once
+
 #include <stdio.h>
 /**
  *  Moved this CPU / FPU code here 'cause it's generic, and doesn't just belong to just SDLMain or Winmain
@@ -21,7 +21,7 @@ long cputype = 0; //I think this will work just fine.
 */
 static inline long testflag (long c)
 {
-	#ifdef __GNUC__ //gcc inline asm
+	#if defined(__GNUC__)//gcc inline asm
 	long a;
 	__asm__ __volatile__ (
 		"pushf\npopl %%eax\nmovl %%eax, %%ebx\nxorl %%ecx, %%eax\npushl %%eax\n"
@@ -29,8 +29,7 @@ static inline long testflag (long c)
 		"xorl %%eax, %%eax\n0:"
 		: "=a" (a) : "c" (c) : "ebx","cc" );
 	return a;
-	#endif
-	#ifdef _MSC_VER //msvc inline asm
+	#elif defined(_MSC_VER)
 	_asm
 	{
 		mov ecx, c
@@ -53,13 +52,12 @@ static inline long testflag (long c)
 
 static inline void cpuid (long a, long *s)
 {
-	#ifdef __GNUC__ //gcc inline asm
+	#if defined(__GNUC__)
 	__asm__ __volatile__ (
 		"cpuid\nmovl %%eax, (%%esi)\nmovl %%ebx, 4(%%esi)\n"
 		"movl %%ecx, 8(%%esi)\nmovl %%edx, 12(%%esi)"
 		: "+a" (a) : "S" (s) : "ebx","ecx","edx","memory","cc");
-	#endif
-	#ifdef _MSC_VER //msvc inline asm
+	#elif defined(_MSC_VER)
 	_asm
 	{
 		push ebx
@@ -111,7 +109,7 @@ static long getcputype ()
 static long fpuasm[2];
 static inline void fpuinit (long a)
 {
-	#ifdef __GNUC__ //gcc inline asm
+	#if defined(__GNUC__) //gcc inline asm
 	__asm__ __volatile__
 	(
 		"fninit\n"
@@ -123,8 +121,7 @@ static inline void fpuinit (long a)
 		: "a" (a), [fp] "p" (fpuasm)
 		: "cc"
 	);
-	#endif
-	#ifdef _MSC_VER //msvc inline asm
+	#elif defined(_MSC_VER)
 	_asm
 	{
 		mov	eax, a
@@ -151,6 +148,7 @@ static void code_rwx_unlock ( void * dep_protect_start, void * dep_protect_end)
 #endif
 
 }
+/** Check for FPU&RDTSC support */
 static int check_fpu_rdtsc()
 {
 	cputype = getcputype();
@@ -160,4 +158,3 @@ static int check_fpu_rdtsc()
         return 0; // A okay
 }
 
-#endif //CPU_DETECT_H
