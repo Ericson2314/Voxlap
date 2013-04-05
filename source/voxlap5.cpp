@@ -131,8 +131,8 @@ long ylookup[MAXYDIM+1];
 static lpoint3d glipos;             // gline and opticast
 /** @note global eyepos opticast drawpoint 3d drawline3d setcamera project2d drawspherefill kv6draw */
 static point3d gipos;
-static gistr, gihei, gifor;
-static point3d gixs, giys, gizs, giadd;
+static point3d gistr, gihei, gifor;
+static point3d gixs, giys, gizs, giadd; // setcamera kv6draw
 static float gihx, gihy, gihz, gposxfrac[2], gposyfrac[2], grd;
 static long gposz, giforzsgn, gstartz0, gstartz1, gixyi[2];
 static char *gstartv;
@@ -554,7 +554,9 @@ void voxdealloc (const char *v)
 #endif
 }
 
-/** @note  danum MUST be a multiple of 4! */
+/** @note  danum MUST be a multiple of 4!
+ *  @warning This function can evilquit
+ */
 char *voxalloc (long danum)
 {
 	long i, badcnt, p0, p1, vend;
@@ -755,64 +757,7 @@ long compilestack (long *uind, long *n0, long *n1, long *n2, long *n3, char *cbu
 /** Expand compressed span data, in to uncompressed bitmap */
 static inline void expandbit256 (void *s, void *d)
 {
-	#ifdef NOASM
-	int32_t eax;
-	int32_t ecx = 32; //current bit index
-	uint32_t edx = 0; //value of current 32-bit bits
-
-	goto in2it;
-
-	while (eax != 0)
-	{
-		s += eax * 4;
-		eax = ((uint8_t*)s)[3];
-
-		if ((eax -= ecx) >= 0) //xor mask [eax] for ceiling begins
-		{
-			do
-			{
-				*(uint32_t*)d = edx;
-				d += 4;
-				edx = -1;
-				ecx += 32;
-			}
-			while ((eax -= 32) >= 0);
-		}
-
-		edx &= xbsceil[32+eax];
-		//no jump
-
-	in2it:
-		eax = ((uint8_t*)s)[1];
-
-		if ((eax -= ecx) > 0) //xor mask [eax] for floor begins
-		{
-			do
-			{
-				*(uint32_t*)d = edx;
-				d += 4;
-				edx = 0;
-				ecx += 32;
-			}
-			while ((eax -= 32) >= 0);
-		}
-
-		edx |= xbsflor[32+eax];
-		eax = *(uint8_t*)s;
-	}
-
-	if ((ecx -= 256) <= 0)
-	{
-		do
-		{
-			*(uint32_t*)d = edx;
-			d += 4;
-			edx = -1;
-		}
-		while ((ecx += 32) <= 0);
-	}
-	#else
-	#ifdef __GNUC__ //gcc inline asm
+    #if defined(__GNUC__) && ! defined(NOASM)
 	__asm__ __volatile__
 	(
 		".intel_syntax noprefix\n"
@@ -869,8 +814,7 @@ static inline void expandbit256 (void *s, void *d)
 		: "S" (s), "D" (d), [ceil] "p" (xbsceil), [floor] "p" (xbsflor)
 		: "cc", "eax", "ecx", "edx"
 	);
-	#endif
-	#ifdef _MSC_VER //msvc inline asm
+	#elif defined(_MSC_VER) && ! defined(NOASM) //msvc inline asm
 	_asm
 	{
 		push	esi
@@ -922,8 +866,64 @@ static inline void expandbit256 (void *s, void *d)
 		pop	edi
 		pop	esi
 	}
+	#else // C Default
+	int32_t eax;
+	int32_t ecx = 32; //current bit index
+	uint32_t edx = 0; //value of current 32-bit bits
+
+	goto in2it;
+
+	while (eax != 0)
+	{
+		s += eax * 4;
+		eax = ((uint8_t*)s)[3];
+
+		if ((eax -= ecx) >= 0) //xor mask [eax] for ceiling begins
+		{
+			do
+			{
+				*(uint32_t*)d = edx;
+				d += 4;
+				edx = -1;
+				ecx += 32;
+			}
+			while ((eax -= 32) >= 0);
+		}
+
+		edx &= xbsceil[32+eax];
+		//no jump
+
+	in2it:
+		eax = ((uint8_t*)s)[1];
+
+		if ((eax -= ecx) > 0) //xor mask [eax] for floor begins
+		{
+			do
+			{
+				*(uint32_t*)d = edx;
+				d += 4;
+				edx = 0;
+				ecx += 32;
+			}
+			while ((eax -= 32) >= 0);
+		}
+
+		edx |= xbsflor[32+eax];
+		eax = *(uint8_t*)s;
+	}
+
+	if ((ecx -= 256) <= 0)
+	{
+		do
+		{
+			*(uint32_t*)d = edx;
+			d += 4;
+			edx = -1;
+		}
+		while ((ecx += 32) <= 0);
+	}
 	#endif
-	#endif
+
 }
 
 void expandbitstack (long x, long y, int64_t *bind)
@@ -1463,7 +1463,7 @@ void estnorm (long x, long y, long z, point3d *fp)
 		n.z += j; n.y += (*(signed short *)&j)*yy;
 	}
 	n.z >>= 16;
-#else
+#else // ESTNORMRAD != 2
 	for(yy=-ESTNORMRAD;yy<=ESTNORMRAD;yy++)
 		for(xx=-ESTNORMRAD;xx<=ESTNORMRAD;xx++)
 			for(zz=-ESTNORMRAD;zz<=ESTNORMRAD;zz++)
@@ -1475,13 +1475,13 @@ void estnorm (long x, long y, long z, point3d *fp)
 	f = fsqrecip[n.x*n.x + n.y*n.y + n.z*n.z];
 	fp->x = ((float)n.x)*f; fp->y = ((float)n.y)*f; fp->z = ((float)n.z)*f;
 #else
-
 		//f = 1.0 / sqrt((double)(n.x*n.x + n.y*n.y + n.z*n.z));
 		//fp->x = f*(float)n.x; fp->y = f*(float)n.y; fp->z = f*(float)n.z;
 	zz = n.x*n.x + n.y*n.y + n.z*n.z;
 	if (cputype&(1<<25))
 	{
-		#ifdef __GNUC__ //gcc inline asm
+
+		#if defined(__GNUC__) && !defined(NOASM) //gcc inline asm
 		__asm__ __volatile__
 		(
 			"cvtsi2ss	zz,%xmm0\n"
@@ -1499,8 +1499,7 @@ void estnorm (long x, long y, long z, point3d *fp)
 			"movhlps	%xmm0,%xmm0\n"
 			"movss	%xmm0,8(%eax)\n"
 		);
-		#endif
-		#ifdef _MSC_VER //msvc inline asm
+		#elif defined(_MSC_VER) && !defined(NOASM)
 		_asm
 		{
 			cvtsi2ss	xmm0, zz
@@ -1518,13 +1517,13 @@ void estnorm (long x, long y, long z, point3d *fp)
 			movhlps	xmm0, xmm0
 			movss	[eax+8], xmm0
 		}
+		#else // C Default
+		#error No C Default yet defined
 		#endif
 	}
 	else
 	{
-		#ifdef NOASM
-		#endif
-		#ifdef __GNUC__ //gcc inline asm
+		#if defined(__GNUC__) && !defined(NOASM) //gcc inline asm
 		__asm__ __volatile__
 		(
 			"pi2fd	zz,%mm0\n"       //mm0:     0          zz
@@ -1540,8 +1539,7 @@ void estnorm (long x, long y, long z, point3d *fp)
 			"movl	%mm2,8(%eax)\n"
 			"femms\n"
 		);
-		#endif
-		#ifdef _MSC_VER //msvc inline asm
+		#elif defined(_MSC_VER) && !defined(NOASM)
 		_asm
 		{
 			pi2fd	mm0, zz      //mm0:      0          zz
@@ -1557,9 +1555,11 @@ void estnorm (long x, long y, long z, point3d *fp)
 			movd	[eax+8], mm2
 			femms
 		}
+		#else // C Default
+		#error No C Default yet defined
 		#endif
 	}
-#endif
+#endif //1
 }
 
 static long vspan (long x, long y0, long y1)
@@ -4241,6 +4241,8 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 			psllw	mm5, 4       //mm5: [-WBa-WBr-WBg-WBb]
 			movq	mm6, rgbmask64
 		}
+		#else
+		#error NO C Equivalent defined
 		#endif //no C equivalent here
 		for(y=y0,vv=y*vi+v;y<y1;y++,vv+=vi)
 		{
@@ -4249,13 +4251,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 			{
 				i = *(long *)(((uu>>16)<<2) + j);
 
-				#ifdef NOASM
-				((uint8_t *)&i)[0] = ((uint8_t *)&i)[0] * (((uint8_t *)&white)[0] - ((uint8_t *)&black)[0])/256 + ((uint8_t *)&black)[0];
-				((uint8_t *)&i)[1] = ((uint8_t *)&i)[1] * (((uint8_t *)&white)[1] - ((uint8_t *)&black)[1])/256 + ((uint8_t *)&black)[1];
-				((uint8_t *)&i)[2] = ((uint8_t *)&i)[2] * (((uint8_t *)&white)[2] - ((uint8_t *)&black)[2])/256 + ((uint8_t *)&black)[2];
-				((uint8_t *)&i)[3] = ((uint8_t *)&i)[3] * (((uint8_t *)&white)[3] - ((uint8_t *)&black)[3])/256 + ((uint8_t *)&black)[3];
-				#else
-				#ifdef __GNUC__ //gcc inline asm
+				#if defined(__GNUC__) && !defined(NOASM) //gcc inline asm
 				__asm__ __volatile__
 				(
 					"punpcklbw	%[y7], %[y0]\n" //mm1: [00Aa00Rr00Gg00Bb]
@@ -4269,8 +4265,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					:
 					:
 				);
-				#endif
-				#ifdef _MSC_VER //msvc inline asm
+				#elif defined(_MSC_VER) && !defined(NOASM)
 				_asm
 				{
 					movd	mm0, i       //mm1: [00000000AaRrGgBb]
@@ -4282,7 +4277,11 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					packuswb	mm0, mm0 //mm1: [AaRrGgBbAaRrGgBb]
 					movd	i, mm0
 				}
-				#endif
+				#else // C Default
+				((uint8_t *)&i)[0] = ((uint8_t *)&i)[0] * (((uint8_t *)&white)[0] - ((uint8_t *)&black)[0])/256 + ((uint8_t *)&black)[0];
+				((uint8_t *)&i)[1] = ((uint8_t *)&i)[1] * (((uint8_t *)&white)[1] - ((uint8_t *)&black)[1])/256 + ((uint8_t *)&black)[1];
+				((uint8_t *)&i)[2] = ((uint8_t *)&i)[2] * (((uint8_t *)&white)[2] - ((uint8_t *)&black)[2])/256 + ((uint8_t *)&black)[2];
+				((uint8_t *)&i)[3] = ((uint8_t *)&i)[3] * (((uint8_t *)&white)[3] - ((uint8_t *)&black)[3])/256 + ((uint8_t *)&black)[3];
 				#endif
 
 					//a = (((unsigned long)i)>>24);
@@ -4293,7 +4292,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					if (i < 0) *(long *)((x<<2)+p) = i;
 					continue;
 				}
-				#ifdef __GNUC__ //gcc inline asm
+				#if defined(__GNUC__) && !defined(NOASM) //gcc inline asm
 				__asm__ __volatile__
 				(
 					//mm0 = (mm1-mm0)*a + mm0
@@ -4318,8 +4317,7 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					: [a] "r" (x), [d] "r" (p)
 					:
 				);
-				#endif
-				#ifdef _MSC_VER //msvc inline asm
+				#elif defined(_MSC_VER) && !defined(NOASM)
 				_asm
 				{
 					mov eax, x            //mm0 = (mm1-mm0)*a + mm0
@@ -4340,6 +4338,8 @@ void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
 					packuswb mm0, mm0
 					movd [eax], mm0
 				}
+				#else // C Default
+				#error No C Default yet defined
 				#endif
 			}
 		}
@@ -4886,7 +4886,7 @@ loadbluesky:;
 	return(0);
 }
 
-/**
+/** @warning this function can evilquit on malloc fail
  * Loads a native Voxlap5 .VXL file into memory.
  * @param filnam .VXL map formatted like this: "UNTITLED.VXL"
  * @param ipo default starting camera position
@@ -5615,12 +5615,7 @@ static void updatereflects (vx5sprite *spr)
 		if (i > 2047) i = 2047;
 		fogmul = foglut[i];
 
-        #if defined(NOASM)
-		i = (long)(*(short *)&fogmul);
-		((short *)kv6coladd)[0] = (short)((((long)(((short *)&fogcol)[0]))*i)>>1);
-		((short *)kv6coladd)[1] = (short)((((long)(((short *)&fogcol)[1]))*i)>>1);
-		((short *)kv6coladd)[2] = (short)((((long)(((short *)&fogcol)[2]))*i)>>1);
-        #elif defined(__GNUC__) && !defined(NOASM)
+        #if defined(__GNUC__) && !defined(NOASM) //5623
 		__asm__ __volatile__
 		(
 			"paddd	%[m64], %[m64]\n"
@@ -5638,7 +5633,12 @@ static void updatereflects (vx5sprite *spr)
 			movq	kv6coladd[0], mm0
 			emms
 		}
-		#endif
+        #else // C default
+		i = (long)(*(short *)&fogmul);
+		((short *)kv6coladd)[0] = (short)((((long)(((short *)&fogcol)[0]))*i)>>1);
+		((short *)kv6coladd)[1] = (short)((((long)(((short *)&fogcol)[1]))*i)>>1);
+		((short *)kv6coladd)[2] = (short)((((long)(((short *)&fogcol)[2]))*i)>>1);
+		#endif //5623
 	}
 	else
 	{
@@ -5668,16 +5668,8 @@ static void updatereflects (vx5sprite *spr)
 		tp.z = spr->f.x*fx + spr->f.y*fy + spr->f.z*fz;
 
 		f = 64.0 / sqrt(tp.x*tp.x + tp.y*tp.y + tp.z*tp.z);
-        #if defined(NOASM)
-		for(i=255;i>=0;i--)
-		{
-		   ftol(univec[i].x*tp.x + univec[i].y*tp.y + univec[i].z*tp.z,&j);
-		   j = (lbound0(j+128,255)<<8);
-		   ((unsigned short *)(&kv6colmul[i]))[0] = j;
-		   ((unsigned short *)(&kv6colmul[i]))[1] = j;
-		   ((unsigned short *)(&kv6colmul[i]))[2] = j;
-		}
-        #else
+
+        #if !defined(NOASM) // 5776
 		g = ((float)((((long)fogmul)&32767)^32767))*(16.f*8.f/65536.f);
 		if (!(((vx5.kv6col&0xffff)<<8)^(vx5.kv6col&0xffff00))) //Cool way to check if R==G==B :)
 		{
@@ -5688,7 +5680,7 @@ static void updatereflects (vx5sprite *spr)
 			lightlist[0][1] = (short)(tp.y*f);
 			lightlist[0][2] = (short)(tp.z*f);
 			lightlist[0][3] = (short)(g*128.f);
-			#ifdef __GNUC__ //gcc inline asm
+			#if defined( __GNUC__ ) && !defined(NOASM)//5687
 			__asm__ __volatile__
 			(
 			".Lnolighta:\n"
@@ -5713,8 +5705,7 @@ static void updatereflects (vx5sprite *spr)
 				  [uv] "p" (iunivec), [kvcm] "p" (kv6colmul)
 				:
 			);
-			#endif
-			#ifdef _MSC_VER //msvc inline asm
+			#elif defined(_MSC_VER) && !defined(NOASM) //msvc inline asm
 			_asm
 			{
 				movq	mm6, lightlist[0]
@@ -5735,9 +5726,9 @@ static void updatereflects (vx5sprite *spr)
 				sub	ecx, 2*8
 				jnc	short nolighta
 			}
-			#endif
+			#endif //5687
 		}
-		else
+		else //  ! R!=G!=B
 		{
 			f *= g;
 			lightlist[0][0] = (short)(tp.x*f);
@@ -5799,7 +5790,16 @@ static void updatereflects (vx5sprite *spr)
 			#endif
 		}
 		//NOTE: emms not necessary!
-		#endif
+        #else // C default
+		for(i=255;i>=0;i--)
+		{
+		   ftol(univec[i].x*tp.x + univec[i].y*tp.y + univec[i].z*tp.z,&j);
+		   j = (lbound0(j+128,255)<<8);
+		   ((unsigned short *)(&kv6colmul[i]))[0] = j;
+		   ((unsigned short *)(&kv6colmul[i]))[1] = j;
+		   ((unsigned short *)(&kv6colmul[i]))[2] = j;
+		}
+		#endif // 5776
 	}
 	else
 	{
@@ -5842,25 +5842,8 @@ static void updatereflects (vx5sprite *spr)
 		}
 
 		fx = 0.0; fy = 0.5; fz = 1.0;
-        #if defined(NOASM)
-		tp.x = (sprs.x*fx + sprs.y*fy + sprs.z*fz)*16.0;
-		tp.y = (sprh.x*fx + sprh.y*fy + sprh.z*fz)*16.0;
-		tp.z = (sprf.x*fx + sprf.y*fy + sprf.z*fz)*16.0;
-		for(i=255;i>=0;i--)
-		{
-			f = tp.x*univec[i].x + tp.y*univec[i].y + tp.z*univec[i].z + 48;
-			for(k=lightcnt-1;k>=0;k--)
-			{
-				h = lightlist[k][0]*univec[i].x + lightlist[k][1]*univec[i].y + lightlist[k][2]*univec[i].z;
-				if (*(long *)&h < 0) f -= h;
-			}
-			if (f > 255) f = 255;
-			ftol(f,&j); j <<= 8;
-			((unsigned short *)(&kv6colmul[i]))[0] = j;
-			((unsigned short *)(&kv6colmul[i]))[1] = j;
-			((unsigned short *)(&kv6colmul[i]))[2] = j;
-		}
-		#else
+
+		#if !defined(NOASM)
 		hh *= 16*16.f*8.f/2.f;
 		lightlist[lightcnt][0] = (short)((sprs.x*fx + sprs.y*fy + sprs.z*fz)*hh);
 		lightlist[lightcnt][1] = (short)((sprh.x*fx + sprh.y*fy + sprh.z*fz)*hh);
@@ -5941,15 +5924,32 @@ static void updatereflects (vx5sprite *spr)
 		}
 		#endif
 		//NOTE: emms not necessary!
-		#endif
+
+		#else // C Default
+		tp.x = (sprs.x*fx + sprs.y*fy + sprs.z*fz)*16.0;
+		tp.y = (sprh.x*fx + sprh.y*fy + sprh.z*fz)*16.0;
+		tp.z = (sprf.x*fx + sprf.y*fy + sprf.z*fz)*16.0;
+		for(i=255;i>=0;i--)
+		{
+			f = tp.x*univec[i].x + tp.y*univec[i].y + tp.z*univec[i].z + 48;
+			for(k=lightcnt-1;k>=0;k--)
+			{
+				h = lightlist[k][0]*univec[i].x + lightlist[k][1]*univec[i].y + lightlist[k][2]*univec[i].z;
+				if (*(long *)&h < 0) f -= h;
+			}
+			if (f > 255) f = 255;
+			ftol(f,&j); j <<= 8;
+			((unsigned short *)(&kv6colmul[i]))[0] = j;
+			((unsigned short *)(&kv6colmul[i]))[1] = j;
+			((unsigned short *)(&kv6colmul[i]))[2] = j;
+		}
+		#endif // 5850
 	}
 }
-
+/** @shared */
 static inline void movps (point4d *dest, point4d *src)
 {
-	#if defined(NOASM)
-	*dest = *src;
-    #elif defined(__GNUC__) && !defined(NOASM)
+    #if defined(__GNUC__) && !defined(NOASM)
 	__asm__ __volatile__
 	(
 		""
@@ -5965,14 +5965,14 @@ static inline void movps (point4d *dest, point4d *src)
 		mov	eax, dest
 		movaps	[eax], xmm7
 	}
+	#else // C Default
+	*dest = *src;
 	#endif
 }
-
+/** @shared */
 static inline void intss (point4d *dest, long src)
 {
-	#if defined(NOASM)
-	dest->x = dest->y = dest->z = dest->z2 = (float)src;
-    #elif defined(__GNUC__) && !defined(NOASM)
+    #if defined(__GNUC__) && !defined(NOASM)
 	__asm__ __volatile__
 	(
 		"cvtsi2ss	%[src], %[dest]\n"
@@ -5989,17 +5989,14 @@ static inline void intss (point4d *dest, long src)
 		shufps	xmm7, xmm7, 0
 		movaps	[eax], xmm7
 	}
+	#else // C Default
+	dest->x = dest->y = dest->z = dest->z2 = (float)src;
 	#endif
 }
-
+/** @shared */
 static inline void addps (point4d *sum, point4d *a, point4d *b)
 {
-	#if defined(NOASM)
-	sum->x  =  a->x  +  b->x;
-	sum->y  =  a->y  +  b->y;
-	sum->z  =  a->z  +  b->z;
-	sum->z2 =  a->z2 +  b->z2;
-    #elif defined(__GNUC__) && !defined(NOASM)
+    #if defined(__GNUC__) && !defined(NOASM)
 	__asm__ __volatile__
 	(
 		"addps	%[b], %[a]\n"
@@ -6017,17 +6014,17 @@ static inline void addps (point4d *sum, point4d *a, point4d *b)
 		mov	eax, sum
 		movaps	[eax], xmm7
 	}
+	#else // C Default
+	sum->x  =  a->x  +  b->x;
+	sum->y  =  a->y  +  b->y;
+	sum->z  =  a->z  +  b->z;
+	sum->z2 =  a->z2 +  b->z2;
 	#endif
 }
-
+/** @shared */
 static inline void mulps (point4d *sum, point4d *a, point4d *b)
 {
-	#if defined(NOASM)
-	sum->x  =  a->x  *  b->x;
-	sum->y  =  a->y  *  b->y;
-	sum->z  =  a->z  *  b->z;
-	sum->z2 =  a->z2 *  b->z2;
-    #elif defined(__GNUC__) && !defined(NOASM)
+    #if defined(__GNUC__) && !defined(NOASM)
 	__asm__ __volatile__
 	(
 		"mulps	%[b], %[a]\n"
@@ -6045,17 +6042,17 @@ static inline void mulps (point4d *sum, point4d *a, point4d *b)
 		mov	eax, sum
 		movaps	[eax], xmm7
 	}
+	#else // C Default
+	sum->x  =  a->x  *  b->x;
+	sum->y  =  a->y  *  b->y;
+	sum->z  =  a->z  *  b->z;
+	sum->z2 =  a->z2 *  b->z2;
 	#endif
 }
-
+/** @shared */
 static inline void subps (point4d *sum, point4d *a, point4d *b)
 {
-    #if defined(NOASM)
-	sum->x  =  a->x  -  b->x;
-	sum->y  =  a->y  -  b->y;
-	sum->z  =  a->z  -  b->z;
-	sum->z2 =  a->z2 -  b->z2;
-    #elif defined(__GNUC__) && !defined(NOASM)
+    #if defined(__GNUC__) && !defined(NOASM)
 	__asm__ __volatile__
 	(
 		"subps	%[b], %[a]\n"
@@ -6073,18 +6070,18 @@ static inline void subps (point4d *sum, point4d *a, point4d *b)
 		mov	eax, sum
 		movaps	[eax], xmm7
 	}
+	#else // C Default
+	sum->x  =  a->x  -  b->x;
+	sum->y  =  a->y  -  b->y;
+	sum->z  =  a->z  -  b->z;
+	sum->z2 =  a->z2 -  b->z2;
 	#endif
 
 }
-
+/** @shared */
 static inline void minps (point4d *sum, point4d *a, point4d *b)
 {
-    #if defined(NOASM)
-	sum->x  =  MIN(a->x,  b->x);
-	sum->y  =  MIN(a->y,  b->y);
-	sum->z  =  MIN(a->z,  b->z);
-	sum->z2 =  MIN(a->z2, b->z2);
-    #elif defined(__GNUC__) && !defined(NOASM)
+    #if defined(__GNUC__) && !defined(NOASM)
 	__asm__ __volatile__
 	(
 		"minps	%[b], %[a]\n"
@@ -6102,17 +6099,17 @@ static inline void minps (point4d *sum, point4d *a, point4d *b)
 		mov	eax, sum
 		movaps	[eax], xmm7
 	}
+	#else // C Default
+	sum->x  =  MIN(a->x,  b->x);
+	sum->y  =  MIN(a->y,  b->y);
+	sum->z  =  MIN(a->z,  b->z);
+	sum->z2 =  MIN(a->z2, b->z2);
 	#endif
 }
-
+/** @shared */
 static inline void maxps (point4d *sum, point4d *a, point4d *b)
 {
-    #if defined(NOASM)
-	sum->x  =  MAX(a->x,  b->x);
-	sum->y  =  MAX(a->y,  b->y);
-	sum->z  =  MAX(a->z,  b->z);
-	sum->z2 =  MAX(a->z2, b->z2);
-    #elif defined(__GNUC__) && !defined(NOASM)
+    #if defined(__GNUC__) && !defined(NOASM)
 		__asm__ __volatile__
 	(
 		"maxps	%[b], %[a]\n"
@@ -6130,14 +6127,17 @@ static inline void maxps (point4d *sum, point4d *a, point4d *b)
 		mov	eax, sum
 		movaps	[eax], xmm7
 	}
+    #else // C Default
+    sum->x  =  MAX(a->x,  b->x);
+	sum->y  =  MAX(a->y,  b->y);
+	sum->z  =  MAX(a->z,  b->z);
+	sum->z2 =  MAX(a->z2, b->z2);
 	#endif
 }
-
+/** @shared */
 static inline void movps_3dn (point4d *dest, point4d *src)
 {
-    #if defined(NOASM)
-	*dest = *src;
-    #elif defined(__GNUC__) && !defined(NOASM)
+    #if defined(__GNUC__) && !defined(NOASM)
 	__asm__ __volatile__
 	(
 		""
@@ -6155,14 +6155,14 @@ static inline void movps_3dn (point4d *dest, point4d *src)
 		movq	[eax], mm0
 		movq	[eax+8], mm1
 	}
+	#else // C Default
+	*dest = *src;
 	#endif
 }
-
+/** @shared */
 static inline void intss_3dn (point4d *dest, long src)
 {
-    #if defined(NOASM)
-	dest->x = dest->y = dest->z = dest->z2 = (float)src;
-    #elif defined(__GNUC__) && !defined(NOASM)
+    #if defined(__GNUC__) && !defined(NOASM)
 	__asm__ __volatile__
 	(
 		"pi2fd	%[y1], %[y1]\n"
@@ -6182,17 +6182,14 @@ static inline void intss_3dn (point4d *dest, long src)
 		movq	[eax], mm0
 		movq	[eax+8], mm0
 	}
+	#else // C default
+    dest->x = dest->y = dest->z = dest->z2 = (float)src;
 	#endif
 }
-
+/** @shared */
 static inline void addps_3dn (point4d *sum, point4d *a, point4d *b)
 {
-    #if defined(NOASM)
-	sum->x  =  a->x  +  b->x;
-	sum->y  =  a->y  +  b->y;
-	sum->z  =  a->z  +  b->z;
-	sum->z2 =  a->z2 +  b->z2;
-    #elif defined(__GNUC__) && !defined(NOASM)
+    #if defined(__GNUC__) && !defined(NOASM)
 	__asm__ __volatile__
 	(
 		"pfadd	(%[b]),  %[a1]\n"
@@ -6214,17 +6211,17 @@ static inline void addps_3dn (point4d *sum, point4d *a, point4d *b)
 		movq	[eax], mm0
 		movq	[eax+8], mm1
 	}
+	#else // C Default
+    sum->x  =  a->x  +  b->x;
+	sum->y  =  a->y  +  b->y;
+	sum->z  =  a->z  +  b->z;
+	sum->z2 =  a->z2 +  b->z2;
 	#endif
 }
-
+/** @shared */
 static inline void mulps_3dn (point4d *sum, point4d *a, point4d *b)
 {
-    #if defined(NOASM)
-	sum->x  =  a->x  *  b->x;
-	sum->y  =  a->y  *  b->y;
-	sum->z  =  a->z  *  b->z;
-	sum->z2 =  a->z2 *  b->z2;
-    #elif defined(__GNUC__) && !defined(NOASM)
+    #if defined(__GNUC__) && !defined(NOASM)
 	__asm__ __volatile__
 	(
 		"pfmul	(%[b]),  %[a1]\n"
@@ -6246,17 +6243,17 @@ static inline void mulps_3dn (point4d *sum, point4d *a, point4d *b)
 		movq	[eax], mm0
 		movq	[eax+8], mm1
 	}
+	#else // C Default
+    sum->x  =  a->x  *  b->x;
+	sum->y  =  a->y  *  b->y;
+	sum->z  =  a->z  *  b->z;
+	sum->z2 =  a->z2 *  b->z2;
 	#endif
 }
-
+/** @shared */
 static inline void subps_3dn (point4d *sum, point4d *a, point4d *b)
 {
-    #if defined(NOASM)
-	sum->x  =  a->x  -  b->x;
-	sum->y  =  a->y  -  b->y;
-	sum->z  =  a->z  -  b->z;
-	sum->z2 =  a->z2 -  b->z2;
-    #elif defined(__GNUC__) && !defined(NOASM)
+    #if defined(__GNUC__) && !defined(NOASM)
 	__asm__ __volatile__
 	(
 		"pfsub	(%[b]),  %[a1]\n"
@@ -6278,17 +6275,17 @@ static inline void subps_3dn (point4d *sum, point4d *a, point4d *b)
 		movq	[eax], mm0
 		movq	[eax+8], mm1
 	}
+	#else // C Default
+    sum->x  =  a->x  -  b->x;
+	sum->y  =  a->y  -  b->y;
+	sum->z  =  a->z  -  b->z;
+	sum->z2 =  a->z2 -  b->z2;
 	#endif
 }
-
+/** @shared */
 static inline void minps_3dn (point4d *sum, point4d *a, point4d *b)
 {
-    #if defined(NOASM)
-	sum->x  =  MIN(a->x,  b->x);
-	sum->y  =  MIN(a->y,  b->y);
-	sum->z  =  MIN(a->z,  b->z);
-	sum->z2 =  MIN(a->z2, b->z2);
-    #elif defined(__GNUC__) && !defined(NOASM)
+    #if defined(__GNUC__) && !defined(NOASM)
 	__asm__ __volatile__
 	(
 		"pfmin	(%[b]),  %[a1]\n"
@@ -6310,17 +6307,17 @@ static inline void minps_3dn (point4d *sum, point4d *a, point4d *b)
 		movq	[eax], mm0
 		movq	[eax+8], mm1
 	}
+    #else // C Default
+    sum->x  =  MIN(a->x,  b->x);
+	sum->y  =  MIN(a->y,  b->y);
+	sum->z  =  MIN(a->z,  b->z);
+	sum->z2 =  MIN(a->z2, b->z2);
 	#endif
 }
-
+/** @shared */
 static inline void maxps_3dn (point4d *sum, point4d *a, point4d *b)
 {
-    #if defined(NOASM)
-	sum->x  =  MAX(a->x,  b->x);
-	sum->y  =  MAX(a->y,  b->y);
-	sum->z  =  MAX(a->z,  b->z);
-	sum->z2 =  MAX(a->z2, b->z2);
-    #elif defined(__GNUC__) && !defined(NOASM)
+    #if defined(__GNUC__) && !defined(NOASM)
 	__asm__ __volatile__
 	(
 		"pfmax	(%[b]),  %[a1]\n"
@@ -6342,6 +6339,11 @@ static inline void maxps_3dn (point4d *sum, point4d *a, point4d *b)
 		movq	[eax], mm0
 		movq	[eax+8], mm1
 	}
+	#else // C Default
+    sum->x  =  MAX(a->x,  b->x);
+	sum->y  =  MAX(a->y,  b->y);
+	sum->z  =  MAX(a->z,  b->z);
+	sum->z2 =  MAX(a->z2, b->z2);
 	#endif
 }
 
@@ -8109,12 +8111,11 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 									h = tp.x*fx+tp.y*fy+tp.z*fz; if (*(long *)&h >= 0) continue;
 									g = fx*fx+fy*fy+fz*fz; if (g >= vx5.lightsrc[j].r2) continue;
 
-									#ifdef NOASM
-									g = 1.0/(g*sqrt(g))-lightsub[i]; //1.0/g;
-									#else
+
+									#if !defined(NOASM) // equiv g = 1.0/(g*sqrt(g))-lightsub[i]; //1.0/g;
 									if (cputype&(1<<25))
 									{
-										#ifdef __GNUC__ //gcc inline asm
+										#if defined(__GNUC__) && !defined(NOASM)
 										__asm__ __volatile__
 										(
 											"rcpss	%[x0], %[x1]\n"     //xmm1=1/g
@@ -8125,8 +8126,7 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 											: [x0] "x" (g), [i] "r" (i), [lsub] "p" (lightsub)
 											:
 										);
-										#endif
-										#ifdef _MSC_VER //msvc inline asm
+										#elif defined(_MSC_VER) && !defined(NOASM)
 										_asm
 										{
 											movss	xmm0, g        //xmm0=g
@@ -8141,7 +8141,7 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 									}
 									else
 									{
-										#ifdef __GNUC__ //gcc inline asm
+										#if defined(__GNUC__) && !defined(NOASM)
 										__asm__ __volatile__
 										(
 											"pfrcp	%[y0], %%mm1\n"
@@ -8153,8 +8153,7 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 											: [i]   "r" (i), [lsub] "p" (lightsub)
 											: "mm1"
 										);
-										#endif
-										#ifdef _MSC_VER //msvc inline asm
+										#elif defined(_MSC_VER) && !defined(NOASM)
 										_asm
 										{
 											movd mm0, g
@@ -8168,6 +8167,8 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 										}
 										#endif
 									}
+									#else C Default
+									g = 1.0/(g*sqrt(g))-lightsub[i]; //1.0/g;
 									#endif
 									f -= g*h*vx5.lightsrc[j].sc;
 								}
@@ -8648,7 +8649,7 @@ void finishfalls ()
 
 //----------------------------------------------------------------------------
 
-/**
+/** @warning This function can evilquit on bad malloc
  * Since voxlap is currently a software renderer and I don't have any system
  * dependent code in it, you must provide it with the frame buffer. You
  * MUST call this once per frame, AFTER startdirectdraw(), but BEFORE any
@@ -8716,7 +8717,8 @@ void voxsetframebuffer (long p, long b, long x, long y)
 			while (i < 2048) foglut[i++] = all32767;
 #else
 			i = 0x7fffffff/vx5.maxscandist;
-			#ifdef __GNUC__ //gcc inline asm
+			#if defined( __GNUC__) && !defined(NOASM) //gcc inline asm
+
 			__asm__ __volatile__
 			(
 				".intel_syntax noprefix\n"
@@ -8744,8 +8746,7 @@ void voxsetframebuffer (long p, long b, long x, long y)
 				: [i] "d" (i)
 				: "eax", "ecx", "mm0"
 			);
-			#endif
-			#ifdef _MSC_VER //msvc inline asm
+			#elif defined(_MSC_VER) && !defined(NOASM)
 			_asm
 			{
 				xor	eax, eax
@@ -8769,8 +8770,10 @@ void voxsetframebuffer (long p, long b, long x, long y)
 			fogend2:
 				emms
 			}
+			#else // C Default
+			#error No C Default yet defined
 			#endif
-#endif
+#endif // 0
 		}
 	} else ofogdist = -1;
 
