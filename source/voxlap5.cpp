@@ -195,6 +195,11 @@ static long skypic = 0, nskypic = 0, skybpl, skyysiz, skycurlng, skycurdir;
 static float skylngmul;
 static point2d *skylng = 0;
 
+// forward declarations ?
+void delslab(long *b2, long y0, long y1);
+long *scum2(long x, long y);
+void scum2finish();
+
 void *caddasm;
 #define cadd4 ((point4d *)&caddasm)
 void *ztabasm;
@@ -1837,8 +1842,6 @@ void hline (float x0, float y0, float x1, float y1, long *ix0, long *ix1)
     );
 }
 
-
-
 void vline (float x0, float y0, float x1, float y1, long *iy0, long *iy1)
 {
 	float dxy;
@@ -2251,7 +2254,7 @@ void opticast ()
 		}
 	}
 }
-
+/**
 	//0: asm temp for current x
 	//1: asm temp for current y
 	//2: bottom (28)
@@ -2262,6 +2265,7 @@ void opticast ()
 	//7: down   (12)
 	//setsideshades(0,0,0,0,0,0);
 	//setsideshades(0,28,8,24,12,12);
+	*/
 /** Shade offset for each face of the cube: useful for editing
  *
  * @param sto top face (z minimum) shade offset
@@ -3160,10 +3164,6 @@ void sprhitscan (dpoint3d *p0, dpoint3d *v0, vx5sprite *spr, lpoint3d *h, kv6vox
 	{ (*vsc) = f; (*h) = a; (*ind) = vx[2]; (*vsc) = f; }
 }
 
-	//Stupidly useless declarations:
-void delslab(long *b2, long y0, long y1);
-long *scum2(long x, long y);
-void scum2finish();
 
 void orthonormalize (point3d *v0, point3d *v1, point3d *v2)
 {
@@ -4798,6 +4798,270 @@ long loadsxl (const char *sxlnam, char **vxlnam, char **skynam, char **globst)
 		//Count number of sprites in .SXL file (helpful for GAME)
 	sxlparspos = j;
 	return(1);
+}
+/**
+ * Loads a sky into memory. Sky must be PNG,JPG,TGA,GIF,BMP,PCX formatted as
+ * a Mercator projection on its side. This means x-coordinate is latitude
+ * and y-coordinate is longitude. Loadsky() can be called at any time.
+ *
+ * If for some reason you don't want to load a textured sky, you call call
+ * loadsky with these 2 built-in skies:
+ * loadsky("BLACK");  //pitch black
+ * loadsky("BLUE");   //a cool ramp of bright blue to blue to greenish
+ *
+ * @param skyfilnam the name of the image to load
+ * @return -1:bad, 0:good
+ */
+long loadsky (const char *skyfilnam)
+{
+	long x, y, xoff, yoff;
+	float ang, f;
+
+	if (skypic) { free((void *)skypic); skypic = skyoff = 0; }
+	xoff = yoff = 0;
+
+	if (!strcasecmp(skyfilnam,"BLACK")) return(0);
+	if (!strcasecmp(skyfilnam,"BLUE")) goto loadbluesky;
+
+	kpzload(skyfilnam,(int *)&skypic,(int *)&skybpl,(int *)&skyxsiz,(int *)&skyysiz);
+	if (!skypic)
+	{
+		long r, g, b, *p;
+loadbluesky:;
+			//Load default sky
+		skyxsiz = 512; skyysiz = 1; skybpl = skyxsiz*4;
+		if (!(skypic = (long)malloc(skyysiz*skybpl))) return(-1);
+
+		p = (long *)skypic; y = skyxsiz*skyxsiz;
+		for(x=0;x<=(skyxsiz>>1);x++)
+		{
+			p[x] = ((((x*1081 - skyxsiz*252)*x)/y + 35)<<16)+
+					 ((((x* 950 - skyxsiz*198)*x)/y + 53)<<8)+
+					  (((x* 439 - skyxsiz* 21)*x)/y + 98);
+		}
+		p[skyxsiz-1] = 0x50903c;
+		r = ((p[skyxsiz>>1]>>16)&255);
+		g = ((p[skyxsiz>>1]>>8)&255);
+		b = ((p[skyxsiz>>1])&255);
+		for(x=(skyxsiz>>1)+1;x<skyxsiz;x++)
+		{
+			p[x] = ((((0x50-r)*(x-(skyxsiz>>1)))/(skyxsiz-1-(skyxsiz>>1))+r)<<16)+
+					 ((((0x90-g)*(x-(skyxsiz>>1)))/(skyxsiz-1-(skyxsiz>>1))+g)<<8)+
+					 ((((0x3c-b)*(x-(skyxsiz>>1)))/(skyxsiz-1-(skyxsiz>>1))+b));
+		}
+		y = skyxsiz*skyysiz;
+		for(x=skyxsiz;x<y;x++) p[x] = p[x-skyxsiz];
+	}
+
+		//Initialize look-up table for longitudes
+	if (skylng) free((void *)skylng);
+	if (!(skylng = (point2d *)malloc(skyysiz*8))) return(-1);
+	f = PI*2.0 / ((float)skyysiz);
+	for(y=skyysiz-1;y>=0;y--)
+		fcossin((float)y*f+PI,&skylng[y].x,&skylng[y].y);
+	skylngmul = (float)skyysiz/(PI*2);
+		//This makes those while loops in gline() not lockup when skyysiz==1
+	if (skyysiz == 1) { skylng[0].x = 0; skylng[0].y = 0; }
+
+		//Initialize look-up table for latitudes
+	if (skylat) free((void *)skylat);
+	if (!(skylat = (long *)malloc(skyxsiz*4))) return(-1);
+	f = PI*.5 / ((float)skyxsiz);
+	for(x=skyxsiz-1;x;x--)
+	{
+		ang = (float)((x<<1)-skyxsiz)*f;
+		ftol(cos(ang)*32767.0,&xoff);
+		ftol(sin(ang)*32767.0,&yoff);
+		skylat[x] = (xoff<<16)+((-yoff)&65535);
+	}
+	skylat[0] = 0; //Hack to make sure assembly index never goes < 0
+	skyxsiz--; //Hack for assembly code
+
+	return(0);
+}
+
+/**
+ * Loads a native Voxlap5 .VXL file into memory.
+ * @param filnam .VXL map formatted like this: "UNTITLED.VXL"
+ * @param ipo default starting camera position
+ * @param ist RIGHT unit vector
+ * @param ihe DOWN unit vector
+ * @param ifo FORWARD unit vector
+ * @return 0:bad, 1:good
+ */
+long loadvxl (const char *lodfilnam, dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo)
+{
+	FILE *fil;
+	long i, j, fsiz;
+	char *v, *v2;
+
+	if (!vbuf) { vbuf = (long *)malloc((VOXSIZ>>2)<<2); if (!vbuf) evilquit("vbuf malloc failed"); }
+	if (!vbit) { vbit = (long *)malloc((VOXSIZ>>7)<<2); if (!vbit) evilquit("vbuf malloc failed"); }
+
+	if (!kzopen(lodfilnam)) return(0);
+	fsiz = kzfilelength();
+
+	kzread(&i,4); if (i != 0x09072000) return(0);
+	kzread(&i,4); if (i != VSID) return(0);
+	kzread(&i,4); if (i != VSID) return(0);
+	kzread(ipo,24);
+	kzread(ist,24);
+	kzread(ihe,24);
+	kzread(ifo,24);
+
+	v = (char *)(&vbuf[1]); //1st dword for voxalloc compare logic optimization
+	kzread((void *)v,fsiz-kztell());
+
+	for(i=0;i<VSID*VSID;i++)
+	{
+		sptr[i] = v;
+		while (v[0]) v += (((long)v[0])<<2);
+		v += ((((long)v[2])-((long)v[1])+2)<<2);
+	}
+	kzclose();
+
+	memset(&sptr[VSID*VSID],0,sizeof(sptr)-VSID*VSID*4);
+	vbiti = (((long)v-(long)vbuf)>>2); //# vbuf longs/vbit bits allocated
+	clearbuf((void *)vbit,vbiti>>5,-1);
+	clearbuf((void *)&vbit[vbiti>>5],(VOXSIZ>>7)-(vbiti>>5),0);
+	vbit[vbiti>>5] = (1<<vbiti)-1;
+
+	vx5.globalmass = calcglobalmass();
+	backedup = -1;
+
+	gmipnum = 1; vx5.flstnum = 0;
+	updatebbox(0,0,0,VSID,VSID,MAXZDIM,0);
+	return(1);
+}
+
+/**
+ * Saves a native Voxlap5 .VXL file & specified position to disk
+ * @param filnam .VXL map formatted like this: "UNTITLED.VXL"
+ * @param ipo default starting camera position
+ * @param ist RIGHT unit vector
+ * @param ihe DOWN unit vector
+ * @param ifo FORWARD unit vector
+ * @return 0:bad, 1:good
+ */
+long savevxl (const char *savfilnam, dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo)
+{
+	FILE *fil;
+	long i;
+
+	if (!(fil = fopen(savfilnam,"wb"))) return(0);
+	i = 0x09072000; fwrite(&i,4,1,fil);  //Version
+	i = VSID; fwrite(&i,4,1,fil);
+	i = VSID; fwrite(&i,4,1,fil);
+	fwrite(ipo,24,1,fil);
+	fwrite(ist,24,1,fil);
+	fwrite(ihe,24,1,fil);
+	fwrite(ifo,24,1,fil);
+	for(i=0;i<VSID*VSID;i++) fwrite((void *)sptr[i],slng(sptr[i]),1,fil);
+	fclose(fil);
+	return(1);
+}
+
+void voxdontrestore ()
+{
+	long i;
+
+	if (backedup == 1)
+	{
+		for(i=(bacx1-bacx0)*(bacy1-bacy0)-1;i>=0;i--) voxdealloc(bacsptr[i]);
+	}
+	backedup = -1;
+}
+
+void voxrestore ()
+{
+	long i, j, x, y;
+	char *v, *daptr;
+
+	if (backedup == 1)
+	{
+		i = 0;
+		for(y=bacy0;y<bacy1;y++)
+		{
+			j = y*VSID;
+			for(x=bacx0;x<bacx1;x++)
+			{
+				v = sptr[j+x]; vx5.globalmass += v[1];
+				while (v[0]) { v += v[0]*4; vx5.globalmass += v[1]-v[3]; }
+
+				voxdealloc(sptr[j+x]);
+				sptr[j+x] = bacsptr[i]; i++;
+
+				v = sptr[j+x]; vx5.globalmass -= v[1];
+				while (v[0]) { v += v[0]*4; vx5.globalmass += v[3]-v[1]; }
+			}
+		}
+		if (vx5.vxlmipuse > 1) genmipvxl(bacx0,bacy0,bacx1,bacy1);
+	}
+	else if (backedup == 2)
+	{
+		daptr = (char *)bacsptr;
+		for(y=bacy0;y<bacy1;y++)
+		{
+			j = y*VSID;
+			for(x=bacx0;x<bacx1;x++)
+			{
+				for(v=sptr[j+x];v[0];v+=v[0]*4)
+					for(i=1;i<v[0];i++) v[(i<<2)+3] = *daptr++;
+				for(i=1;i<=v[2]-v[1]+1;i++) v[(i<<2)+3] = *daptr++;
+			}
+		}
+		if (vx5.vxlmipuse > 1) genmipvxl(bacx0,bacy0,bacx1,bacy1);
+	}
+	backedup = -1;
+}
+
+void voxbackup (long x0, long y0, long x1, long y1, long tag)
+{
+	long i, j, n, x, y;
+	char *v, *daptr;
+
+	voxdontrestore();
+
+	x0 = MAX(x0-2,0); y0 = MAX(y0-2,0);
+	x1 = MIN(x1+2,VSID); y1 = MIN(y1+2,VSID);
+	if ((x1-x0)*(y1-y0) > 262144) return;
+
+	bacx0 = x0; bacy0 = y0; bacx1 = x1; bacy1 = y1; backtag = tag;
+
+	if (tag&0x10000)
+	{
+		backedup = 1;
+		i = 0;
+		for(y=bacy0;y<bacy1;y++)
+		{
+			j = y*VSID;
+			for(x=bacx0;x<bacx1;x++)
+			{
+				bacsptr[i] = v = sptr[j+x]; i++;
+				n = slng(v); sptr[j+x] = voxalloc(n);
+
+				copybuf((void *)v,(void *)sptr[j+x],n>>2);
+			}
+		}
+	}
+	else if (tag&0x20000)
+	{
+		backedup = 2;
+			//WARNING!!! Right now, function will crash if saving more than
+			//   1<<20 colors :( This needs to be addressed!!!
+		daptr = (char *)bacsptr;
+		for(y=bacy0;y<bacy1;y++)
+		{
+			j = y*VSID;
+			for(x=bacx0;x<bacx1;x++)
+			{
+				for(v=sptr[j+x];v[0];v+=v[0]*4)
+					for(i=1;i<v[0];i++) *daptr++ = v[(i<<2)+3];
+				for(i=1;i<=v[2]-v[1]+1;i++) *daptr++ = v[(i<<2)+3];
+			}
+		}
+	}
+	else backedup = 0;
 }
 
 /**
