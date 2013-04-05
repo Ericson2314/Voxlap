@@ -17,7 +17,7 @@
 #include "ksnippits.h"
 
 	//Basic System Specific Stuff
-#ifndef _WIN32 //Windows (hypothetically 6 64-bit too)
+#ifndef _WIN32 //Windows (hypothetically 64-bit too)
 	#include <stdarg.h> //Moved from #if _DOS, included via windows.h for Windows
 	#include <string.h> //Moved from #if _DOS, included via windows.h for Windows
 	#ifdef _DOS //MS-DOS
@@ -128,8 +128,10 @@ typedef struct { castdat *i0, *i1; long z0, z1, cx0, cy0, cx1, cy1; } cftype;
 static long xres_voxlap, yres_voxlap, bytesperline, frameplace, xres4_voxlap;
 long ylookup[MAXYDIM+1];
 
-static lpoint3d glipos;
-static point3d gipos, gistr, gihei, gifor;
+static lpoint3d glipos;             // gline and opticast
+/** @note global eyepos opticast drawpoint 3d drawline3d setcamera project2d drawspherefill kv6draw */
+static point3d gipos;
+static gistr, gihei, gifor;
 static point3d gixs, giys, gizs, giadd;
 static float gihx, gihy, gihz, gposxfrac[2], gposyfrac[2], grd;
 static long gposz, giforzsgn, gstartz0, gstartz1, gixyi[2];
@@ -178,7 +180,7 @@ static long *zbuffermem = 0, zbuffersiz = 0;
 #endif
 static castdat *angstart[MAXXDIM*4], *gscanptr;
 #define CMPRECIPSIZ MAXXDIM+32
-static float cmprecip[CMPRECIPSIZ], wx0, wy0, wx1, wy1;
+static float cmprecip[CMPRECIPSIZ], wx0, wy0, wx1, wy1; // Lookup table
 static long iwx0, iwy0, iwx1, iwy1;
 static point3d gcorn[4];
 		 point3d ginor[4]; /** @note Should be static, but... necessary for stupid pingball hack :/ */
@@ -211,7 +213,7 @@ float scisdist;
 int64_t kv6colmul[256], kv6coladd[256];
 
 //Rendering
-
+static unsigned short xyoffs[256][256+1]; // used only by setkvx
 
 static float optistrx, optistry, optiheix, optiheiy, optiaddx, optiaddy;
 
@@ -676,7 +678,7 @@ long getcube (long x, long y, long z)
 		}
 	}
 }
-
+/**
 	// Inputs: uind[MAXZDIM]: uncompressed 32-bit color buffer (-1: air)
 	//         nind?[MAXZDIM]: neighbor buf:
 	//            -2: unexposed solid
@@ -685,6 +687,7 @@ long getcube (long x, long y, long z)
 	//         px,py: parameters for setting unexposed voxel colors
 	//Outputs: cbuf[MAXCSIZ]: compressed output buffer
 	//Returns: n: length of compressed buffer (in bytes)
+*/
 long compilestack (long *uind, long *n0, long *n1, long *n2, long *n3, char *cbuf, long px, long py)
 {
 	long oz, onext, n, cp2, cp1, cp0, rp1, rp0;
@@ -2054,6 +2057,7 @@ void opticast ()
 #else
 	if (ofogdist < 0)
 	{
+	    /** @todo Put in sse selections too */
 		hrend = hrendz; vrend = vrendz;
 	}
 	else
@@ -3164,7 +3168,6 @@ void sprhitscan (dpoint3d *p0, dpoint3d *v0, vx5sprite *spr, lpoint3d *h, kv6vox
 	{ (*vsc) = f; (*h) = a; (*ind) = vx[2]; (*vsc) = f; }
 }
 
-
 void orthonormalize (point3d *v0, point3d *v1, point3d *v2)
 {
 	float t;
@@ -3790,6 +3793,9 @@ static void canseerange (point3d *p0, point3d *p1)
 }
 #include "kvoxel_modelling.h"
 
+
+
+//-------------------------- FILE IO CODE STARTS ----------------------------
 #define LPATBUFSIZ 14
 static lpoint2d *patbuf;
 #define LPATHASHSIZ 12
@@ -3908,10 +3914,10 @@ pathfound:
 	pathpos[pcnt] = (p0->x*VSID + p0->y)*MAXZDIM+p0->z;
 	return(pcnt+1);
 }
+//-------------------------- FILE IO CODE ENDS ----------------------------
 
 //---------------------------------------------------------------------
 
-static unsigned short xyoffs[256][256+1];
 void setkvx (const char *filename, long ox, long oy, long oz, long rot, long bakit)
 {
 	long i, j, x, y, z, xsiz, ysiz, zsiz, longpal[256], zleng, oldz, vis;
@@ -5213,8 +5219,6 @@ static char *stripdir (char *filnam)
 	return(&filnam[j+1]);
 }
 
-//-------------------------- KV6 sprite code begins --------------------------
-
 //EQUIVEC code begins -----------------------------------------------------
 point3d univec[256];
 __ALIGN(8) short iunivec[256][4];
@@ -5311,6 +5315,7 @@ void equivecinit (long n)
 
 //EQUIVEC code ends -------------------------------------------------------
 
+//-------------------------- KV6 sprite code begins --------------------------
 /** Bitmask for multiplying npix at 9 mip levels */
 static long umulmip[9] =
 {
@@ -9153,7 +9158,7 @@ long initvoxlap ()
 	return(0);
 }
 
-#if 0 //ndef _WIN32
+#if 0
 	long i, j, k, l;
 	char *v;
 
