@@ -1,3 +1,6 @@
+#ifndef KSOUND_H
+#define KSOUND_H
+
 //Sound:
 #define KSND_3D 1 //Use LOGICAL OR (|) to combine flags
 #define KSND_MOVE 2
@@ -1095,3 +1098,5 @@ void playsoundupdate (void *optr, void *nptr)
 	}
 	LEAVEMUTX; /** @note Do nothing unless using SDL */
 }
+
+#endif //KSOUND_H
