@@ -32,11 +32,12 @@
 /** SYSMAIN Preprocessor stuff */
 //#define SYSMAIN_C //if sysmain is compiled as C
 #include "sysmain.h"
-#include "voxlap5.h"
 
 /** Voxlap Preprocessor stuff */
 #define VOXLAP5
+#include "voxlap5.h"
 
+#pragma warning(disable:4789)
 /** We never want to define C bindings if this is compiled as C++. */
 #undef VOXLAP_C	//Putting this here just in case.
 
@@ -238,7 +239,28 @@ char ptfaces16[43][8] =
     {6,32,48,112, 80,64,96,0} , {6, 0,32,48,112,80,64,0} , {6,16,80, 64, 96,32,48,0} , {0,0,0,0,0,0,0,0} ,
     {6, 0,16, 48,112,96,32,0} , {6, 0,16,48,112,96,64,0} , {6, 0,16, 80,112,96,32,0}
 };
+#if !defined(VOXLAP5)
+void dep_protect_start();
+void dep_protect_end();
+void grouscanasm(long);
+#else
+void dep_protect_start(){};
+void dep_protect_end(){};
+void grouscanasm(long){};
+#endif
 
+#if USEV5ASM == 0
+void drawboundcubesseinit (){};
+void drawboundcubesse (kv6voxtype *, long){};
+void drawboundcube3dninit (){};
+void drawboundcube3dn (kv6voxtype *, long){};
+#else
+void drawboundcubesseinit (){};
+void drawboundcubesse (kv6voxtype *, long){};
+void drawboundcube3dninit (){};
+void drawboundcube3dn (kv6voxtype *, long){};
+
+#endif
 
 #ifdef __cplusplus
 }
@@ -347,13 +369,8 @@ static long gmaxscandist;
 
 //long reax, rebx, recx, redx, resi, redi, rebp, resp, remm[16];
 
-#if (defined(USEV5ASM) && (USEV5ASM != 0))
-/** @todo still having issues with these in MSVC build */
-EXTERN_C void dep_protect_start();
-EXTERN_C void dep_protect_end();
-#endif
 
-EXTERN_C void grouscanasm (long);
+
 #if (USEZBUFFER == 1)
 long zbufoff;
 #endif
@@ -385,6 +402,9 @@ static inline long lbound (long a, long b, long c) //c MUST be >= b
 
 #define LSINSIZ 8 //Must be >= 2!
 static point2d usintab[(1<<LSINSIZ)+(1<<(LSINSIZ-2))];
+
+
+
 /** Create a cos / sin lookup table, with LSINSIZ determining number of elements
  * ( and ultimately precision )
  */
@@ -407,6 +427,74 @@ static void ucossininit ()
 	for(i=(1<<(LSINSIZ-2))-1;i>=0;i--) usintab[i+(1<<LSINSIZ)] = usintab[i];
 }
 
+unsigned long calcglobalmass ()
+{
+	unsigned long i, j;
+	char *v;
+
+	j = VSID*VSID*256;
+	for(i=0;i<VSID*VSID;i++)
+	{
+		v = sptr[i]; j -= v[1];
+		while (v[0]) { v += v[0]*4; j += v[3]-v[1]; }
+	}
+	return(j);
+}
+
+
+/** @warning this function can evilquit on malloc fail
+ * Loads a native Voxlap5 .VXL file into memory.
+ * @param filnam .VXL map formatted like this: "UNTITLED.VXL"
+ * @param ipo default starting camera position
+ * @param ist RIGHT unit vector
+ * @param ihe DOWN unit vector
+ * @param ifo FORWARD unit vector
+ * @return 0:bad, 1:good
+ */
+long loadvxl (const char *lodfilnam, dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo)
+{
+	FILE *fil;
+	long i, j, fsiz;
+	char *v, *v2;
+
+	if (!vbuf) { vbuf = (long *)malloc((VOXSIZ>>2)<<2); if (!vbuf) evilquit("vbuf malloc failed"); }
+	if (!vbit) { vbit = (long *)malloc((VOXSIZ>>7)<<2); if (!vbit) evilquit("vbuf malloc failed"); }
+
+	if (!kzopen(lodfilnam)) return(0);
+	fsiz = kzfilelength();
+
+	kzread(&i,4); if (i != 0x09072000) return(0);
+	kzread(&i,4); if (i != VSID) return(0);
+	kzread(&i,4); if (i != VSID) return(0);
+	kzread(ipo,24);
+	kzread(ist,24);
+	kzread(ihe,24);
+	kzread(ifo,24);
+
+	v = (char *)(&vbuf[1]); //1st dword for voxalloc compare logic optimization
+	kzread((void *)v,fsiz-kztell());
+
+	for(i=0;i<VSID*VSID;i++)
+	{
+		sptr[i] = v;
+		while (v[0]) v += (((long)v[0])<<2);
+		v += ((((long)v[2])-((long)v[1])+2)<<2);
+	}
+	kzclose();
+
+	memset(&sptr[VSID*VSID],0,sizeof(sptr)-VSID*VSID*4);
+	vbiti = (((long)v-(long)vbuf)>>2); //# vbuf longs/vbit bits allocated
+	clearbuf((void *)vbit,vbiti>>5,-1);
+	clearbuf((void *)&vbit[vbiti>>5],(VOXSIZ>>7)-(vbiti>>5),0);
+	vbit[vbiti>>5] = (1<<vbiti)-1;
+
+	vx5.globalmass = calcglobalmass();
+	backedup = -1;
+
+	gmipnum = 1; vx5.flstnum = 0;
+	updatebbox(0,0,0,VSID,VSID,MAXZDIM,0);
+	return(1);
+}
 /** Calculates cos & sin of 32-bit unsigned long angle in ~15 clock cycles
  *  Uses bitshift to find offset into table, and places sin/cos of angle into
  *  *cosin's memory location.
@@ -3791,16 +3879,18 @@ static void canseerange (point3d *p0, point3d *p1)
 		else                                  { a.y += d.y; p.y += i.z; p.z += i.x; }
 	}
 }
+
+
+
 #include "kvoxel_modelling.h"
-
-
-
+#include "kfile_io.h"
 //-------------------------- FILE IO CODE STARTS ----------------------------
 #define LPATBUFSIZ 14
 static lpoint2d *patbuf;
 #define LPATHASHSIZ 12
 static lpoint3d *pathashdat;
 static long *pathashead, pathashcnt, pathashmax;
+
 
 static void initpathash ()
 {
@@ -4752,220 +4842,6 @@ void drawpicinquad (long rpic, long rbpl, long rxsiz, long rysiz,
 
 //------------------------- SXL parsing code begins --------------------------
 
-static char *sxlbuf = 0;
-static long sxlparspos, sxlparslen;
-
-/**
- * Loads and begins parsing of an .SXL file. Always call this first before
- * using parspr().
- * @param sxlnam .SXL filename
- * @param vxlnam pointer to .VXL filename (written by loadsxl)
- * @param vxlnam pointer to .SKY filename (written by loadsxl)
- * @param globst pointer to global user string. You parse this yourself!
- *               You can edit this in Voxed by pressing F6.
- * @return 0: loadsxl failed (file not found or malloc failed)
- *         1: loadsxl successful; call parspr()!
- */
-long loadsxl (const char *sxlnam, char **vxlnam, char **skynam, char **globst)
-{
-	long j, k, m, n;
-
-		//NOTE: MUST buffer file because insertsprite uses kz file code :/
-	if (!kzopen(sxlnam)) return(0);
-	sxlparslen = kzfilelength();
-	if (sxlbuf) { free(sxlbuf); sxlbuf = 0; }
-	if (!(sxlbuf = (char *)malloc(sxlparslen))) return(0);
-	kzread(sxlbuf,sxlparslen);
-	kzclose();
-
-	j = n = 0;
-
-		//parse vxlnam
-	(*vxlnam) = &sxlbuf[j];
-	while ((sxlbuf[j]!=13)&&(sxlbuf[j]!=10) && (j < sxlparslen)) j++; sxlbuf[j++] = 0;
-	while (((sxlbuf[j]==13)||(sxlbuf[j]==10)) && (j < sxlparslen)) j++;
-
-		//parse skynam
-	(*skynam) = &sxlbuf[j];
-	while ((sxlbuf[j]!=13)&&(sxlbuf[j]!=10) && (j < sxlparslen)) j++; sxlbuf[j++] = 0;
-	while (((sxlbuf[j]==13)||(sxlbuf[j]==10)) && (j < sxlparslen)) j++;
-
-		//parse globst
-	m = n = j; (*globst) = &sxlbuf[n];
-	while (((sxlbuf[j] == ' ') || (sxlbuf[j] == 9)) && (j < sxlparslen))
-	{
-		j++;
-		while ((sxlbuf[j]!=13) && (sxlbuf[j]!=10) && (j < sxlparslen)) sxlbuf[n++] = sxlbuf[j++];
-		sxlbuf[n++] = 13; j++;
-		while (((sxlbuf[j]==13) || (sxlbuf[j]==10)) && (j < sxlparslen)) j++;
-	}
-	if (n > m) sxlbuf[n-1] = 0; else (*globst) = &nullst;
-
-		//Count number of sprites in .SXL file (helpful for GAME)
-	sxlparspos = j;
-	return(1);
-}
-/**
- * Loads a sky into memory. Sky must be PNG,JPG,TGA,GIF,BMP,PCX formatted as
- * a Mercator projection on its side. This means x-coordinate is latitude
- * and y-coordinate is longitude. Loadsky() can be called at any time.
- *
- * If for some reason you don't want to load a textured sky, you call call
- * loadsky with these 2 built-in skies:
- * loadsky("BLACK");  //pitch black
- * loadsky("BLUE");   //a cool ramp of bright blue to blue to greenish
- *
- * @param skyfilnam the name of the image to load
- * @return -1:bad, 0:good
- */
-long loadsky (const char *skyfilnam)
-{
-	long x, y, xoff, yoff;
-	float ang, f;
-
-	if (skypic) { free((void *)skypic); skypic = skyoff = 0; }
-	xoff = yoff = 0;
-
-	if (!strcasecmp(skyfilnam,"BLACK")) return(0);
-	if (!strcasecmp(skyfilnam,"BLUE")) goto loadbluesky;
-
-	kpzload(skyfilnam,(int *)&skypic,(int *)&skybpl,(int *)&skyxsiz,(int *)&skyysiz);
-	if (!skypic)
-	{
-		long r, g, b, *p;
-loadbluesky:;
-			//Load default sky
-		skyxsiz = 512; skyysiz = 1; skybpl = skyxsiz*4;
-		if (!(skypic = (long)malloc(skyysiz*skybpl))) return(-1);
-
-		p = (long *)skypic; y = skyxsiz*skyxsiz;
-		for(x=0;x<=(skyxsiz>>1);x++)
-		{
-			p[x] = ((((x*1081 - skyxsiz*252)*x)/y + 35)<<16)+
-					 ((((x* 950 - skyxsiz*198)*x)/y + 53)<<8)+
-					  (((x* 439 - skyxsiz* 21)*x)/y + 98);
-		}
-		p[skyxsiz-1] = 0x50903c;
-		r = ((p[skyxsiz>>1]>>16)&255);
-		g = ((p[skyxsiz>>1]>>8)&255);
-		b = ((p[skyxsiz>>1])&255);
-		for(x=(skyxsiz>>1)+1;x<skyxsiz;x++)
-		{
-			p[x] = ((((0x50-r)*(x-(skyxsiz>>1)))/(skyxsiz-1-(skyxsiz>>1))+r)<<16)+
-					 ((((0x90-g)*(x-(skyxsiz>>1)))/(skyxsiz-1-(skyxsiz>>1))+g)<<8)+
-					 ((((0x3c-b)*(x-(skyxsiz>>1)))/(skyxsiz-1-(skyxsiz>>1))+b));
-		}
-		y = skyxsiz*skyysiz;
-		for(x=skyxsiz;x<y;x++) p[x] = p[x-skyxsiz];
-	}
-
-		//Initialize look-up table for longitudes
-	if (skylng) free((void *)skylng);
-	if (!(skylng = (point2d *)malloc(skyysiz*8))) return(-1);
-	f = PI*2.0 / ((float)skyysiz);
-	for(y=skyysiz-1;y>=0;y--)
-		fcossin((float)y*f+PI,&skylng[y].x,&skylng[y].y);
-	skylngmul = (float)skyysiz/(PI*2);
-		//This makes those while loops in gline() not lockup when skyysiz==1
-	if (skyysiz == 1) { skylng[0].x = 0; skylng[0].y = 0; }
-
-		//Initialize look-up table for latitudes
-	if (skylat) free((void *)skylat);
-	if (!(skylat = (long *)malloc(skyxsiz*4))) return(-1);
-	f = PI*.5 / ((float)skyxsiz);
-	for(x=skyxsiz-1;x;x--)
-	{
-		ang = (float)((x<<1)-skyxsiz)*f;
-		ftol(cos(ang)*32767.0,&xoff);
-		ftol(sin(ang)*32767.0,&yoff);
-		skylat[x] = (xoff<<16)+((-yoff)&65535);
-	}
-	skylat[0] = 0; //Hack to make sure assembly index never goes < 0
-	skyxsiz--; //Hack for assembly code
-
-	return(0);
-}
-
-/** @warning this function can evilquit on malloc fail
- * Loads a native Voxlap5 .VXL file into memory.
- * @param filnam .VXL map formatted like this: "UNTITLED.VXL"
- * @param ipo default starting camera position
- * @param ist RIGHT unit vector
- * @param ihe DOWN unit vector
- * @param ifo FORWARD unit vector
- * @return 0:bad, 1:good
- */
-long loadvxl (const char *lodfilnam, dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo)
-{
-	FILE *fil;
-	long i, j, fsiz;
-	char *v, *v2;
-
-	if (!vbuf) { vbuf = (long *)malloc((VOXSIZ>>2)<<2); if (!vbuf) evilquit("vbuf malloc failed"); }
-	if (!vbit) { vbit = (long *)malloc((VOXSIZ>>7)<<2); if (!vbit) evilquit("vbuf malloc failed"); }
-
-	if (!kzopen(lodfilnam)) return(0);
-	fsiz = kzfilelength();
-
-	kzread(&i,4); if (i != 0x09072000) return(0);
-	kzread(&i,4); if (i != VSID) return(0);
-	kzread(&i,4); if (i != VSID) return(0);
-	kzread(ipo,24);
-	kzread(ist,24);
-	kzread(ihe,24);
-	kzread(ifo,24);
-
-	v = (char *)(&vbuf[1]); //1st dword for voxalloc compare logic optimization
-	kzread((void *)v,fsiz-kztell());
-
-	for(i=0;i<VSID*VSID;i++)
-	{
-		sptr[i] = v;
-		while (v[0]) v += (((long)v[0])<<2);
-		v += ((((long)v[2])-((long)v[1])+2)<<2);
-	}
-	kzclose();
-
-	memset(&sptr[VSID*VSID],0,sizeof(sptr)-VSID*VSID*4);
-	vbiti = (((long)v-(long)vbuf)>>2); //# vbuf longs/vbit bits allocated
-	clearbuf((void *)vbit,vbiti>>5,-1);
-	clearbuf((void *)&vbit[vbiti>>5],(VOXSIZ>>7)-(vbiti>>5),0);
-	vbit[vbiti>>5] = (1<<vbiti)-1;
-
-	vx5.globalmass = calcglobalmass();
-	backedup = -1;
-
-	gmipnum = 1; vx5.flstnum = 0;
-	updatebbox(0,0,0,VSID,VSID,MAXZDIM,0);
-	return(1);
-}
-
-/**
- * Saves a native Voxlap5 .VXL file & specified position to disk
- * @param filnam .VXL map formatted like this: "UNTITLED.VXL"
- * @param ipo default starting camera position
- * @param ist RIGHT unit vector
- * @param ihe DOWN unit vector
- * @param ifo FORWARD unit vector
- * @return 0:bad, 1:good
- */
-long savevxl (const char *savfilnam, dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo)
-{
-	FILE *fil;
-	long i;
-
-	if (!(fil = fopen(savfilnam,"wb"))) return(0);
-	i = 0x09072000; fwrite(&i,4,1,fil);  //Version
-	i = VSID; fwrite(&i,4,1,fil);
-	i = VSID; fwrite(&i,4,1,fil);
-	fwrite(ipo,24,1,fil);
-	fwrite(ist,24,1,fil);
-	fwrite(ihe,24,1,fil);
-	fwrite(ifo,24,1,fil);
-	for(i=0;i<VSID*VSID;i++) fwrite((void *)sptr[i],slng(sptr[i]),1,fil);
-	fclose(fil);
-	return(1);
-}
 
 void voxdontrestore ()
 {
@@ -5068,78 +4944,6 @@ void voxbackup (long x0, long y0, long x1, long y1, long tag)
 		}
 	}
 	else backedup = 0;
-}
-
-/**
- * If loadsxl returns a 1, then you should call parspr with a while loop
- * that terminates when the return value is 0.
- * @param spr pointer to sprite structure (written by parspr) You allocate
- *            the vx5sprite, & parspr fills in the position&orientation.
- * @param userst pointer to user string associated with the given sprite.
- *               You can edit this in Voxed by right-clicking the sprite.
- * @return pointer to .KV6 filename OR NULL if no more sprites left.
- *         You must load the .KV6 to memory yourself by doing:
- *         char *kv6filename = parspr(...)
- *         if (kv6filename) spr->voxnum = getkv6(kv6filename);
- */
-char *parspr (vx5sprite *spr, char **userst)
-{
-	float f;
-	long j, k, m, n;
-	char *namptr;
-
-	j = sxlparspos; //unnecessary temp variable (to shorten code)
-
-		//Automatically free temp sxlbuf when done reading sprites
-	if (((j+2 < sxlparslen) && (sxlbuf[j] == 'e') && (sxlbuf[j+1] == 'n') && (sxlbuf[j+2] == 'd') &&
-		((j+3 == sxlparslen) || (sxlbuf[j+3] == 13) || (sxlbuf[j+3] == 10))) || (j > sxlparslen))
-		return(0);
-
-		//parse kv6name
-	for(k=j;(sxlbuf[k]!=',') && (k < sxlparslen);k++); sxlbuf[k] = 0;
-	namptr = &sxlbuf[j]; j = k+1;
-
-		//parse 12 floats
-	for(m=0;m<12;m++)
-	{
-		if (m < 11) { for(k=j;(sxlbuf[k]!=',') && (k < sxlparslen);k++); }
-		else { for(k=j;(sxlbuf[k]!=13) && (sxlbuf[k]!=10) && (k < sxlparslen);k++); }
-
-		sxlbuf[k] = 0; f = atof(&sxlbuf[j]); j = k+1;
-		switch(m)
-		{
-			case  0: spr->p.x = f; break;
-			case  1: spr->p.y = f; break;
-			case  2: spr->p.z = f; break;
-			case  3: spr->s.x = f; break;
-			case  4: spr->s.y = f; break;
-			case  5: spr->s.z = f; break;
-			case  6: spr->h.x = f; break;
-			case  7: spr->h.y = f; break;
-			case  8: spr->h.z = f; break;
-			case  9: spr->f.x = f; break;
-			case 10: spr->f.y = f; break;
-			case 11: spr->f.z = f; break;
-			default: _gtfo(); //tells MSVC default can't be reached
-		}
-	}
-	while (((sxlbuf[j]==13) || (sxlbuf[j]==10)) && (j < sxlparslen)) j++;
-
-	spr->flags = 0;
-
-		//parse userst
-	m = n = j; (*userst) = &sxlbuf[n];
-	while (((sxlbuf[j] == ' ') || (sxlbuf[j] == 9)) && (j < sxlparslen))
-	{
-		j++;
-		while ((sxlbuf[j]!=13) && (sxlbuf[j]!=10) && (j < sxlparslen)) sxlbuf[n++] = sxlbuf[j++];
-		sxlbuf[n++] = 13; j++;
-		while (((sxlbuf[j]==13) || (sxlbuf[j]==10)) && (j < sxlparslen)) j++;
-	}
-	if (n > m) sxlbuf[n-1] = 0; else (*userst) = &nullst;
-
-	sxlparspos = j; //unnecessary temp variable (for short code)
-	return(namptr);
 }
 
 //--------------------------  Name hash code begins --------------------------
@@ -5564,12 +5368,6 @@ kv6data *getkv6 (const char *filnam)
 	return(kv6ptr);
 }
 
-#if defined(USEV5ASM) && !defined(NOASM)
-EXTERN_C void drawboundcubesseinit ();
-EXTERN_C void drawboundcubesse (kv6voxtype *, long);
-EXTERN_C void drawboundcube3dninit ();
-EXTERN_C void drawboundcube3dn (kv6voxtype *, long);
-#endif
 
 static void updatereflects (vx5sprite *spr)
 {

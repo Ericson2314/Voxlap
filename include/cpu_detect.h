@@ -77,7 +77,7 @@ static inline void cpuid (long a, long *s)
 
 /**
  *  Bit numbers of return value:
- *	0:FPU, 4:RDTSC, 15:CMOV, 22:MMX+, 23:MMX, 25:SSE, 26:SSE2, 30:3DNow!+, 31:3DNow!
+ *	@return 0:FPU, 4:RDTSC, 15:CMOV, 22:MMX+, 23:MMX, 25:SSE, 26:SSE2, 30:3DNow!+, 31:3DNow!
 */
 static long getcputype ()
 {
@@ -134,7 +134,7 @@ static inline void fpuinit (long a)
 	#endif
 }
 
-static void code_rwx_unlock ( void * dep_protect_start, void * dep_protect_end)
+void code_rwx_unlock ( void * dep_protect_start, void * dep_protect_end)
 {
 #ifdef _WIN32
     #ifndef PAGE_EXECUTE_READWRITE
@@ -148,7 +148,9 @@ static void code_rwx_unlock ( void * dep_protect_start, void * dep_protect_end)
 #endif
 
 }
-/** Check for FPU&RDTSC support */
+/** Check for FPU&RDTSC support 
+ *  @return -1 on failure 0 on success
+ */
 static int check_fpu_rdtsc()
 {
 	cputype = getcputype();

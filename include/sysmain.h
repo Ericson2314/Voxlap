@@ -48,6 +48,7 @@
 extern long cputype;
 extern void setacquire (long mouse, long kbd);
 
+
 	//Program Flow:
 extern const char *prognam;
 extern long progresiz;
@@ -69,12 +70,7 @@ extern void updatepalette (long start, long danum);
 extern long getvalidmodelist (validmodetype **validmodelist);
 extern long changeres (long, long, long, long);
 
-	//Sound:
-#define KSND_3D 1 //Use LOGICAL OR (|) to combine flags
-#define KSND_MOVE 2
-#define KSND_LOOP 4
-#define KSND_LOPASS 8
-#define KSND_MEM 16
+#ifndef NOSOUND
 extern void playsound (const char *, long, float, void *, long);
 extern void playsoundupdate (void *, void *);
 extern void setears3d (float, float, float, float, float, float, float, float, float);
@@ -82,7 +78,9 @@ extern void setvolume (long);
 extern long umixerstart (void (*mixfunc)(void *, long), long, long, long);
 extern void umixerkill (long);
 extern void umixerbreathe ();
+#endif
 
+#ifndef NOINPUT
 	//Keyboard:
 extern char keystatus[256];     //bit0=1:down
 extern char ext_keystatus[256]; //bit0=1:down,bit1=1:was down
@@ -100,12 +98,13 @@ extern void readmouse (float *, float *, float *, long *);
 #endif
 extern long ismouseout (long, long);
 extern void setmouseout (void (*)(long, long), long, long);
+#endif //NOINPUT
 
 	//Timer:
 extern void readklock (double *);
 
 	//code to change memory permissions now moved here because used in slab6 and voxlap
-extern void code_rwx_unlock ( void * dep_protect_start, void * dep_protect_end);
+extern void code_rwx_unlock ( void *, void *);
 
 #if defined(SYSMAIN_C) && defined(__cplusplus)
 }

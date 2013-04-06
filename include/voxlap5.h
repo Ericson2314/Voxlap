@@ -31,6 +31,7 @@
 	#define EXTERN_VOXLAP extern
 #endif
 
+
 // 3 dimensional points don't have power of 2 vector
 typedef struct { long x, y, z; } lpoint3d;
 typedef struct { float x, y, z; } point3d;
@@ -45,20 +46,19 @@ typedef union
 	#endif
 	#ifdef _MSC_VER
 	//__ALIGN(16) __m32 vec;
-	unsigned short vec;
+    unsigned int vec;
 	#endif
 } uspoint2d;
-
 typedef union
 {
 	struct { long x, y; };
-	long array[2];
-	#ifdef __GNUC__
-	long vec __attribute__ ((vector_size (8)));
-	#endif
-	#ifdef _MSC_VER
+    long array[2];
+    #ifdef __GNUC__
+	float vec __attribute__ ((vector_size (8)));
+    #endif
+    #ifdef _MSC_VER
 	__ALIGN(16) __m64 vec;
-	#endif
+    #endif
 } lpoint2d;
 typedef union
 {
@@ -223,6 +223,8 @@ struct vx5_interface
 
 	long fallcheck;
 };
+
+
 #ifdef VOXLAP5
 struct vx5_interface vx5;
 #else
@@ -233,35 +235,13 @@ extern struct vx5_interface vx5;
 extern long initvoxlap ();
 extern void uninitvoxlap ();
 
-	//File related functions:
-extern long loadsxl (const char *, char **, char **, char **);
-extern char *parspr (vx5sprite *, char **);
-extern void loadnul (dpoint3d *, dpoint3d *, dpoint3d *, dpoint3d *);
-extern long loaddta (const char *, dpoint3d *, dpoint3d *, dpoint3d *, dpoint3d *);
-extern long loadpng (const char *, dpoint3d *, dpoint3d *, dpoint3d *, dpoint3d *);
-extern void loadbsp (const char *, dpoint3d *, dpoint3d *, dpoint3d *, dpoint3d *);
-extern long loadvxl (const char *, dpoint3d *, dpoint3d *, dpoint3d *, dpoint3d *);
-extern long savevxl (const char *, dpoint3d *, dpoint3d *, dpoint3d *, dpoint3d *);
-extern long loadsky (const char *);
+	//File related functions: in kfile_io.h
+
+#include "kfile_io.h"
+
 
 	//Screen related functions:
-extern void voxsetframebuffer (long, long, long, long);
-extern void setsideshades (char, char, char, char, char, char);
-extern void setcamera (dpoint3d *, dpoint3d *, dpoint3d *, dpoint3d *, float, float, float);
-extern void opticast ();
-extern void drawpoint2d (long, long, long);
-extern void drawpoint3d (float, float, float, long);
-extern void drawline2d (float, float, float, float, long);
-extern void drawline3d (float, float, float, float, float, float, long);
-extern long project2d (float, float, float, float *, float *, float *);
-extern void drawspherefill (float, float, float, float, long);
-extern void drawpicinquad (long, long, long, long, long, long, long, long, float, float, float, float, float, float, float, float);
-extern void drawpolyquad (long, long, long, long, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float);
-extern void print4x6 (long, long, long, long, const char *, ...);
-extern void print6x8 (long, long, long, long, const char *, ...);
-extern void drawtile (long, long, long, long, long, long, long, long, long, long, long, long);
-extern long screencapture32bit (const char *);
-extern long surroundcapture32bit (dpoint3d *, const char *, long);
+#include "kscreen.h"
 
 	//Sprite related functions:
 extern kv6data *getkv6 (const char *);
@@ -348,6 +328,22 @@ extern void voxbackup (long, long, long, long, long);
 extern void voxdontrestore ();
 extern void voxrestore ();
 extern void voxredraw ();
+
+
+
+
+
+
+#if (defined(VOXLAP5) && (USEV5ASM != 0))
+
+void drawboundcubeasm (long);
+
+#else
+/** @todo still having issues with these in MSVC build */
+
+extern void drawboundcubeasm (long);
+#endif
+
 
 #if defined(VOXLAP_C) && defined(__cplusplus)
 }

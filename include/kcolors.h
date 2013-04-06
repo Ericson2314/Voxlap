@@ -55,9 +55,6 @@ long colormul (long i, long mulup8)
 }
 
 long curcolfunc (lpoint3d *p) { return(vx5.curcol); }
-
-
-
 long jitcolfunc (lpoint3d *p) { return(colorjit(vx5.curcol,vx5.amount)); }
 
 static long manycolukup[64] =

@@ -6,7 +6,7 @@ License for this code:
 	* Do not remove my name or credit
 	* You may distribute modified code/executables but please make it clear that it is modified
 ***************************************************************************************************/
-
+/**
 // This file has been modified from Ken Silverman's original release
 
 	//TODO:
@@ -74,7 +74,7 @@ License for this code:
 	//  22. A variant of the "C" tool for changing colors that works just like the flood tool, and by this I mean, change
 	//      ONLY the colors of the same-colored voxel cluster under the cursor, which would be akin to filling only the
 	//      "air" area under the cursor using "F" in the slice editor.
-
+*/
 #include <stdio.h>
 #include <io.h>
 #include <fcntl.h>
@@ -255,7 +255,7 @@ static inline void clearbufbyte (void *d, long c, long a)
 		"rep	stosd\n"
 	".Lskipit:\n"
 		".att_syntax prefix\n"
-		: 
+		:
 		: "D" (d), "c" (c), "a" (a)
 		:
 	);
@@ -298,7 +298,7 @@ static inline void clearbufbyte (void *d, long c, long a)
 		"rep stosb\n"
 	".Lskip2:\n"
 		".att_syntax prefix\n"
-		: 
+		:
 		: "D" (d), "c" (c), "a" (a)
 		: "edx"
 	);
@@ -336,7 +336,7 @@ static inline long fstcw ()
 	__asm__ __volatile__
 	(
 		"fstcw %0\n"
-		: 
+		:
 		: "m" (fpumode)
 		:
 	);
@@ -1582,6 +1582,7 @@ EXTERN_C void drawboundcubeasm (point4d *, long, long);
 extern "C" {
 #endif
 
+/** @shared */
 char ptfaces16[43][8] =
 {
 	0, 0, 0,  0,  0, 0, 0,0,  4, 0,32,96, 64, 0,32,0,  4,16,80,112,48, 16,80,0,  0,0,0,0,0,0,0,0,
@@ -1601,6 +1602,7 @@ char ptfaces16[43][8] =
 }
 #endif
 
+/** @shared */
 static inline void movps (point4d *dest, point4d *src)
 {
 	#ifdef NOASM
@@ -1628,7 +1630,7 @@ static inline void movps (point4d *dest, point4d *src)
 	#endif
 	#endif
 }
-
+/** @shared */
 static inline void intss (point4d *dest, long src)
 {
 	#ifdef NOASM
@@ -1658,7 +1660,7 @@ static inline void intss (point4d *dest, long src)
 	#endif
 	#endif
 }
-
+/** @shared */
 static inline void addps (point4d *sum, point4d *a, point4d *b)
 {
 	#ifdef NOASM
@@ -1692,7 +1694,7 @@ static inline void addps (point4d *sum, point4d *a, point4d *b)
 	#endif
 	#endif
 }
-
+/** @shared */
 static inline void mulps (point4d *sum, point4d *a, point4d *b)
 {
 	#ifdef NOASM
@@ -1726,7 +1728,7 @@ static inline void mulps (point4d *sum, point4d *a, point4d *b)
 	#endif
 	#endif
 }
-
+/** @shared */
 static inline void subps (point4d *sum, point4d *a, point4d *b)
 {
 	#ifdef NOASM
@@ -2233,7 +2235,7 @@ void rendersphere ()
 	r2.x = -irig.z*(float)ysiz;
 	r2.y = -idow.z*(float)ysiz;
 	r2.z = -ifor.z*(float)ysiz;
-	
+
 	xv = voxdata;
 
 	r1.x = irig.x*c.x+irig.z*c.y+irig.y*c.z;
@@ -2781,7 +2783,7 @@ static inline long bsf (long a)
 	__asm__ __volatile__
 	(
 		"bsf %0, %%eax\n"
-		: 
+		:
 		: "m" (a)
 		:
 	);
@@ -2797,7 +2799,7 @@ static inline long bsr (long a)
 	__asm__ __volatile__
 	(
 		"bsr %0, %%eax\n"
-		: 
+		:
 		: "m" (a)
 		:
 	);
@@ -5001,6 +5003,7 @@ static char pcxheader[128] =
 	0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,
 };
 static char sl6dcap[] = "SL6D0000.PCX";
+/** @shared */
 void screencapture(char *filnam)
 {
 	FILE *fil;
