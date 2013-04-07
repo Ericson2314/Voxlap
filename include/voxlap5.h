@@ -2,14 +2,16 @@
 // This file has been modified from Ken Silverman's original release
 
 #pragma once
-#include "xmmintrin.h"
+
 // For SSE2 byte-vectors
 #ifdef _MSC_VER
-
+	#include "xmmintrin.h"
     #ifndef __ALIGN
         #define __ALIGN(num) __declspec(align(num))
     #endif
 #endif
+
+#include "porthacks.h"
 
 #define MAXXDIM 1024
 #define MAXYDIM 768
@@ -24,11 +26,22 @@
 #endif
 
 
+
+
 #if defined(VOXLAP_C) && defined(__cplusplus)
-	extern "C" {
 	#define EXTERN_VOXLAP extern "C"
 #else
 	#define EXTERN_VOXLAP extern
+#endif
+
+EXTERN_VOXLAP void breath ();
+EXTERN_VOXLAP void evilquit (const char *);	
+
+EXTERN_VOXLAP long lbound0 (long, long); 
+
+
+#if defined(VOXLAP_C) && defined(__cplusplus)
+	extern "C" {
 #endif
 
 
@@ -227,34 +240,38 @@ struct vx5_interface
 
 #ifdef VOXLAP5
 struct vx5_interface vx5;
+short qbplbpp[4];
+long kv6frameplace, kv6bytesperline;
+	//Initialization functions:
+long initvoxlap ();
+void uninitvoxlap ();
 #else
 extern struct vx5_interface vx5;
-#endif
-
 	//Initialization functions:
 extern long initvoxlap ();
 extern void uninitvoxlap ();
+#endif
 
+
+
+
+/** Started breaking this into chunks
+ *  Will have to resolve dependancies manually to make this modular
+ */
 	//File related functions: in kfile_io.h
-
 #include "kfile_io.h"
-
-
+	//Sprite related functions:
+#include "ksprite.h"
 	//Screen related functions:
 #include "kscreen.h"
+ 	/** These Screen functions are exported by voxlap */
+extern void voxsetframebuffer (long, long, long, long);
+extern void setsideshades (char, char, char, char, char, char);
+extern void setcamera (dpoint3d *, dpoint3d *, dpoint3d *, dpoint3d *, float, float, float);
+extern void opticast ();
+extern void gline (long, float, float, float, float);
+extern void hline (float, float, float, float, long *, long *);
 
-	//Sprite related functions:
-extern kv6data *getkv6 (const char *);
-extern kfatype *getkfa (const char *);
-extern void freekv6 (kv6data *kv6);
-extern void savekv6 (const char *, kv6data *);
-extern void getspr (vx5sprite *, const char *);
-extern kv6data *genmipkv6 (kv6data *);
-extern char *getkfilname (long);
-extern void animsprite (vx5sprite *, long);
-extern void drawsprite (vx5sprite *);
-extern long meltsphere (vx5sprite *, lpoint3d *, long);
-extern long meltspans (vx5sprite *, vspans *, long, lpoint3d *);
 
 	//Physics helper functions:
 extern void orthonormalize (point3d *, point3d *, point3d *);
@@ -314,14 +331,7 @@ extern long meltfall (vx5sprite *, long, long);
 extern void finishfalls ();
 
 	//Procedural texture functions:
-extern long curcolfunc (lpoint3d *);
-extern long floorcolfunc (lpoint3d *);
-extern long jitcolfunc (lpoint3d *);
-extern long manycolfunc (lpoint3d *);
-extern long sphcolfunc (lpoint3d *);
-extern long woodcolfunc (lpoint3d *);
-extern long pngcolfunc (lpoint3d *);
-extern long kv6colfunc (lpoint3d *);
+#include "kcolors.h"
 
 	//Editing backup/restore functions
 extern void voxbackup (long, long, long, long, long);
@@ -332,19 +342,7 @@ extern void voxredraw ();
 
 
 
-
-
-#if (defined(VOXLAP5) && (USEV5ASM != 0))
-
-void drawboundcubeasm (long);
-
-#else
-/** @todo still having issues with these in MSVC build */
-
-extern void drawboundcubeasm (long);
-#endif
-
-
 #if defined(VOXLAP_C) && defined(__cplusplus)
 }
 #endif
+

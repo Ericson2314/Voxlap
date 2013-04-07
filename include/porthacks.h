@@ -12,7 +12,6 @@
 	#define __i386__
 #endif
 
-
 #ifdef __GNUC__
 	#define GCC_VERSION (__GNUC__ * 10000 \
 		     + __GNUC_MINOR__ * 100 \
@@ -59,50 +58,44 @@
  **/
 
 #if defined(__GNUC__) && !(defined(__MINGW32__) || defined(__MINGW64__))
-#include <ctype.h>
-#include <limits.h>
-#include <stddef.h>
+	#include <ctype.h>
+	#include <limits.h>
+	#include <stddef.h>
 
 
-static int memcasecmp (const void * const ptr0, const void * const ptr1, size_t n)
-{
-	size_t i;
-	int up0, up1;
-	int diff = 0;
-	for (i = 0; i < n; i++)
+	static int memcasecmp (const void * const ptr0, const void * const ptr1, size_t n)
 	{
-		up0 = toupper(((const unsigned char* const)ptr0)[i]);
-		up1 = toupper(((const unsigned char* const)ptr1)[i]);
-		diff = UCHAR_MAX <= INT_MAX ? up0 - up1 : up0 < up1 ? -1 : up1 < up0;
-		if (diff) break;
+		size_t i;
+		int up0, up1;
+		int diff = 0;
+		for (i = 0; i < n; i++)
+		{
+			up0 = toupper(((const unsigned char* const)ptr0)[i]);
+			up1 = toupper(((const unsigned char* const)ptr1)[i]);
+			diff = UCHAR_MAX <= INT_MAX ? up0 - up1 : up0 < up1 ? -1 : up1 < up0;
+			if (diff) break;
+		}
+		return diff;
 	}
-	return diff;
-}
-
 #endif
 
 #if (defined(_WIN32) || defined(_WINDOWS_)) || (defined(__MINGW32__) || defined(__MINGW64__))
-
-#define strcasecmp _stricmp
-#define memcasecmp _memicmp
-
+	#define strcasecmp _stricmp
+	#define memcasecmp _memicmp
 #endif
 
 /**
  * Visual Studio Type Hacks
  **/
 
-
 #if defined(_MSC_VER) && _MSC_VER<1600 //if Visual studio before 2010
-typedef          __int32 int32_t;
-typedef unsigned __int32 uint32_t;
-typedef          __int64 int64_t;
-typedef unsigned __int64 uint64_t;
-
+	typedef          __int32 int32_t;
+	typedef unsigned __int32 uint32_t;
+	typedef          __int64 int64_t;
+	typedef unsigned __int64 uint64_t;
 #else
-#include <stdint.h>
+	#include <stdint.h>
 #endif
-
 
 /**
  * Usefully macros
@@ -113,11 +106,11 @@ typedef unsigned __int64 uint64_t;
 	#define EXTERN_C extern
 #endif
 
-#define COSSIN(degree, cos_, sin_)					\
+#define COSSIN(degree, cos_, sin_)	\
 	do								\
 	{								\
-		sin_ = sin(degree);					\
-		cos_ = cos(degree);					\
+		sin_ = sin(degree);			\
+		cos_ = cos(degree);			\
 	} while(0)
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))

@@ -48,30 +48,31 @@
 //#define KPLIB_C  //if kplib is compiled as C
 #include "kplib.h"
 #include "kfonts.h"
-#include "kcolors.h"
 
-#define USEZBUFFER 1                //Should a Z-Buffer be Used?
-//#define NOASM                     //Instructs compiler to use C(++) alternatives
-#define PREC (256*4096)
-#define CMPPREC (256*4096)
-#define FPREC (256*4096)
+#include "ksnippits.h"
+#include "kscreen.h"
 
-#define SCISDIST 1.0
-#define GOLDRAT 0.3819660112501052  /** Golden Ratio: 1 - 1/((sqrt(5)+1)/2) */
-#define ESTNORMRAD 2                /** \warning Specially optimized for 2: DON'T CHANGE unless testing! */
 
-EXTERN_SYSMAIN void breath ();
-EXTERN_SYSMAIN void evilquit (const char *);
+/** if (a < 0) return(0); else if (a > b) return(b); else return(a); */
+static inline long lbound0 (long a, long b) //b MUST be >= 0
+{
+	if ((unsigned long)a <= b) return(a);
+	return((~(a>>31))&b);
+}
+
+/** if (a < b) return(b); else if (a > c) return(c); else return(a); */
+static inline long lbound (long a, long b, long c) //c MUST be >= b
+{
+	c -= b;
+	if ((unsigned long)(a-b) <= c) return(a);
+	return((((b-a)>>31)&c) + b);
+}
 
 #define VOXSIZ VSID*VSID*128
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-char *sptr[(VSID*VSID*4)/3];
-#ifdef __cplusplus
-}
-#endif
+#include "kglobals.h"
+
+
 static long *vbuf = 0, *vbit = 0, vbiti;
 /** voxel buffer format
 
@@ -109,34 +110,11 @@ static float tempfloatbuf[SETSPHMAXRAD];
 static long factr[SETSPHMAXRAD][2];
 
 #pragma pack(push,1)
-/** Render related variables: */
-#if (USEZBUFFER == 0)
-typedef struct { long col; } castdat;
-#else
-typedef struct { long col, dist; } castdat;
-#endif
-typedef struct { castdat *i0, *i1; long z0, z1, cx0, cy0, cx1, cy1; } cftype;
-#pragma pack(pop)
 
-#if (defined(USEV5ASM) && (USEV5ASM != 0)) //if true
-	EXTERN_C cftype cfasm[256];
-	EXTERN_C castdat skycast;
-#else
-	cftype cfasm[256];
-#endif
 
-/** Display related variables: */
-static long xres_voxlap, yres_voxlap, bytesperline, frameplace, xres4_voxlap;
-long ylookup[MAXYDIM+1];
 
-static lpoint3d glipos;             // gline and opticast
-/** @note global eyepos opticast drawpoint 3d drawline3d setcamera project2d drawspherefill kv6draw */
-static point3d gipos;
-static point3d gistr, gihei, gifor;
-static point3d gixs, giys, gizs, giadd; // setcamera kv6draw
-static float gihx, gihy, gihz, gposxfrac[2], gposyfrac[2], grd;
-static long gposz, giforzsgn, gstartz0, gstartz1, gixyi[2];
-static char *gstartv;
+
+
 
 long backtag, backedup = -1, bacx0, bacy0, bacx1, bacy1;
 char *bacsptr[262144];
@@ -169,35 +147,6 @@ lpoint3d fstk[FSTKSIZ]; //Note .z is actually used as a pointer, not z!
 #define FLCHKSIZ 4096
 lpoint3d flchk[FLCHKSIZ]; long flchkcnt = 0;
 
-/** Opticast global variables
- *  radar: 320x200 requires  419560*2 bytes (area * 6.56*2)
- *  radar: 400x300 requires  751836*2 bytes (area * 6.27*2)
- *  radar: 640x480 requires 1917568*2 bytes (area * 6.24*2)
- */
-#define SCPITCH 256
-long *radar = 0, *radarmem = 0;
-#if (USEZBUFFER == 1)
-static long *zbuffermem = 0, zbuffersiz = 0;
-#endif
-static castdat *angstart[MAXXDIM*4], *gscanptr;
-#define CMPRECIPSIZ MAXXDIM+32
-static float cmprecip[CMPRECIPSIZ], wx0, wy0, wx1, wy1; // Lookup table
-static long iwx0, iwy0, iwx1, iwy1;
-static point3d gcorn[4];
-		 point3d ginor[4]; /** @note Should be static, but... necessary for stupid pingball hack :/ */
-static long lastx[MAX(MAXYDIM,VSID)], uurendmem[MAXXDIM*2+8], *uurend;
-#define VFIFSIZ 16384 //SHOULDN'T BE STATIC ALLOCATION!!!
-static long vfifo[VFIFSIZ];
-
-void mat0(point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *);
-void mat1(point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *);
-void mat2(point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *, point3d *);
-
-/** Parallaxing sky variables */
-static long skypic = 0, nskypic = 0, skybpl, skyysiz, skycurlng, skycurdir;
-static float skylngmul;
-static point2d *skylng = 0;
-
 // forward declarations ?
 void delslab(long *b2, long y0, long y1);
 long *scum2(long x, long y);
@@ -208,22 +157,15 @@ void *caddasm;
 void *ztabasm;
 #define ztab4 ((point4d *)&ztabasm)
 
-short qsum0[4], qsum1[4], qbplbpp[4];
-long kv6frameplace, kv6bytesperline;
+
 float scisdist;
 int64_t kv6colmul[256], kv6coladd[256];
-
-//Rendering
-static unsigned short xyoffs[256][256+1]; // used only by setkvx
-
-static float optistrx, optistry, optiheix, optiheiy, optiaddx, optiaddy;
-
-static int64_t foglut[2048] FORCE_NAME("foglut"), fogcol;
-static long ofogdist = -1;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+	/** Parallaxing sky variables (accessed by assembly code) */
+
 
 char ptfaces16[43][8] =
 {
@@ -239,28 +181,7 @@ char ptfaces16[43][8] =
     {6,32,48,112, 80,64,96,0} , {6, 0,32,48,112,80,64,0} , {6,16,80, 64, 96,32,48,0} , {0,0,0,0,0,0,0,0} ,
     {6, 0,16, 48,112,96,32,0} , {6, 0,16,48,112,96,64,0} , {6, 0,16, 80,112,96,32,0}
 };
-#if !defined(VOXLAP5)
-void dep_protect_start();
-void dep_protect_end();
-void grouscanasm(long);
-#else
-void dep_protect_start(){};
-void dep_protect_end(){};
-void grouscanasm(long){};
-#endif
 
-#if USEV5ASM == 0
-void drawboundcubesseinit (){};
-void drawboundcubesse (kv6voxtype *, long){};
-void drawboundcube3dninit (){};
-void drawboundcube3dn (kv6voxtype *, long){};
-#else
-void drawboundcubesseinit (){};
-void drawboundcubesse (kv6voxtype *, long){};
-void drawboundcube3dninit (){};
-void drawboundcube3dn (kv6voxtype *, long){};
-
-#endif
 
 #ifdef __cplusplus
 }
@@ -275,11 +196,9 @@ void drawboundcube3dn (kv6voxtype *, long){};
 
 static __ALIGN(8) short lightlist[MAXLIGHTS+1][4];
 
-/** Related to fog functions */
-static int64_t all32767 FORCE_NAME("all32767") = 0x7fff7fff7fff7fff;
 
-void (*hrend)(long,long,long,long,long,long);
-void (*vrend)(long,long,long,long,long);
+
+
 //
 #if (ESTNORMRAD == 2)
 /** Used by estnorn */
@@ -308,9 +227,7 @@ static long bitsnum[32] =
 static float fsqrecip[5860]; /** 75*75 + 15*15 + 3*3 = 5859 is max value (5*5*5 box) */
 #endif
 
-static int64_t mskp255 = 0x00ff00ff00ff00ff;
-static int64_t mskn255 = 0xff01ff01ff01ff01;
-static int64_t rgbmask64 = 0xffffff00ffffff;
+
 
 // Column related
 static int64_t qmulmip[8] =
@@ -351,54 +268,14 @@ static long lightlst[MAXLIGHTS];
 static float lightsub[MAXLIGHTS];
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-	//Parallaxing sky variables (accessed by assembly code)
-long skyoff = 0, skyxsiz, *skylat = 0;
-
-int64_t gi, gcsub[8] =
-{
-	0xff00ff00ff00ff,0xff00ff00ff00ff,0xff00ff00ff00ff,0xff00ff00ff00ff,
-	0xff00ff00ff00ff,0xff00ff00ff00ff,0xff00ff00ff00ff,0xff00ff00ff00ff
-};
-long gylookup[512+36], gmipnum = 0; //256+4+128+4+64+4+...
-long gpz[2], gdz[2], gxmip, gxmax, gixy[2], gpixy;
-static long gmaxscandist;
-
-//long reax, rebx, recx, redx, resi, redi, rebp, resp, remm[16];
 
 
-
-#if (USEZBUFFER == 1)
-long zbufoff;
-#endif
-#ifdef __cplusplus
-}
-#endif
-#define gi0 (((long *)&gi)[0])
-#define gi1 (((long *)&gi)[1])
 
 /** @note Ken Silverman knows how to use EMMS */
 #if defined(_MSC_VER) && !defined(NOASM)
 	#pragma warning(disable:4799)
 #endif
 
-/** if (a < 0) return(0); else if (a > b) return(b); else return(a); */
-static inline long lbound0 (long a, long b) //b MUST be >= 0
-{
-	if ((unsigned long)a <= b) return(a);
-	return((~(a>>31))&b);
-}
-
-/** if (a < b) return(b); else if (a > c) return(c); else return(a); */
-static inline long lbound (long a, long b, long c) //c MUST be >= b
-{
-	c -= b;
-	if ((unsigned long)(a-b) <= c) return(a);
-	return((((b-a)>>31)&c) + b);
-}
 
 #define LSINSIZ 8 //Must be >= 2!
 static point2d usintab[(1<<LSINSIZ)+(1<<(LSINSIZ-2))];
@@ -495,12 +372,13 @@ long loadvxl (const char *lodfilnam, dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe
 	updatebbox(0,0,0,VSID,VSID,MAXZDIM,0);
 	return(1);
 }
+
 /** Calculates cos & sin of 32-bit unsigned long angle in ~15 clock cycles
  *  Uses bitshift to find offset into table, and places sin/cos of angle into
  *  *cosin's memory location.
  *  ( Gotta love these old school optimizations ;)
  *  @param a Angle to look up in table
- *  @param cosin Modified by function
+ *  @param *cosin Modified by function
  *  Accuracy is approximately +/-.0001
  */
 static inline void ucossin (unsigned long a, float *cosin)
@@ -510,102 +388,6 @@ static inline void ucossin (unsigned long a, float *cosin)
 	cosin[1] = usintab[a                 ].x*f+usintab[a                 ].y;
 }
 
-/** Draws 4x6 font on screen (very fast!)
- *
- *  @param x x of top-left corner
- *  @param y y of top-left corner
- *  @param fcol foreground color (32-bit RGB format)
- *  @param bcol background color (32-bit RGB format) or -1 for transparent
- *  @param fmt string - same syntax as printf
- */
-void print4x6 (long x, long y, long fcol, long bcol, const char *fmt, ...)
-{
-	va_list arglist;
-	char st[280], *c;
-	long i, j;
-
-	if (!fmt) return;
-	va_start(arglist,fmt);
-	vsprintf(st,fmt,arglist);
-	va_end(arglist);
-
-	y = y*bytesperline+(x<<2)+frameplace;
-	if (bcol < 0)
-	{
-		for(j=20;j>=0;y+=bytesperline,j-=4)
-			for(c=st,x=y;*c;c++,x+=16)
-			{
-				i = (font4x6[*c]>>j);
-				if (i&8) *(long *)(x   ) = fcol;
-				if (i&4) *(long *)(x+ 4) = fcol;
-				if (i&2) *(long *)(x+ 8) = fcol;
-				if (i&1) *(long *)(x+12) = fcol;
-				if ((*c) == 9) x += 32;
-			}
-		return;
-	}
-	fcol -= bcol;
-	for(j=20;j>=0;y+=bytesperline,j-=4)
-		for(c=st,x=y;*c;c++,x+=16)
-		{
-			i = (font4x6[*c]>>j);
-			*(long *)(x   ) = (((i<<28)>>31)&fcol)+bcol;
-			*(long *)(x+ 4) = (((i<<29)>>31)&fcol)+bcol;
-			*(long *)(x+ 8) = (((i<<30)>>31)&fcol)+bcol;
-			*(long *)(x+12) = (((i<<31)>>31)&fcol)+bcol;
-			if ((*c) == 9) { for(i=16;i<48;i+=4) *(long *)(x+i) = bcol; x += 32; }
-		}
-}
-/** Draws 6x8 font on screen (very fast!)
- *
- *  @param x x of top-left corner
- *  @param y y of top-left corner
- *  @param fcol foreground color (32-bit RGB format)
- *  @param bcol background color (32-bit RGB format) or -1 for transparent
- *  @param fmt string - same syntax as printf
- */
-void print6x8 (long x, long y, long fcol, long bcol, const char *fmt, ...)
-{
-	va_list arglist;
-	char st[280], *c, *v;
-	long i, j;
-
-	if (!fmt) return;
-	va_start(arglist,fmt);
-	vsprintf(st,fmt,arglist);
-	va_end(arglist);
-
-	y = y*bytesperline+(x<<2)+frameplace;
-	if (bcol < 0)
-	{
-		for(j=1;j<256;y+=bytesperline,j<<=1)
-			for(c=st,x=y;*c;c++,x+=24)
-			{
-				v = (char *)(((long)font6x8) + ((long)c[0])*6);
-				if (v[0]&j) *(long *)(x   ) = fcol;
-				if (v[1]&j) *(long *)(x+ 4) = fcol;
-				if (v[2]&j) *(long *)(x+ 8) = fcol;
-				if (v[3]&j) *(long *)(x+12) = fcol;
-				if (v[4]&j) *(long *)(x+16) = fcol;
-				if (v[5]&j) *(long *)(x+20) = fcol;
-				if ((*c) == 9) x += ((2*6)<<2);
-			}
-		return;
-	}
-	fcol -= bcol;
-	for(j=1;j<256;y+=bytesperline,j<<=1)
-		for(c=st,x=y;*c;c++,x+=24)
-		{
-			v = (char *)(((long)font6x8) + ((long)c[0])*6);
-			*(long *)(x   ) = (((-(v[0]&j))>>31)&fcol)+bcol;
-			*(long *)(x+ 4) = (((-(v[1]&j))>>31)&fcol)+bcol;
-			*(long *)(x+ 8) = (((-(v[2]&j))>>31)&fcol)+bcol;
-			*(long *)(x+12) = (((-(v[3]&j))>>31)&fcol)+bcol;
-			*(long *)(x+16) = (((-(v[4]&j))>>31)&fcol)+bcol;
-			*(long *)(x+20) = (((-(v[5]&j))>>31)&fcol)+bcol;
-			if ((*c) == 9) { for(i=24;i<72;i+=4) *(long *)(x+i) = bcol; x += ((2*6)<<2); }
-		}
-}
 /** This should move to kcolors.h , but need to deal with global sptr first */
 long floorcolfunc (lpoint3d *p)
 {
@@ -669,7 +451,14 @@ allocnothere:;
 	evilquit("voxalloc: vbuf full"); return(0);
 }
 
-/** Returns 0 if voxel(x,y,z) is air, or 1 if it is solid */
+/** Check that voxel x y z is solid
+ *  @param x Column x
+ *  @param y Column y
+ *  @param z Span z
+ *  @param z0 Start of z range
+ *  @param z1 End of z range
+ *  @return 0 if voxel(x,y,z) is air, or 1 if it is solid 
+ */
 long isvoxelsolid (long x, long y, long z)
 {
 	char *v;
@@ -685,7 +474,12 @@ long isvoxelsolid (long x, long y, long z)
 	}
 }
 
-/** Returns 1 if any voxels in range (x,y,z0) to (x,y,z1-1) are solid, else 0 */
+/** Check column x y for solid voxels in range z0 ... z1-1
+ *  @param x Column x
+ *  @param y Column y
+ *  @param z0 Start of z range
+ *  @param z1 End of z range
+ *  @return 1 if any voxels in range (x,y,z0) to (x,y,z1-1) are solid, else 0 */
 long anyvoxelsolid (long x, long y, long z0, long z1)
 {
 	char *v;
@@ -1043,248 +837,6 @@ void expandstack (long x, long y, long *uind)
 		while (z < v[3]) { uind[z] = *(long *)v2; z++; v2 += 4; }
 	}
 	while (z < MAXZDIM) { uind[z] = -2; z++; }
-}
-
-void gline (long leng, float x0, float y0, float x1, float y1)
-{
-	uint64_t q;
-	float f, f1, f2, vd0, vd1, vz0, vx1, vy1, vz1;
-	long j;
-	cftype *c;
-#if (!defined(USEV5ASM) || (USEV5ASM == 0)) //if false
-	long gx, ogx, gy, ixy, col, dax, day;
-	cftype *c2, *ce;
-	char *v;
-#endif
-
-	vd0 = x0*gistr.x + y0*gihei.x + gcorn[0].x;
-	vd1 = x0*gistr.y + y0*gihei.y + gcorn[0].y;
-	vz0 = x0*gistr.z + y0*gihei.z + gcorn[0].z;
-	vx1 = x1*gistr.x + y1*gihei.x + gcorn[0].x;
-	vy1 = x1*gistr.y + y1*gihei.y + gcorn[0].y;
-	vz1 = x1*gistr.z + y1*gihei.z + gcorn[0].z;
-
-	f = sqrt(vx1*vx1 + vy1*vy1);
-	f1 = f / vx1;
-	f2 = f / vy1;
-	if (fabs(vx1) > fabs(vy1)) vd0 = vd0*f1; else vd0 = vd1*f2;
-	if (*(long *)&vd0 < 0) vd0 = 0; //vd0 MUST NOT be negative: bad for asm
-	vd1 = f;
-	ftol(fabs(f1)*PREC,&gdz[0]);
-	ftol(fabs(f2)*PREC,&gdz[1]);
-
-	gixy[0] = (((*(signed long *)&vx1)>>31)<<3)+4; //=sgn(vx1)*4
-	gixy[1] = gixyi[(*(unsigned long *)&vy1)>>31]; //=sgn(vy1)*4*VSID
-	if (gdz[0] <= 0) { ftol(gposxfrac[(*(unsigned long *)&vx1)>>31]*fabs(f1)*PREC,&gpz[0]); if (gpz[0] <= 0) gpz[0] = 0x7fffffff; gdz[0] = 0x7fffffff-gpz[0]; } //Hack for divide overflow
-	else ftol(gposxfrac[(*(unsigned long *)&vx1)>>31]*(float)gdz[0],&gpz[0]);
-	if (gdz[1] <= 0) { ftol(gposyfrac[(*(unsigned long *)&vy1)>>31]*fabs(f2)*PREC,&gpz[1]); if (gpz[1] <= 0) gpz[1] = 0x7fffffff; gdz[1] = 0x7fffffff-gpz[1]; } //Hack for divide overflow
-	else ftol(gposyfrac[(*(unsigned long *)&vy1)>>31]*(float)gdz[1],&gpz[1]);
-
-	c = &cfasm[128];
-	c->i0 = gscanptr; c->i1 = &gscanptr[leng];
-	c->z0 = gstartz0; c->z1 = gstartz1;
-	if (giforzsgn < 0)
-	{
-		ftol((vd1-vd0)*cmprecip[leng],&gi0); ftol(vd0*CMPPREC,&c->cx0);
-		ftol((vz1-vz0)*cmprecip[leng],&gi1); ftol(vz0*CMPPREC,&c->cy0);
-	}
-	else
-	{
-		ftol((vd0-vd1)*cmprecip[leng],&gi0); ftol(vd1*CMPPREC,&c->cx0);
-		ftol((vz0-vz1)*cmprecip[leng],&gi1); ftol(vz1*CMPPREC,&c->cy0);
-	}
-	c->cx1 = leng*gi0 + c->cx0;
-	c->cy1 = leng*gi1 + c->cy0;
-
-	gxmax = gmaxscandist;
-
-		//Hack for early-out case when looking up towards sky
-#if 0  //DOESN'T WORK WITH LOWER MIPS!
-	if (c->cy1 < 0)
-		if (gposz > 0)
-		{
-			if (dmulrethigh(-gposz,c->cx1,c->cy1,gxmax) >= 0)
-			{
-				j = scale(-gposz,c->cx1,c->cy1)+PREC; //+PREC for good luck
-				if ((unsigned long)j < (unsigned long)gxmax) gxmax = j;
-			}
-		} else gxmax = 0;
-#endif
-
-		//Clip borders safely (MUST use integers!) - don't wrap around
-#if ((USEZBUFFER == 1) && (defined(USEV5ASM) && (USEV5ASM != 0))) //if USEV5ASM is true
-	skycast.dist = gxmax;
-#endif
-	if (gixy[0] < 0) j = glipos.x; else j = VSID-1-glipos.x;
-	q = mul64(gdz[0],j); q += (uint64_t)gpz[0];
-	if (q < (uint64_t)gxmax)
-	{
-		gxmax = (long)q;
-#if ((USEZBUFFER == 1) && (defined(USEV5ASM) && (USEV5ASM != 0)))
-		skycast.dist = 0x7fffffff;
-#endif
-	}
-	if (gixy[1] < 0) j = glipos.y; else j = VSID-1-glipos.y;
-	q = mul64(gdz[1],j); q += (uint64_t)gpz[1];
-	if (q < (uint64_t)gxmax)
-	{
-		gxmax = (long)q;
-#if ((USEZBUFFER == 1) && (defined(USEV5ASM) && (USEV5ASM != 0)))
-		skycast.dist = 0x7fffffff;
-#endif
-	}
-
-	if (vx5.sideshademode)
-	{
-		gcsub[0] = gcsub[(((unsigned long)gixy[0])>>31)+4];
-		gcsub[1] = gcsub[(((unsigned long)gixy[1])>>31)+6];
-	}
-
-#if (defined(USEV5ASM) && (USEV5ASM != 0)) //if true
-	if (nskypic)
-	{
-		if (skycurlng < 0)
-		{
-			ftol((atan2(vy1,vx1)+PI)*skylngmul-.5,&skycurlng);
-			if ((unsigned long)skycurlng >= skyysiz)
-				skycurlng = ((skyysiz-1)&(j>>31));
-		}
-		else if (skycurdir < 0)
-		{
-			j = skycurlng+1; if (j >= skyysiz) j = 0;
-			while (skylng[j].x*vy1 > skylng[j].y*vx1)
-				{ skycurlng = j++; if (j >= skyysiz) j = 0; }
-		}
-		else
-		{
-			while (skylng[skycurlng].x*vy1 < skylng[skycurlng].y*vx1)
-				{ skycurlng--; if (skycurlng < 0) skycurlng = skyysiz-1; }
-		}
-		skyoff = skycurlng*skybpl + nskypic;
-	}
-
-	//resp = 0;
-	grouscanasm((long)gstartv);
-	//if (resp)
-	//{
-	//   static char tempbuf[2048], tempbuf2[256];
-	//   sprintf(tempbuf,"eax:%08x\tmm0:%08x%08x\nebx:%08x\tmm1:%08x%08x\necx:%08x\tmm2:%08x%08x\nedx:%08x\tmm3:%08x%08x\nesi:%08x\tmm4:%08x%08x\nedi:%08x\tmm5:%08x%08x\nebp:%08x\tmm6:%08x%08x\nesp:%08x\tmm7:%08x%08x\n",
-	//      reax,remm[ 1],remm[ 0], rebx,remm[ 3],remm[ 2],
-	//      recx,remm[ 5],remm[ 4], redx,remm[ 7],remm[ 6],
-	//      resi,remm[ 9],remm[ 8], redi,remm[11],remm[10],
-	//      rebp,remm[13],remm[12], resp,remm[15],remm[14]);
-	//
-	//   for(j=0;j<3;j++)
-	//   {
-	//      sprintf(tempbuf2,"%d i0:%d i1:%d z0:%ld z1:%ld cx0:%08x cy0:%08x cx1:%08x cy1:%08x\n",
-	//         j,(long)cfasm[j].i0-(long)gscanptr,(long)cfasm[j].i1-(long)gscanptr,cfasm[j].z0,cfasm[j].z1,cfasm[j].cx0,cfasm[j].cy0,cfasm[j].cx1,cfasm[j].cy1);
-	//      strcat(tempbuf,tempbuf2);
-	//   }
-	//   evilquit(tempbuf);
-	//}
-#else
-//------------------------------------------------------------------------
-	ce = c; v = gstartv;
-	j = (((unsigned long)(gpz[1]-gpz[0]))>>31);
-	gx = gpz[j];
-	ixy = gpixy;
-	if (v == (char *)*(long *)gpixy) goto drawflor; goto drawceil;
-
-	while (1)
-	{
-
-drawfwall:;
-		if (v[1] != c->z1)
-		{
-			if (v[1] > c->z1) c->z1 = v[1];
-			else { do
-			{
-				c->z1--; col = *(long *)&v[(c->z1-v[1])*4+4];
-				while (dmulrethigh(gylookup[c->z1],c->cx1,c->cy1,ogx) < 0)
-				{
-					c->i1->col = col; c->i1--; if (c->i0 > c->i1) goto deletez;
-					c->cx1 -= gi0; c->cy1 -= gi1;
-				}
-			} while (v[1] != c->z1); }
-		}
-
-		if (v == (char *)*(long *)ixy) goto drawflor;
-
-//drawcwall:;
-		if (v[3] != c->z0)
-		{
-			if (v[3] < c->z0) c->z0 = v[3];
-			else { do
-			{
-				c->z0++; col = *(long *)&v[(c->z0-v[3])*4-4];
-				while (dmulrethigh(gylookup[c->z0],c->cx0,c->cy0,ogx) >= 0)
-				{
-					c->i0->col = col; c->i0++; if (c->i0 > c->i1) goto deletez;
-					c->cx0 += gi0; c->cy0 += gi1;
-				}
-			} while (v[3] != c->z0); }
-		}
-
-drawceil:;
-		while (dmulrethigh(gylookup[c->z0],c->cx0,c->cy0,gx) >= 0)
-		{
-			c->i0->col = (*(long *)&v[-4]); c->i0++; if (c->i0 > c->i1) goto deletez;
-			c->cx0 += gi0; c->cy0 += gi1;
-		}
-
-drawflor:;
-		while (dmulrethigh(gylookup[c->z1],c->cx1,c->cy1,gx) < 0)
-		{
-			c->i1->col = *(long *)&v[4]; c->i1--; if (c->i0 > c->i1) goto deletez;
-			c->cx1 -= gi0; c->cy1 -= gi1;
-		}
-
-afterdelete:;
-		c--;
-		if (c < &cfasm[128])
-		{
-			ixy += gixy[j];
-			gpz[j] += gdz[j];
-			j = (((unsigned long)(gpz[1]-gpz[0]))>>31);
-			ogx = gx; gx = gpz[j];
-
-			if (gx > gxmax) break;
-			v = (char *)*(long *)ixy; c = ce;
-		}
-			//Find highest intersecting vbuf slab
-		while (1)
-		{
-			if (!v[0]) goto drawfwall;
-			if (dmulrethigh(gylookup[v[2]+1],c->cx0,c->cy0,ogx) >= 0) break;
-			v += v[0]*4;
-		}
-			//If next slab ALSO intersects, split cfasm!
-		gy = gylookup[v[v[0]*4+3]];
-		if (dmulrethigh(gy,c->cx1,c->cy1,ogx) < 0)
-		{
-			col = (long)c->i1; dax = c->cx1; day = c->cy1;
-			while (dmulrethigh(gylookup[v[2]+1],dax,day,ogx) < 0)
-				{ col -= sizeof(castdat); dax -= gi0; day -= gi1; }
-			ce++; if (ce >= &cfasm[192]) return; //Give it max=64 entries like ASM
-			for(c2=ce;c2>c;c2--) c2[0] = c2[-1];
-			c[1].i1 = (castdat *)col; c->i0 = ((castdat *)col)+1;
-			c[1].cx1 = dax; c->cx0 = dax+gi0;
-			c[1].cy1 = day; c->cy0 = day+gi1;
-			c[1].z1 = c->z0 = v[v[0]*4+3];
-			c++;
-		}
-	}
-//------------------------------------------------------------------------
-
-	for(c=ce;c>=&cfasm[128];c--)
-		while (c->i0 <= c->i1) { c->i0->col = 0; c->i0++; }
-	return;
-
-deletez:;
-	ce--; if (ce < &cfasm[128]) return;
-	for(c2=c;c2<=ce;c2++) c2[0] = c2[1];
-	goto afterdelete;
-#endif
 }
 
 /** add b to *a and clamp to maximum char val of 255 */
@@ -1649,7 +1201,110 @@ void estnorm (long x, long y, long z, point3d *fp)
 	}
 #endif //1
 }
+void (*hrend)(long,long,long,long,long,long);
+void (*vrend)(long,long,long,long,long);
 
+
+#if (USEZBUFFER != 1) //functions without Z Buffer
+
+/** Horizontal render with no zbuffer */
+void hrendnoz (long sx, long sy, long p1, long plc, long incr, long j)
+{
+	sy = ylookup[sy]+frameplace; p1 = sy+(p1<<2); sy += (sx<<2);
+	do
+	{
+		*(long *)sy = angstart[plc>>16][j].col;
+		plc += incr; sy += 4;
+	} while (sy != p1);
+}
+/** Vertical render with no zbuffer */
+void vrendnoz (long sx, long sy, long p1, long iplc, long iinc)
+{
+	sy = ylookup[sy]+(sx<<2)+frameplace;
+	for(;sx<p1;sx++)
+	{
+		*(long *)sy = angstart[uurend[sx]>>16][iplc].col;
+		uurend[sx] += uurend[sx+MAXXDIM]; sy += 4; iplc += iinc;
+	}
+}
+
+#else //functions with Z Buffer
+/** Horizontal render with zbuffer */
+void hrendz (long sx, long sy, long p1, long plc, long incr, long j)
+{
+	long p0, i; float dirx, diry;
+	p0 = ylookup[sy]+(sx<<2)+frameplace;
+	p1 = ylookup[sy]+(p1<<2)+frameplace;
+	dirx = optistrx*(float)sx + optiheix*(float)sy + optiaddx;
+	diry = optistry*(float)sx + optiheiy*(float)sy + optiaddy;
+	i = zbufoff;
+	do
+	{
+		*(long *)p0 = angstart[plc>>16][j].col;
+		*(float *)(p0+i) = (float)angstart[plc>>16][j].dist/sqrt(dirx*dirx+diry*diry);
+		dirx += optistrx; diry += optistry; plc += incr; p0 += 4;
+	} while (p0 != p1);
+}
+/** Vertical render with zbuffer */
+void vrendz (long sx, long sy, long p1, long iplc, long iinc)
+{
+	float dirx, diry; long i, p0;
+	p0 = ylookup[sy]+(sx<<2)+frameplace;
+	p1 = ylookup[sy]+(p1<<2)+frameplace;
+	dirx = optistrx*(float)sx + optiheix*(float)sy + optiaddx;
+	diry = optistry*(float)sx + optiheiy*(float)sy + optiaddy;
+	i = zbufoff;
+	while (p0 < p1)
+	{
+		*(long *)p0 = angstart[uurend[sx]>>16][iplc].col;
+		*(float *)(p0+i) = (float)angstart[uurend[sx]>>16][iplc].dist/sqrt(dirx*dirx+diry*diry);
+		dirx += optistrx; diry += optistry; uurend[sx] += uurend[sx+MAXXDIM]; p0 += 4; iplc += iinc; sx++;
+	}
+}
+/** Horizontal render with zbuffer + fog */
+void hrendzfog (long sx, long sy, long p1, long plc, long incr, long j)
+{
+	long p0, i, k, l; float dirx, diry;
+	p0 = ylookup[sy]+(sx<<2)+frameplace;
+	p1 = ylookup[sy]+(p1<<2)+frameplace;
+	dirx = optistrx*(float)sx + optiheix*(float)sy + optiaddx;
+	diry = optistry*(float)sx + optiheiy*(float)sy + optiaddy;
+	i = zbufoff;
+	do
+	{
+		k = angstart[plc>>16][j].col;
+		l = angstart[plc>>16][j].dist;
+		l = (foglut[l>>20]&32767);
+		*(long *)p0 = ((((( vx5.fogcol     &255)-( k     &255))*l)>>15)    ) +
+						  ((((((vx5.fogcol>> 8)&255)-((k>> 8)&255))*l)>>15)<< 8) +
+						  ((((((vx5.fogcol>>16)&255)-((k>>16)&255))*l)>>15)<<16)+k;
+		*(float *)(p0+i) = (float)angstart[plc>>16][j].dist/sqrt(dirx*dirx+diry*diry);
+		dirx += optistrx; diry += optistry; plc += incr; p0 += 4;
+	} while (p0 != p1);
+}
+/** Vertical render with zbuffer + fog */
+void vrendzfog (long sx, long sy, long p1, long iplc, long iinc)
+{
+	float dirx, diry; long i, k, l, p0;
+	p0 = ylookup[sy]+(sx<<2)+frameplace;
+	p1 = ylookup[sy]+(p1<<2)+frameplace;
+	dirx = optistrx*(float)sx + optiheix*(float)sy + optiaddx;
+	diry = optistry*(float)sx + optiheiy*(float)sy + optiaddy;
+	i = zbufoff;
+	while (p0 < p1)
+	{
+		k = angstart[uurend[sx]>>16][iplc].col;
+		l = angstart[uurend[sx]>>16][iplc].dist;
+		l = (foglut[l>>20]&32767);
+		*(long *)p0 = ((((( vx5.fogcol     &255)-( k     &255))*l)>>15)    ) +
+						  ((((((vx5.fogcol>> 8)&255)-((k>> 8)&255))*l)>>15)<< 8) +
+						  ((((((vx5.fogcol>>16)&255)-((k>>16)&255))*l)>>15)<<16)+k;
+		*(float *)(p0+i) = (float)angstart[uurend[sx]>>16][iplc].dist/sqrt(dirx*dirx+diry*diry);
+		dirx += optistrx; diry += optistry; uurend[sx] += uurend[sx+MAXXDIM]; p0 += 4; iplc += iinc; sx++;
+	}
+}
+
+#endif
 static long vspan (long x, long y0, long y1)
 {
 	long y, yy, *bbufx;
@@ -1685,6 +1340,423 @@ static long docube (long x, long y, long z)
 	for(g=0;x0<x1;x0++) g |= vspan(x0,y0,y1);
 	return(g);
 }
+
+/** @warning This function can evilquit on bad malloc
+ * Since voxlap is currently a software renderer and I don't have any system
+ * dependent code in it, you must provide it with the frame buffer. You
+ * MUST call this once per frame, AFTER startdirectdraw(), but BEFORE any
+ * functions that access the frame buffer.
+ * @param p pointer to the top-left corner of the frame
+ * @param b pitch (bytes per line)
+ * @param x frame width
+ * @param y frame height
+ */
+void voxsetframebuffer (long p, long b, long x, long y)
+{
+	long i;
+
+	frameplace = p;
+	if (x > MAXXDIM) x = MAXXDIM; //This sucks, but it crashes without it
+	if (y > MAXYDIM) y = MAXYDIM;
+
+		//Set global variables used by kv6draw's PIII asm (drawboundcube)
+	qsum1[3] = qsum1[1] = 0x7fff-y; qsum1[2] = qsum1[0] = 0x7fff-x;
+	kv6bytesperline = qbplbpp[1] = b; qbplbpp[0] = 4;
+	kv6frameplace = p - (qsum1[0]*qbplbpp[0] + qsum1[1]*qbplbpp[1]);
+
+	if ((b != ylookup[1]) || (x != xres_voxlap) || (y != yres_voxlap))
+	{
+		bytesperline = b; xres_voxlap = x; yres_voxlap = y; xres4_voxlap = (xres_voxlap<<2);
+		ylookup[0] = 0; for(i=0;i<yres_voxlap;i++) ylookup[i+1] = ylookup[i]+bytesperline;
+		//gihx = gihz = (float)xres_voxlap*.5f; gihy = (float)yres_voxlap*.5f; //BAD!!!
+#if (USEZBUFFER == 1)
+		if ((ylookup[yres_voxlap]+256 > zbuffersiz) || (!zbuffermem))  //Increase Z buffer size if too small
+		{
+			if (zbuffermem) { free(zbuffermem); zbuffermem = 0; }
+			zbuffersiz = ylookup[yres_voxlap]+256;
+			if (!(zbuffermem = (long *)malloc(zbuffersiz))) evilquit("voxsetframebuffer: allocation too big");
+		}
+#endif
+	}
+#if (USEZBUFFER == 1)
+		//zbuffer aligns its memory to the same pixel boundaries as the screen!
+		//WARNING: Pentium 4's L2 cache has severe slowdowns when 65536-64 <= (zbufoff&65535) < 64
+	zbufoff = (((((long)zbuffermem)-frameplace-128)+255)&~255)+128;
+#endif
+	uurend = &uurendmem[((frameplace&4)^(((long)uurendmem)&4))>>2];
+
+	if (vx5.fogcol >= 0)
+	{
+		fogcol = (((int64_t)(vx5.fogcol&0xff0000))<<16) +
+					(((int64_t)(vx5.fogcol&0x00ff00))<< 8) +
+					(((int64_t)(vx5.fogcol&0x0000ff))    );
+
+		if (vx5.maxscandist > 2047) vx5.maxscandist = 2047;
+		if ((vx5.maxscandist != ofogdist) && (vx5.maxscandist > 0))
+		{
+			ofogdist = vx5.maxscandist;
+
+			//foglut[?>>20] = MIN(?*32767/vx5.maxscandist,32767)
+#if 0
+			long j, k, l;
+			j = 0; l = 0x7fffffff/vx5.maxscandist;
+			for(i=0;i<2048;i++)
+			{
+				k = (j>>16); j += l;
+				if (k < 0) break;
+				foglut[i] = (((int64_t)k)<<32)+(((int64_t)k)<<16)+((int64_t)k);
+			}
+			while (i < 2048) foglut[i++] = all32767;
+#else
+			i = 0x7fffffff/vx5.maxscandist;
+			#if defined( __GNUC__) && !defined(NOASM) //gcc inline asm
+
+			__asm__ __volatile__
+			(
+				".intel_syntax noprefix\n"
+				"xor	eax, eax\n"
+				"mov	ecx, -2048*8\n"
+			".Lfogbeg:\n"
+				"movd	mm0, eax\n"
+				"add	eax, edx\n"
+				"jo	short .Lfogend\n"
+				"pshufw	mm0, mm0, 0x55\n"
+				"movq	foglut[ecx+2048*8], mm0\n"
+				"add	ecx, 8\n"
+				"js	short .Lfogbeg\n"
+				"jmp	short .Lfogend2\n"
+			".Lfogend:\n"
+				"movq	mm0, all32767\n"
+			".Lfogbeg2:\n"
+				"movq	foglut[ecx+2048*8], mm0\n"
+				"add	ecx, 8\n"
+				"js	short .Lfogbeg2\n"
+			".Lfogend2:\n"
+				"emms\n"
+				".att_syntax prefix\n"
+				:
+				: [i] "d" (i)
+				: "eax", "ecx", "mm0"
+			);
+			#elif defined(_MSC_VER) && !defined(NOASM)
+			_asm
+			{
+				xor	eax, eax
+				mov	ecx, -2048*8
+				mov	edx, i
+			fogbeg:
+				movd	mm0, eax
+				add	eax, edx
+				jo	short fogend
+				pshufw	mm0, mm0, 0x55
+				movq	foglut[ecx+2048*8], mm0
+				add	ecx, 8
+				js	short fogbeg
+				jmp	short fogend2
+			fogend:
+				movq	mm0, all32767
+			fogbeg2:
+				movq	foglut[ecx+2048*8], mm0
+				add	ecx, 8
+				js	short fogbeg2
+			fogend2:
+				emms
+			}
+			#else // C Default
+			#error No C Default yet defined
+			#endif
+#endif // 0
+		}
+	} else ofogdist = -1;
+
+	if (cputype&(1<<25)) drawboundcubesseinit(); else drawboundcube3dninit();
+}
+
+void vline (float x0, float y0, float x1, float y1, long *iy0, long *iy1)
+{
+	float dxy;
+
+	dxy = (x1-x0) * grd; //grd = 1/(y1-y0)
+
+		  if (x0 < wx0) ftol((wx0-x0)/dxy+y0,iy0);
+	else if (x0 > wx1) ftol((wx1-x0)/dxy+y0,iy0);
+	else ftol(y0,iy0);
+		  if (x1 < wx0) ftol((wx0-x0)/dxy+y0,iy1);
+	else if (x1 > wx1) ftol((wx1-x0)/dxy+y0,iy1);
+	else ftol(y1,iy1);
+	if ((*iy0) < iwy0) (*iy0) = iwy0;
+	if ((*iy0) > iwy1) (*iy0) = iwy1;
+	gline(labs((*iy1)-(*iy0)),((*iy0)-y1)*dxy + x1,(float)(*iy0),
+									  ((*iy1)-y1)*dxy + x1,(float)(*iy1));
+}
+
+void gline (long leng, float x0, float y0, float x1, float y1)
+{
+	uint64_t q;
+	float f, f1, f2, vd0, vd1, vz0, vx1, vy1, vz1;
+	long j;
+	cftype *c;
+#if (!defined(USEV5ASM) || (USEV5ASM == 0)) //if false
+	long gx, ogx, gy, ixy, col, dax, day;
+	cftype *c2, *ce;
+	char *v;
+#endif
+
+	vd0 = x0*gistr.x + y0*gihei.x + gcorn[0].x;
+	vd1 = x0*gistr.y + y0*gihei.y + gcorn[0].y;
+	vz0 = x0*gistr.z + y0*gihei.z + gcorn[0].z;
+	vx1 = x1*gistr.x + y1*gihei.x + gcorn[0].x;
+	vy1 = x1*gistr.y + y1*gihei.y + gcorn[0].y;
+	vz1 = x1*gistr.z + y1*gihei.z + gcorn[0].z;
+
+	f = sqrt(vx1*vx1 + vy1*vy1);
+	f1 = f / vx1;
+	f2 = f / vy1;
+	if (fabs(vx1) > fabs(vy1)) vd0 = vd0*f1; else vd0 = vd1*f2;
+	if (*(long *)&vd0 < 0) vd0 = 0; //vd0 MUST NOT be negative: bad for asm
+	vd1 = f;
+	ftol(fabs(f1)*PREC,&gdz[0]);
+	ftol(fabs(f2)*PREC,&gdz[1]);
+
+	gixy[0] = (((*(signed long *)&vx1)>>31)<<3)+4; //=sgn(vx1)*4
+	gixy[1] = gixyi[(*(unsigned long *)&vy1)>>31]; //=sgn(vy1)*4*VSID
+	if (gdz[0] <= 0) { ftol(gposxfrac[(*(unsigned long *)&vx1)>>31]*fabs(f1)*PREC,&gpz[0]); if (gpz[0] <= 0) gpz[0] = 0x7fffffff; gdz[0] = 0x7fffffff-gpz[0]; } //Hack for divide overflow
+	else ftol(gposxfrac[(*(unsigned long *)&vx1)>>31]*(float)gdz[0],&gpz[0]);
+	if (gdz[1] <= 0) { ftol(gposyfrac[(*(unsigned long *)&vy1)>>31]*fabs(f2)*PREC,&gpz[1]); if (gpz[1] <= 0) gpz[1] = 0x7fffffff; gdz[1] = 0x7fffffff-gpz[1]; } //Hack for divide overflow
+	else ftol(gposyfrac[(*(unsigned long *)&vy1)>>31]*(float)gdz[1],&gpz[1]);
+
+	c = &cfasm[128];
+	c->i0 = gscanptr; c->i1 = &gscanptr[leng];
+	c->z0 = gstartz0; c->z1 = gstartz1;
+	if (giforzsgn < 0)
+	{
+		ftol((vd1-vd0)*cmprecip[leng],&gi0); ftol(vd0*CMPPREC,&c->cx0);
+		ftol((vz1-vz0)*cmprecip[leng],&gi1); ftol(vz0*CMPPREC,&c->cy0);
+	}
+	else
+	{
+		ftol((vd0-vd1)*cmprecip[leng],&gi0); ftol(vd1*CMPPREC,&c->cx0);
+		ftol((vz0-vz1)*cmprecip[leng],&gi1); ftol(vz1*CMPPREC,&c->cy0);
+	}
+	c->cx1 = leng*gi0 + c->cx0;
+	c->cy1 = leng*gi1 + c->cy0;
+
+	gxmax = gmaxscandist;
+
+		//Hack for early-out case when looking up towards sky
+#if 0  //DOESN'T WORK WITH LOWER MIPS!
+	if (c->cy1 < 0)
+		if (gposz > 0)
+		{
+			if (dmulrethigh(-gposz,c->cx1,c->cy1,gxmax) >= 0)
+			{
+				j = scale(-gposz,c->cx1,c->cy1)+PREC; //+PREC for good luck
+				if ((unsigned long)j < (unsigned long)gxmax) gxmax = j;
+			}
+		} else gxmax = 0;
+#endif
+
+		//Clip borders safely (MUST use integers!) - don't wrap around
+#if ((USEZBUFFER == 1) && (defined(USEV5ASM) && (USEV5ASM != 0))) //if USEV5ASM is true
+	skycast.dist = gxmax;
+#endif
+	if (gixy[0] < 0) j = glipos.x; else j = VSID-1-glipos.x;
+	q = mul64(gdz[0],j); q += (uint64_t)gpz[0];
+	if (q < (uint64_t)gxmax)
+	{
+		gxmax = (long)q;
+#if ((USEZBUFFER == 1) && (defined(USEV5ASM) && (USEV5ASM != 0)))
+		skycast.dist = 0x7fffffff;
+#endif
+	}
+	if (gixy[1] < 0) j = glipos.y; else j = VSID-1-glipos.y;
+	q = mul64(gdz[1],j); q += (uint64_t)gpz[1];
+	if (q < (uint64_t)gxmax)
+	{
+		gxmax = (long)q;
+#if ((USEZBUFFER == 1) && (defined(USEV5ASM) && (USEV5ASM != 0)))
+		skycast.dist = 0x7fffffff;
+#endif
+	}
+
+	if (vx5.sideshademode)
+	{
+		gcsub[0] = gcsub[(((unsigned long)gixy[0])>>31)+4];
+		gcsub[1] = gcsub[(((unsigned long)gixy[1])>>31)+6];
+	}
+
+#if (defined(USEV5ASM) && (USEV5ASM != 0)) //if true
+	if (nskypic)
+	{
+		if (skycurlng < 0)
+		{
+			ftol((atan2(vy1,vx1)+PI)*skylngmul-.5,&skycurlng);
+			if ((unsigned long)skycurlng >= skyysiz)
+				skycurlng = ((skyysiz-1)&(j>>31));
+		}
+		else if (skycurdir < 0)
+		{
+			j = skycurlng+1; if (j >= skyysiz) j = 0;
+			while (skylng[j].x*vy1 > skylng[j].y*vx1)
+				{ skycurlng = j++; if (j >= skyysiz) j = 0; }
+		}
+		else
+		{
+			while (skylng[skycurlng].x*vy1 < skylng[skycurlng].y*vx1)
+				{ skycurlng--; if (skycurlng < 0) skycurlng = skyysiz-1; }
+		}
+		skyoff = skycurlng*skybpl + nskypic;
+	}
+
+	//resp = 0;
+	grouscanasm((long)gstartv);
+	//if (resp)
+	//{
+	//   static char tempbuf[2048], tempbuf2[256];
+	//   sprintf(tempbuf,"eax:%08x\tmm0:%08x%08x\nebx:%08x\tmm1:%08x%08x\necx:%08x\tmm2:%08x%08x\nedx:%08x\tmm3:%08x%08x\nesi:%08x\tmm4:%08x%08x\nedi:%08x\tmm5:%08x%08x\nebp:%08x\tmm6:%08x%08x\nesp:%08x\tmm7:%08x%08x\n",
+	//      reax,remm[ 1],remm[ 0], rebx,remm[ 3],remm[ 2],
+	//      recx,remm[ 5],remm[ 4], redx,remm[ 7],remm[ 6],
+	//      resi,remm[ 9],remm[ 8], redi,remm[11],remm[10],
+	//      rebp,remm[13],remm[12], resp,remm[15],remm[14]);
+	//
+	//   for(j=0;j<3;j++)
+	//   {
+	//      sprintf(tempbuf2,"%d i0:%d i1:%d z0:%ld z1:%ld cx0:%08x cy0:%08x cx1:%08x cy1:%08x\n",
+	//         j,(long)cfasm[j].i0-(long)gscanptr,(long)cfasm[j].i1-(long)gscanptr,cfasm[j].z0,cfasm[j].z1,cfasm[j].cx0,cfasm[j].cy0,cfasm[j].cx1,cfasm[j].cy1);
+	//      strcat(tempbuf,tempbuf2);
+	//   }
+	//   evilquit(tempbuf);
+	//}
+#else
+//------------------------------------------------------------------------
+	ce = c; v = gstartv;
+	j = (((unsigned long)(gpz[1]-gpz[0]))>>31);
+	gx = gpz[j];
+	ixy = gpixy;
+	if (v == (char *)*(long *)gpixy) goto drawflor; goto drawceil;
+
+	while (1)
+	{
+
+drawfwall:;
+		if (v[1] != c->z1)
+		{
+			if (v[1] > c->z1) c->z1 = v[1];
+			else { do
+			{
+				c->z1--; col = *(long *)&v[(c->z1-v[1])*4+4];
+				while (dmulrethigh(gylookup[c->z1],c->cx1,c->cy1,ogx) < 0)
+				{
+					c->i1->col = col; c->i1--; if (c->i0 > c->i1) goto deletez;
+					c->cx1 -= gi0; c->cy1 -= gi1;
+				}
+			} while (v[1] != c->z1); }
+		}
+
+		if (v == (char *)*(long *)ixy) goto drawflor;
+
+//drawcwall:;
+		if (v[3] != c->z0)
+		{
+			if (v[3] < c->z0) c->z0 = v[3];
+			else { do
+			{
+				c->z0++; col = *(long *)&v[(c->z0-v[3])*4-4];
+				while (dmulrethigh(gylookup[c->z0],c->cx0,c->cy0,ogx) >= 0)
+				{
+					c->i0->col = col; c->i0++; if (c->i0 > c->i1) goto deletez;
+					c->cx0 += gi0; c->cy0 += gi1;
+				}
+			} while (v[3] != c->z0); }
+		}
+
+drawceil:;
+		while (dmulrethigh(gylookup[c->z0],c->cx0,c->cy0,gx) >= 0)
+		{
+			c->i0->col = (*(long *)&v[-4]); c->i0++; if (c->i0 > c->i1) goto deletez;
+			c->cx0 += gi0; c->cy0 += gi1;
+		}
+
+drawflor:;
+		while (dmulrethigh(gylookup[c->z1],c->cx1,c->cy1,gx) < 0)
+		{
+			c->i1->col = *(long *)&v[4]; c->i1--; if (c->i0 > c->i1) goto deletez;
+			c->cx1 -= gi0; c->cy1 -= gi1;
+		}
+
+afterdelete:;
+		c--;
+		if (c < &cfasm[128])
+		{
+			ixy += gixy[j];
+			gpz[j] += gdz[j];
+			j = (((unsigned long)(gpz[1]-gpz[0]))>>31);
+			ogx = gx; gx = gpz[j];
+
+			if (gx > gxmax) break;
+			v = (char *)*(long *)ixy; c = ce;
+		}
+			//Find highest intersecting vbuf slab
+		while (1)
+		{
+			if (!v[0]) goto drawfwall;
+			if (dmulrethigh(gylookup[v[2]+1],c->cx0,c->cy0,ogx) >= 0) break;
+			v += v[0]*4;
+		}
+			//If next slab ALSO intersects, split cfasm!
+		gy = gylookup[v[v[0]*4+3]];
+		if (dmulrethigh(gy,c->cx1,c->cy1,ogx) < 0)
+		{
+			col = (long)c->i1; dax = c->cx1; day = c->cy1;
+			while (dmulrethigh(gylookup[v[2]+1],dax,day,ogx) < 0)
+				{ col -= sizeof(castdat); dax -= gi0; day -= gi1; }
+			ce++; if (ce >= &cfasm[192]) return; //Give it max=64 entries like ASM
+			for(c2=ce;c2>c;c2--) c2[0] = c2[-1];
+			c[1].i1 = (castdat *)col; c->i0 = ((castdat *)col)+1;
+			c[1].cx1 = dax; c->cx0 = dax+gi0;
+			c[1].cy1 = day; c->cy0 = day+gi1;
+			c[1].z1 = c->z0 = v[v[0]*4+3];
+			c++;
+		}
+	}
+//------------------------------------------------------------------------
+
+	for(c=ce;c>=&cfasm[128];c--)
+		while (c->i0 <= c->i1) { c->i0->col = 0; c->i0++; }
+	return;
+
+deletez:;
+	ce--; if (ce < &cfasm[128]) return;
+	for(c2=c;c2<=ce;c2++) c2[0] = c2[1];
+	goto afterdelete;
+#endif
+}
+
+void hline (float x0, float y0, float x1, float y1, long *ix0, long *ix1)
+{
+	float dyx;
+
+	dyx = (y1-y0) * grd; //grd = 1/(x1-x0)
+
+	if (y0 < wy0){
+	    ftol((wy0-y0)/dyx+x0,ix0);
+	}
+	else if (y0 > wy1){ ftol((wy1-y0)/dyx+x0,ix0);
+	}
+	else ftol(x0,ix0);
+		  if (y1 < wy0) ftol((wy0-y0)/dyx+x0,ix1);
+	else if (y1 > wy1) ftol((wy1-y0)/dyx+x0,ix1);
+	else ftol(x1,ix1);
+	if ((*ix0) < iwx0){ (*ix0) = iwx0; }
+	if ((*ix0) > iwx1){ (*ix0) = iwx1; }//(*ix1) = MIN(MAX(*ix1,wx0),wx1);
+	gline(
+        labs((*ix1)-(*ix0))
+        ,(float)(*ix0),((*ix0)-x1)*dyx + y1
+        ,(float)(*ix1),((*ix1)-x1)*dyx + y1
+    );
+}
+
+
 
 void setnormflash (float px, float py, float pz, long flashradius, long intens)
 {
@@ -1909,148 +1981,6 @@ normflash_exwhile4:;
 	updatebbox(vx5.minx,vx5.miny,vx5.minz,vx5.maxx,vx5.maxy,vx5.maxz,0);
 }
 
-void hline (float x0, float y0, float x1, float y1, long *ix0, long *ix1)
-{
-	float dyx;
-
-	dyx = (y1-y0) * grd; //grd = 1/(x1-x0)
-
-	if (y0 < wy0){
-	    ftol((wy0-y0)/dyx+x0,ix0);
-	}
-	else if (y0 > wy1){ ftol((wy1-y0)/dyx+x0,ix0);
-	}
-	else ftol(x0,ix0);
-		  if (y1 < wy0) ftol((wy0-y0)/dyx+x0,ix1);
-	else if (y1 > wy1) ftol((wy1-y0)/dyx+x0,ix1);
-	else ftol(x1,ix1);
-	if ((*ix0) < iwx0){ (*ix0) = iwx0; }
-	if ((*ix0) > iwx1){ (*ix0) = iwx1; }//(*ix1) = MIN(MAX(*ix1,wx0),wx1);
-	gline(
-        labs((*ix1)-(*ix0))
-        ,(float)(*ix0),((*ix0)-x1)*dyx + y1
-        ,(float)(*ix1),((*ix1)-x1)*dyx + y1
-    );
-}
-
-void vline (float x0, float y0, float x1, float y1, long *iy0, long *iy1)
-{
-	float dxy;
-
-	dxy = (x1-x0) * grd; //grd = 1/(y1-y0)
-
-		  if (x0 < wx0) ftol((wx0-x0)/dxy+y0,iy0);
-	else if (x0 > wx1) ftol((wx1-x0)/dxy+y0,iy0);
-	else ftol(y0,iy0);
-		  if (x1 < wx0) ftol((wx0-x0)/dxy+y0,iy1);
-	else if (x1 > wx1) ftol((wx1-x0)/dxy+y0,iy1);
-	else ftol(y1,iy1);
-	if ((*iy0) < iwy0) (*iy0) = iwy0;
-	if ((*iy0) > iwy1) (*iy0) = iwy1;
-	gline(labs((*iy1)-(*iy0)),((*iy0)-y1)*dxy + x1,(float)(*iy0),
-									  ((*iy1)-y1)*dxy + x1,(float)(*iy1));
-}
-
-#if (USEZBUFFER != 1) //functions without Z Buffer
-
-/** Horizontal render with no zbuffer */
-void hrendnoz (long sx, long sy, long p1, long plc, long incr, long j)
-{
-	sy = ylookup[sy]+frameplace; p1 = sy+(p1<<2); sy += (sx<<2);
-	do
-	{
-		*(long *)sy = angstart[plc>>16][j].col;
-		plc += incr; sy += 4;
-	} while (sy != p1);
-}
-/** Vertical render with no zbuffer */
-void vrendnoz (long sx, long sy, long p1, long iplc, long iinc)
-{
-	sy = ylookup[sy]+(sx<<2)+frameplace;
-	for(;sx<p1;sx++)
-	{
-		*(long *)sy = angstart[uurend[sx]>>16][iplc].col;
-		uurend[sx] += uurend[sx+MAXXDIM]; sy += 4; iplc += iinc;
-	}
-}
-
-#else //functions with Z Buffer
-/** Horizontal render with zbuffer */
-void hrendz (long sx, long sy, long p1, long plc, long incr, long j)
-{
-	long p0, i; float dirx, diry;
-	p0 = ylookup[sy]+(sx<<2)+frameplace;
-	p1 = ylookup[sy]+(p1<<2)+frameplace;
-	dirx = optistrx*(float)sx + optiheix*(float)sy + optiaddx;
-	diry = optistry*(float)sx + optiheiy*(float)sy + optiaddy;
-	i = zbufoff;
-	do
-	{
-		*(long *)p0 = angstart[plc>>16][j].col;
-		*(float *)(p0+i) = (float)angstart[plc>>16][j].dist/sqrt(dirx*dirx+diry*diry);
-		dirx += optistrx; diry += optistry; plc += incr; p0 += 4;
-	} while (p0 != p1);
-}
-/** Vertical render with zbuffer */
-void vrendz (long sx, long sy, long p1, long iplc, long iinc)
-{
-	float dirx, diry; long i, p0;
-	p0 = ylookup[sy]+(sx<<2)+frameplace;
-	p1 = ylookup[sy]+(p1<<2)+frameplace;
-	dirx = optistrx*(float)sx + optiheix*(float)sy + optiaddx;
-	diry = optistry*(float)sx + optiheiy*(float)sy + optiaddy;
-	i = zbufoff;
-	while (p0 < p1)
-	{
-		*(long *)p0 = angstart[uurend[sx]>>16][iplc].col;
-		*(float *)(p0+i) = (float)angstart[uurend[sx]>>16][iplc].dist/sqrt(dirx*dirx+diry*diry);
-		dirx += optistrx; diry += optistry; uurend[sx] += uurend[sx+MAXXDIM]; p0 += 4; iplc += iinc; sx++;
-	}
-}
-/** Horizontal render with zbuffer + fog */
-void hrendzfog (long sx, long sy, long p1, long plc, long incr, long j)
-{
-	long p0, i, k, l; float dirx, diry;
-	p0 = ylookup[sy]+(sx<<2)+frameplace;
-	p1 = ylookup[sy]+(p1<<2)+frameplace;
-	dirx = optistrx*(float)sx + optiheix*(float)sy + optiaddx;
-	diry = optistry*(float)sx + optiheiy*(float)sy + optiaddy;
-	i = zbufoff;
-	do
-	{
-		k = angstart[plc>>16][j].col;
-		l = angstart[plc>>16][j].dist;
-		l = (foglut[l>>20]&32767);
-		*(long *)p0 = ((((( vx5.fogcol     &255)-( k     &255))*l)>>15)    ) +
-						  ((((((vx5.fogcol>> 8)&255)-((k>> 8)&255))*l)>>15)<< 8) +
-						  ((((((vx5.fogcol>>16)&255)-((k>>16)&255))*l)>>15)<<16)+k;
-		*(float *)(p0+i) = (float)angstart[plc>>16][j].dist/sqrt(dirx*dirx+diry*diry);
-		dirx += optistrx; diry += optistry; plc += incr; p0 += 4;
-	} while (p0 != p1);
-}
-/** Vertical render with zbuffer + fog */
-void vrendzfog (long sx, long sy, long p1, long iplc, long iinc)
-{
-	float dirx, diry; long i, k, l, p0;
-	p0 = ylookup[sy]+(sx<<2)+frameplace;
-	p1 = ylookup[sy]+(p1<<2)+frameplace;
-	dirx = optistrx*(float)sx + optiheix*(float)sy + optiaddx;
-	diry = optistry*(float)sx + optiheiy*(float)sy + optiaddy;
-	i = zbufoff;
-	while (p0 < p1)
-	{
-		k = angstart[uurend[sx]>>16][iplc].col;
-		l = angstart[uurend[sx]>>16][iplc].dist;
-		l = (foglut[l>>20]&32767);
-		*(long *)p0 = ((((( vx5.fogcol     &255)-( k     &255))*l)>>15)    ) +
-						  ((((((vx5.fogcol>> 8)&255)-((k>> 8)&255))*l)>>15)<< 8) +
-						  ((((((vx5.fogcol>>16)&255)-((k>>16)&255))*l)>>15)<<16)+k;
-		*(float *)(p0+i) = (float)angstart[uurend[sx]>>16][iplc].dist/sqrt(dirx*dirx+diry*diry);
-		dirx += optistrx; diry += optistry; uurend[sx] += uurend[sx+MAXXDIM]; p0 += 4; iplc += iinc; sx++;
-	}
-}
-
-#endif
 
 /** Set global camera position for future voxlap5 engine calls.
  *  Functions that depend on this include: opticast, drawsprite, spherefill, etc...
@@ -2107,6 +2037,7 @@ void setcamera (dpoint3d *ipo, dpoint3d *ist, dpoint3d *ihe, dpoint3d *ifo,
 		ginor[i].z = gcorn[i].x*gcorn[j].y - gcorn[i].y*gcorn[j].x;
 	}
 }
+
 
 /** Render VXL screen (this is where it all happens!)
  *
@@ -2346,6 +2277,8 @@ void opticast ()
 		}
 	}
 }
+
+
 /**
 	//0: asm temp for current x
 	//1: asm temp for current y
@@ -2379,6 +2312,7 @@ void setsideshades (char sto, char sbo, char sle, char sri, char sup, char sdo)
 	}
 	else vx5.sideshademode = 1;
 }
+
 
 double findmaxcr (double px, double py, double pz, double cr)
 {
@@ -4172,672 +4106,6 @@ void setkvx (const char *filename, long ox, long oy, long oz, long rot, long bak
 	updatebbox(vx5.minx,vx5.miny,vx5.minz,vx5.maxx,vx5.maxy,vx5.maxz,0);
 
 	fclose(fp);
-}
-
-	//This here for game programmer only. I would never use it!
-/**
- * Draw a pixel on the screen.
- */
-void drawpoint2d (long sx, long sy, long col)
-{
-	if ((unsigned long)sx >= (unsigned long)xres_voxlap) return;
-	if ((unsigned long)sy >= (unsigned long)yres_voxlap) return;
-	*(long *)(ylookup[sy]+(sx<<2)+frameplace) = col;
-}
-
-	//This here for game programmer only. I would never use it!
-/**
- * Draw a pixel on the screen. (specified by VXL location) Ignores Z-buffer.
- */
-void drawpoint3d (float x0, float y0, float z0, long col)
-{
-	float ox, oy, oz, r;
-	long x, y;
-
-	ox = x0-gipos.x; oy = y0-gipos.y; oz = z0-gipos.z;
-	z0 = ox*gifor.x + oy*gifor.y + oz*gifor.z; if (z0 < SCISDIST) return;
-	r = 1.0f / z0;
-	x0 = (ox*gistr.x + oy*gistr.y + oz*gistr.z)*gihz;
-	y0 = (ox*gihei.x + oy*gihei.y + oz*gihei.z)*gihz;
-
-	ftol(x0*r + gihx-.5f,&x); if ((unsigned long)x >= (unsigned long)xres_voxlap) return;
-	ftol(y0*r + gihy-.5f,&y); if ((unsigned long)y >= (unsigned long)yres_voxlap) return;
-	*(long *)(ylookup[y]+(x<<2)+frameplace) = col;
-}
-
-/**
- * Transform & Project a 3D point to a 2D screen coordinate. This could be
- * used for billboard sprites.
- *
- * @param x VXL location to transform & project
- * @param y VXL location to transform & project
- * @param z VXL location to transform & project
- * @param px screen coordinate returned
- * @param py screen coordinate returned
- * @param sx depth of screen coordinate
- * @return 1 if visible else 0
- */
-long project2d (float x, float y, float z, float *px, float *py, float *sx)
-{
-	float ox, oy, oz;
-
-	ox = x-gipos.x; oy = y-gipos.y; oz = z-gipos.z;
-	z = ox*gifor.x + oy*gifor.y + oz*gifor.z; if (z < SCISDIST) return(0);
-
-	z = gihz / z;
-	*px = (ox*gistr.x + oy*gistr.y + oz*gistr.z)*z + gihx;
-	*py = (ox*gihei.x + oy*gihei.y + oz*gihei.z)*z + gihy;
-	*sx = z;
-	return(1);
-}
-
-/**
- * Draws a 32-bit color texture from memory to the screen. This is the
- * low-level function used to draw text loaded from a PNG,JPG,TGA,GIF.
- *
- * @param tf pointer to top-left corner of SOURCE picture
- * @param tp pitch (bytes per line) of the SOURCE picture
- * @param tx dimensions of the SOURCE picture
- * @param ty dimensions of the SOURCE picture
- * @param tcx texel (<<16) at (sx,sy). Set this to (0,0) if you want (sx,sy)
- *            to be the top-left corner of the destination
- * @param tcy texel (<<16) at (sx,sy). Set this to (0,0) if you want (sx,sy)
- *            to be the top-left corner of the destination
- * @param sx screen coordinate (matches the texture at tcx,tcy)
- * @param sy screen coordinate (matches the texture at tcx,tcy)
- * @param xz x&y zoom, all (<<16). Use (65536,65536) for no zoom change
- * @param yz x&y zoom, all (<<16). Use (65536,65536) for no zoom change
- * @param black shade scale (ARGB format). For no effects, use (0,-1)
- *              NOTE: if alphas of black&white are same, then alpha channel ignored
- * @param white shade scale (ARGB format). For no effects, use (0,-1)
- *              NOTE: if alphas of black&white are same, then alpha channel ignored
- */
-void drawtile (long tf, long tp, long tx, long ty, long tcx, long tcy,
-					long sx, long sy, long xz, long yz, long black, long white)
-{
-	long sx0, sy0, sx1, sy1, x0, y0, x1, y1, x, y, u, v, ui, vi, uu, vv;
-	long p, i, j, a;
-
-	#if defined(__GNUC__) && !defined(NOASM) //only for gcc inline asm
-	register lpoint2d reg0 asm("mm0");
-	register lpoint2d reg1 asm("mm1");
-	register lpoint2d reg2 asm("mm2");
-	//register lpoint2d reg3 asm("mm3");
-	register lpoint2d reg4 asm("mm4");
-	register lpoint2d reg5 asm("mm5");
-	register lpoint2d reg6 asm("mm6");
-	register lpoint2d reg7 asm("mm7");
-	#endif
-
-	if (!tf) return;
-	sx0 = sx - mulshr16(tcx,xz); sx1 = sx0 + xz*tx;
-	sy0 = sy - mulshr16(tcy,yz); sy1 = sy0 + yz*ty;
-	x0 = MAX((sx0+65535)>>16,0); x1 = MIN((sx1+65535)>>16,xres_voxlap);
-	y0 = MAX((sy0+65535)>>16,0); y1 = MIN((sy1+65535)>>16,yres_voxlap);
-	ui = shldiv16(65536,xz); u = mulshr16(-sx0,ui);
-	vi = shldiv16(65536,yz); v = mulshr16(-sy0,vi);
-	if (!((black^white)&0xff000000)) //Ignore alpha
-	{
-		for(y=y0,vv=y*vi+v;y<y1;y++,vv+=vi)
-		{
-			p = ylookup[y] + frameplace; j = (vv>>16)*tp + tf;
-			for(x=x0,uu=x*ui+u;x<x1;x++,uu+=ui)
-			*(long *)((x<<2)+p) = *(long *)(((uu>>16)<<2) + j);
-		}
-	}
-	else //Use alpha for masking
-	{
-		//Init for black/white code
-		#if defined(__GNUC__) && !defined(NOASM) //gcc inline asm
-		__asm__ __volatile__
-		(
-			"pxor	%[y7], %[y7]\n"
-			"movd	%[w], %[y5]\n"
-			"movd	%[b], %[y4]\n"
-			"punpcklbw	%[y7], %[y5]\n"   //mm5: [00Wa00Wr00Wg00Wb]
-			"punpcklbw	%[y7], %[y4]\n"   //mm4: [00Ba00Br00Bg00Bb]
-			"psubw	%[y4], %[y5]\n"       //mm5: each word range: -255 to 255
-			"movq	%[y5], %[y0]\n"       //if (? == -255) ? = -256;
-			"movq	%[y5], %[y1]\n"       //if (? ==  255) ? =  256;
-			"pcmpeqw	%c[skp], %[y0]\n" //if (mm0.w[#] == 0x00ff) mm0.w[#] = 0xffff
-			"pcmpeqw	%c[skn], %[y1]\n" //if (mm1.w[#] == 0xff01) mm1.w[#] = 0xffff
-			"psubw	%[y5], %[y0]\n"
-			"paddw	%[y5], %[y1]\n"
-			"psllw	$4, %[y5]\n"          //mm5: [-WBa-WBr-WBg-WBb]
-			"movq	%c[mask], %[y6]\n"
-			: [y0] "=y" (reg0), [y1] "=y" (reg1),
-			  [y4] "=y" (reg4), [y5] "=y" (reg5),
-			  [y6] "=y" (reg6), [y7] "=y" (reg7)
-			: [w] "g" (white), [skp] "p" (&mskp255),
-			  [b] "g" (black), [skn] "p" (&mskn255),
-			  [mask] "p" (&rgbmask64)
-			:
-		);
-		#elif defined(_MSC_VER) && !defined(NOASM) //msvc inline asm
-		_asm
-		{
-			pxor	mm7, mm7
-			movd	mm5, white
-			movd	mm4, black
-			punpcklbw	mm5, mm7 //mm5: [00Wa00Wr00Wg00Wb]
-			punpcklbw	mm4, mm7 //mm4: [00Ba00Br00Bg00Bb]
-			psubw	mm5, mm4     //mm5: each word range: -255 to 255
-			movq	mm0, mm5     //if (? == -255) ? = -256;
-			movq	mm1, mm5     //if (? ==  255) ? =  256;
-			pcmpeqw	mm0, mskp255 //if (mm0.w[#] == 0x00ff) mm0.w[#] = 0xffff
-			pcmpeqw	mm1, mskn255 //if (mm1.w[#] == 0xff01) mm1.w[#] = 0xffff
-			psubw	mm5, mm0
-			paddw	mm5, mm1
-			psllw	mm5, 4       //mm5: [-WBa-WBr-WBg-WBb]
-			movq	mm6, rgbmask64
-		}
-		#else
-		#error NO C Equivalent defined
-		#endif //no C equivalent here
-		for(y=y0,vv=y*vi+v;y<y1;y++,vv+=vi)
-		{
-			p = ylookup[y] + frameplace; j = (vv>>16)*tp + tf;
-			for(x=x0,uu=x*ui+u;x<x1;x++,uu+=ui)
-			{
-				i = *(long *)(((uu>>16)<<2) + j);
-
-				#if defined(__GNUC__) && !defined(NOASM) //gcc inline asm
-				__asm__ __volatile__
-				(
-					"punpcklbw	%[y7], %[y0]\n" //mm1: [00Aa00Rr00Gg00Bb]
-					"psllw	$4, %[y0]\n"        //mm1: [0Aa00Rr00Gg00Bb0]
-					"pmulhw	%[y5], %[y0]\n"     //mm1: [--Aa--Rr--Gg--Bb]
-					"paddw	%[y4], %[y0]\n"     //mm1: [00Aa00Rr00Gg00Bb]
-					"movq	%[y0], %[y1]\n"
-					"packuswb	%[y0], %[y0]\n"  //mm1: [AaRrGgBbAaRrGgBb]
-					: [y0] "+y" (i),    [y1] "+y" (reg1), [y7] "+y" (reg7),
-					  [y4] "+y" (reg4), [y5] "+y" (reg5)
-					:
-					:
-				);
-				#elif defined(_MSC_VER) && !defined(NOASM)
-				_asm
-				{
-					movd	mm0, i       //mm1: [00000000AaRrGgBb]
-					punpcklbw	mm0, mm7 //mm1: [00Aa00Rr00Gg00Bb]
-					psllw	mm0, 4       //mm1: [0Aa00Rr00Gg00Bb0]
-					pmulhw	mm0, mm5     //mm1: [--Aa--Rr--Gg--Bb]
-					paddw	mm0, mm4     //mm1: [00Aa00Rr00Gg00Bb]
-					movq	mm1, mm0
-					packuswb	mm0, mm0 //mm1: [AaRrGgBbAaRrGgBb]
-					movd	i, mm0
-				}
-				#else // C Default
-				((uint8_t *)&i)[0] = ((uint8_t *)&i)[0] * (((uint8_t *)&white)[0] - ((uint8_t *)&black)[0])/256 + ((uint8_t *)&black)[0];
-				((uint8_t *)&i)[1] = ((uint8_t *)&i)[1] * (((uint8_t *)&white)[1] - ((uint8_t *)&black)[1])/256 + ((uint8_t *)&black)[1];
-				((uint8_t *)&i)[2] = ((uint8_t *)&i)[2] * (((uint8_t *)&white)[2] - ((uint8_t *)&black)[2])/256 + ((uint8_t *)&black)[2];
-				((uint8_t *)&i)[3] = ((uint8_t *)&i)[3] * (((uint8_t *)&white)[3] - ((uint8_t *)&black)[3])/256 + ((uint8_t *)&black)[3];
-				#endif
-
-					//a = (((unsigned long)i)>>24);
-					//if (!a) continue;
-					//if (a == 255) { *(long *)((x<<2)+p) = i; continue; }
-				if ((unsigned long)(i+0x1000000) < 0x2000000)
-				{
-					if (i < 0) *(long *)((x<<2)+p) = i;
-					continue;
-				}
-				#if defined(__GNUC__) && !defined(NOASM) //gcc inline asm
-				__asm__ __volatile__
-				(
-					//mm0 = (mm1-mm0)*a + mm0
-					"lea	(%[d],%[a],4), %[a]\n"
-					"movd	(%[a]), %[y0]\n"       //mm0: [00000000AaRrGgBb]
-					//"movd	mm1, i\n"                //mm1: [00000000AaRrGgBb]
-					"pand	%[y6], %[y0]\n"        //zero alpha from screen pixel
-					"punpcklbw	%[y7], %[y0]\n"    //mm0: [00Aa00Rr00Gg00Bb]
-					//"punpcklbw	mm1, mm7\n"      //mm1: [00Aa00Rr00Gg00Bb]
-					"psubw	%[y0], %[y1]\n"        //mm1: [--Aa--Rr--Gg--Bb] range:+-255
-					"psllw	$4, %[y1]\n"           //mm1: [-Aa0-Rr0-Gg0-Bb0]
-					"pshufw	$0xff, %[y1], %[y2]\n" //mm2: [-Aa0-Aa0-Aa0-Aa0]
-					"pmulhw	%[y2], %[y1]\n"
-					//"mov	edx, a\n"                //alphalookup[i] = i*0x001000100010;
-					//"pmulhw	mm1, alphalookup[edx*8]\n"
-					"paddw	%[y1], %[y0]\n"
-					"packuswb	%[y0], %[y0]\n"
-					"movd	%[y0], (%[a])\n"
-					: [y0] "+y" (reg0), [y1] "+y" (reg1),
-					  [y2] "+y" (reg2),
-					  [y6] "+y" (reg6), [y7] "+y" (reg7)
-					: [a] "r" (x), [d] "r" (p)
-					:
-				);
-				#elif defined(_MSC_VER) && !defined(NOASM)
-				_asm
-				{
-					mov eax, x            //mm0 = (mm1-mm0)*a + mm0
-					mov edx, p
-					lea eax, [eax*4+edx]
-					movd mm0, [eax]       //mm0: [00000000AaRrGgBb]
-					//movd mm1, i           //mm1: [00000000AaRrGgBb]
-					pand mm0, mm6         //zero alpha from screen pixel
-					punpcklbw mm0, mm7    //mm0: [00Aa00Rr00Gg00Bb]
-					//punpcklbw mm1, mm7    //mm1: [00Aa00Rr00Gg00Bb]
-					psubw mm1, mm0        //mm1: [--Aa--Rr--Gg--Bb] range:+-255
-					psllw mm1, 4          //mm1: [-Aa0-Rr0-Gg0-Bb0]
-					pshufw mm2, mm1, 0xff //mm2: [-Aa0-Aa0-Aa0-Aa0]
-					pmulhw mm1, mm2
-					//mov edx, a            //alphalookup[i] = i*0x001000100010;
-					//pmulhw mm1, alphalookup[edx*8]
-					paddw mm0, mm1
-					packuswb mm0, mm0
-					movd [eax], mm0
-				}
-				#else // C Default
-				#error No C Default yet defined
-				#endif
-			}
-		}
-		clearMMX();
-	}
-}
-/**
- * Draw a 2d line on the screen
- */
-void drawline2d (float x1, float y1, float x2, float y2, long col)
-{
-	float dx, dy, fxresm1, fyresm1;
-	long i, j, incr, ie;
-
-	dx = x2-x1; dy = y2-y1; if ((dx == 0) && (dy == 0)) return;
-	fxresm1 = (float)xres_voxlap-.5; fyresm1 = (float)yres_voxlap-.5;
-	if (x1 >= fxresm1) { if (x2 >= fxresm1) return; y1 += (fxresm1-x1)*dy/dx; x1 = fxresm1; }
-	else if (x1 < 0) { if (x2 < 0) return; y1 += (0-x1)*dy/dx; x1 = 0; }
-	if (x2 >= fxresm1) { y2 += (fxresm1-x2)*dy/dx; x2 = fxresm1; }
-	else if (x2 < 0) { y2 += (0-x2)*dy/dx; x2 = 0; }
-	if (y1 >= fyresm1) { if (y2 >= fyresm1) return; x1 += (fyresm1-y1)*dx/dy; y1 = fyresm1; }
-	else if (y1 < 0) { if (y2 < 0) return; x1 += (0-y1)*dx/dy; y1 = 0; }
-	if (y2 >= fyresm1) { x2 += (fyresm1-y2)*dx/dy; y2 = fyresm1; }
-	else if (y2 < 0) { x2 += (0-y2)*dx/dy; y2 = 0; }
-
-	if (fabs(dx) >= fabs(dy))
-	{
-		if (x2 > x1) { ftol(x1,&i); ftol(x2,&ie); } else { ftol(x2,&i); ftol(x1,&ie); }
-		if (i < 0) i = 0; if (ie >= xres_voxlap) ie = xres_voxlap-1;
-		ftol(1048576.0*dy/dx,&incr); ftol(y1*1048576.0+((float)i+.5f-x1)*incr,&j);
-		for(;i<=ie;i++,j+=incr)
-			if ((unsigned long)(j>>20) < (unsigned long)yres_voxlap)
-				*(long *)(ylookup[j>>20]+(i<<2)+frameplace) = col;
-	}
-	else
-	{
-		if (y2 > y1) { ftol(y1,&i); ftol(y2,&ie); } else { ftol(y2,&i); ftol(y1,&ie); }
-		if (i < 0) i = 0; if (ie >= yres_voxlap) ie = yres_voxlap-1;
-		ftol(1048576.0*dx/dy,&incr); ftol(x1*1048576.0+((float)i+.5f-y1)*incr,&j);
-		for(;i<=ie;i++,j+=incr)
-			if ((unsigned long)(j>>20) < (unsigned long)xres_voxlap)
-				*(long *)(ylookup[i]+((j>>18)&~3)+frameplace) = col;
-	}
-}
-
-#if (USEZBUFFER == 1)
-void drawline2dclip (float x1, float y1, float x2, float y2, float rx0, float ry0, float rz0, float rx1, float ry1, float rz1, long col)
-{
-	float dx, dy, fxresm1, fyresm1, Za, Zb, Zc, z;
-	long i, j, incr, ie, p;
-
-	dx = x2-x1; dy = y2-y1; if ((dx == 0) && (dy == 0)) return;
-	fxresm1 = (float)xres_voxlap-.5; fyresm1 = (float)yres_voxlap-.5;
-	if (x1 >= fxresm1) { if (x2 >= fxresm1) return; y1 += (fxresm1-x1)*dy/dx; x1 = fxresm1; }
-	else if (x1 < 0) { if (x2 < 0) return; y1 += (0-x1)*dy/dx; x1 = 0; }
-	if (x2 >= fxresm1) { y2 += (fxresm1-x2)*dy/dx; x2 = fxresm1; }
-	else if (x2 < 0) { y2 += (0-x2)*dy/dx; x2 = 0; }
-	if (y1 >= fyresm1) { if (y2 >= fyresm1) return; x1 += (fyresm1-y1)*dx/dy; y1 = fyresm1; }
-	else if (y1 < 0) { if (y2 < 0) return; x1 += (0-y1)*dx/dy; y1 = 0; }
-	if (y2 >= fyresm1) { x2 += (fyresm1-y2)*dx/dy; y2 = fyresm1; }
-	else if (y2 < 0) { x2 += (0-y2)*dx/dy; y2 = 0; }
-
-	if (fabs(dx) >= fabs(dy))
-	{
-			//Original equation: (rz1*t+rz0) / (rx1*t+rx0) = gihz/(sx-gihx)
-		Za = gihz*(rx0*rz1 - rx1*rz0); Zb = rz1; Zc = -gihx*rz1 - gihz*rx1;
-
-		if (x2 > x1) { ftol(x1,&i); ftol(x2,&ie); } else { ftol(x2,&i); ftol(x1,&ie); }
-		if (i < 0) i = 0; if (ie >= xres_voxlap) ie = xres_voxlap-1;
-		ftol(1048576.0*dy/dx,&incr); ftol(y1*1048576.0+((float)i+.5f-x1)*incr,&j);
-		for(;i<=ie;i++,j+=incr)
-			if ((unsigned long)(j>>20) < (unsigned long)yres_voxlap)
-			{
-				p = ylookup[j>>20]+(i<<2)+frameplace;
-				z = Za / ((float)i*Zb + Zc);
-				if (*(long *)&z >= *(long *)(p+zbufoff)) continue;
-				*(long *)(p+zbufoff) = *(long *)&z;
-				*(long *)p = col;
-			}
-	}
-	else
-	{
-		Za = gihz*(ry0*rz1 - ry1*rz0); Zb = rz1; Zc = -gihy*rz1 - gihz*ry1;
-
-		if (y2 > y1) { ftol(y1,&i); ftol(y2,&ie); } else { ftol(y2,&i); ftol(y1,&ie); }
-		if (i < 0) i = 0; if (ie >= yres_voxlap) ie = yres_voxlap-1;
-		ftol(1048576.0*dx/dy,&incr); ftol(x1*1048576.0+((float)i+.5f-y1)*incr,&j);
-		for(;i<=ie;i++,j+=incr)
-			if ((unsigned long)(j>>20) < (unsigned long)xres_voxlap)
-			{
-				p = ylookup[i]+((j>>18)&~3)+frameplace;
-				z = Za / ((float)i*Zb + Zc);
-				if (*(long *)&z >= *(long *)(p+zbufoff)) continue;
-				*(long *)(p+zbufoff) = *(long *)&z;
-				*(long *)p = col;
-			}
-	}
-}
-#endif
-/**
- * Draw a 3d line on the screen (specified by VXL location).
- * Line is automatically Z-buffered into the map.
- * Set alpha of col to non-zero to disable Z-buffering
- */
-void drawline3d (float x0, float y0, float z0, float x1, float y1, float z1, long col)
-{
-	float ox, oy, oz, r;
-
-	ox = x0-gipos.x; oy = y0-gipos.y; oz = z0-gipos.z;
-	x0 = ox*gistr.x + oy*gistr.y + oz*gistr.z;
-	y0 = ox*gihei.x + oy*gihei.y + oz*gihei.z;
-	z0 = ox*gifor.x + oy*gifor.y + oz*gifor.z;
-
-	ox = x1-gipos.x; oy = y1-gipos.y; oz = z1-gipos.z;
-	x1 = ox*gistr.x + oy*gistr.y + oz*gistr.z;
-	y1 = ox*gihei.x + oy*gihei.y + oz*gihei.z;
-	z1 = ox*gifor.x + oy*gifor.y + oz*gifor.z;
-
-	if (z0 < SCISDIST)
-	{
-		if (z1 < SCISDIST) return;
-		r = (SCISDIST-z0)/(z1-z0); z0 = SCISDIST;
-		x0 += (x1-x0)*r; y0 += (y1-y0)*r;
-	}
-	else if (z1 < SCISDIST)
-	{
-		r = (SCISDIST-z1)/(z1-z0); z1 = SCISDIST;
-		x1 += (x1-x0)*r; y1 += (y1-y0)*r;
-	}
-
-	ox = gihz/z0;
-	oy = gihz/z1;
-
-#if (USEZBUFFER == 1)
-	if (!(col&0xff000000))
-		drawline2dclip(x0*ox+gihx,y0*ox+gihy,x1*oy+gihx,y1*oy+gihy,x0,y0,z0,x1-x0,y1-y0,z1-z0,col);
-	else
-		drawline2d(x0*ox+gihx,y0*ox+gihy,x1*oy+gihx,y1*oy+gihy,col&0xffffff);
-#else
-	drawline2d(x0*ox+gihx,y0*ox+gihy,x1*oy+gihx,y1*oy+gihy,col);
-#endif
-}
-/**
- * Draw a solid-color filled sphere on screen (useful for particle effects)
- * @param ox center of sphere
- * @param oy center of sphere
- * @param oz center of sphere
- * @param bakrad radius of sphere. NOTE: if bakrad is negative, it uses
- *               Z-buffering with abs(radius), otherwise no Z-buffering
- * @param col 32-bit color of sphere
- */
-void drawspherefill (float ox, float oy, float oz, float bakrad, long col)
-{
-	float a, b, c, d, e, f, g, h, t, cxcx, cycy, Za, Zb, Zc, ysq;
-	float r2a, rr2a, nb, nbi, isq, isqi, isqii, cx, cy, cz, rad;
-	long sx1, sy1, sx2, sy2, p, sx;
-
-	rad = fabs(bakrad);
-#if (USEZBUFFER == 0)
-	bakrad = rad;
-#endif
-
-	ox -= gipos.x; oy -= gipos.y; oz -= gipos.z;
-	cz = ox*gifor.x + oy*gifor.y + oz*gifor.z; if (cz < SCISDIST) return;
-	cx = ox*gistr.x + oy*gistr.y + oz*gistr.z;
-	cy = ox*gihei.x + oy*gihei.y + oz*gihei.z;
-
-		//3D Sphere projection (see spherast.txt for derivation) (13 multiplies)
-	cxcx = cx*cx; cycy = cy*cy; g = rad*rad - cxcx - cycy - cz*cz;
-	a = g + cxcx; if (!a) return;
-	b = cx*cy; b += b;
-	c = g + cycy;
-	f = gihx*cx + gihy*cy - gihz*cz;
-	d = -cx*f - gihx*g; d += d;
-	e = -cy*f - gihy*g; e += e;
-	f = f*f + g*(gihx*gihx+gihy*gihy+gihz*gihz);
-
-		//isq = (b*b-4*a*c)yý + (2*b*d-4*a*e)y + (d*d-4*a*f) = 0
-	Za = b*b - a*c*4; if (!Za) return;
-	Zb = b*d*2 - a*e*4;
-	Zc = d*d - a*f*4;
-	ysq = Zb*Zb - Za*Zc*4; if (ysq <= 0) return;
-	t = sqrt(ysq); //fsqrtasm(&ysq,&t);
-	h = .5f / Za;
-	ftol((-Zb+t)*h,&sy1); if (sy1 < 0) sy1 = 0;
-	ftol((-Zb-t)*h,&sy2); if (sy2 > yres_voxlap) sy2 = yres_voxlap;
-	if (sy1 >= sy2) return;
-	r2a = .5f / a; rr2a = r2a*r2a;
-	nbi = -b*r2a; nb = nbi*(float)sy1-d*r2a;
-	h = Za*(float)sy1; isq = ((float)sy1*(h+Zb)+Zc)*rr2a;
-	isqi = (h+h+Za+Zb)*rr2a; isqii = Za*rr2a*2;
-
-	p = ylookup[sy1]+frameplace;
-	sy2 = ylookup[sy2]+frameplace;
-#if (USEZBUFFER == 1)
-	if ((*(long *)&bakrad) >= 0)
-	{
-#endif
-		while (1)  //(a)xý + (b*y+d)x + (c*y*y+e*y+f) = 0
-		{
-			t = sqrt(isq); //fsqrtasm(&isq,&t);
-			ftol(nb-t,&sx1); if (sx1 < 0) sx1 = 0;
-			ftol(nb+t,&sx2);
-			sx2 = MIN(sx2,xres_voxlap)-sx1;
-			if (sx2 > 0) clearbuf((void *)((sx1<<2)+p),sx2,col);
-			p += bytesperline; if (p >= sy2) return;
-			isq += isqi; isqi += isqii; nb += nbi;
-		}
-#if (USEZBUFFER == 1)
-	}
-	else
-	{     //Use Z-buffering
-
-		if (ofogdist >= 0) //If fog enabled...
-		{
-			ftol(sqrt(ox*ox + oy*oy),&sx); //Use cylindrical x-y distance for fog
-			if (sx > 2047) sx = 2047;
-			sx = (long)(*(short *)&foglut[sx]);
-			col = ((((( vx5.fogcol     &255)-( col     &255))*sx)>>15)    ) +
-					((((((vx5.fogcol>> 8)&255)-((col>> 8)&255))*sx)>>15)<< 8) +
-					((((((vx5.fogcol>>16)&255)-((col>>16)&255))*sx)>>15)<<16) + col;
-		}
-
-		while (1)  //(a)xý + (b*y+d)x + (c*y*y+e*y+f) = 0
-		{
-			t = sqrt(isq); //fsqrtasm(&isq,&t);
-			ftol(nb-t,&sx1); if (sx1 < 0) sx1 = 0;
-			ftol(nb+t,&sx2);
-			if (sx2 > xres_voxlap) sx2 = xres_voxlap;
-			for(sx=sx1;sx<sx2;sx++)
-				if (*(long *)&cz < *(long *)(p+(sx<<2)+zbufoff))
-				{
-					*(long *)(p+(sx<<2)+zbufoff) = *(long *)&cz;
-					*(long *)(p+(sx<<2)) = col;
-				}
-			sy1++;
-			p += bytesperline; if (p >= sy2) return;
-			isq += isqi; isqi += isqii; nb += nbi;
-		}
-	}
-#endif
-}
-
-/**
- * Draw a texture-mapped quadrilateral to the screen. Drawpicinquad projects
- * the source texture with perspective into the 4 coordinates specified.
- *
- * @param rpic source pointer to top-left corner
- * @param rbpl source pitch (bytes per line)
- * @param rxsiz source dimensions of texture/frame
- * @param rysiz source dimensions of texture/frame
- *
- * @param wpic destination pointer to top-left corner
- * @param wbpl destination pitch (bytes per line)
- * @param wxsiz destination dimensions of texture/frame
- * @param wysiz destination dimensions of texture/frame
- *
- * @param x0 the 4 points of the quadrilateral in the destination texture/frame.
- *           The points must be in loop order.
- * @param x1 the 4 points of the quadrilateral in the destination texture/frame.
- *           The points must be in loop order.
- * @param x2 the 4 points of the quadrilateral in the destination texture/frame.
- *           The points must be in loop order.
- * @param x3 the 4 points of the quadrilateral in the destination texture/frame.
- *           The points must be in loop order.
- *
- * @param y0 the 4 points of the quadrilateral in the destination texture/frame.
- *           The points must be in loop order.
- * @param y1 the 4 points of the quadrilateral in the destination texture/frame.
- *           The points must be in loop order.
- * @param y2 the 4 points of the quadrilateral in the destination texture/frame.
- *           The points must be in loop order.
- * @param y3 the 4 points of the quadrilateral in the destination texture/frame.
- *           The points must be in loop order.
- */
-void drawpicinquad (long rpic, long rbpl, long rxsiz, long rysiz,
-						  long wpic, long wbpl, long wxsiz, long wysiz,
-						  float x0, float y0, float x1, float y1,
-						  float x2, float y2, float x3, float y3)
-{
-	float px[4], py[4], k0, k1, k2, k3, k4, k5, k6, k7, k8;
-	float t, u, v, dx, dy, l0, l1, m0, m1, m2, n0, n1, n2, r;
-	long i, j, k, l, imin, imax, sx, sxe, sy, sy1, dd, uu, vv, ddi, uui, vvi;
-	long x, xi, *p, *pe, uvmax, iu, iv;
-
-	#if defined(__GNUC__) && !defined(NOASM) //only for gcc inline asm
-	register lpoint2d reg0 asm("mm0");
-	register lpoint2d reg1 asm("mm1");
-	register lpoint2d reg2 asm("mm2");
-	//register lpoint2d reg3 asm("mm3");
-	register lpoint2d reg4 asm("mm4");
-	register lpoint2d reg5 asm("mm5");
-	register lpoint2d reg6 asm("mm6");
-	register lpoint2d reg7 asm("mm7");
-	#endif
-
-	px[0] = x0; px[1] = x1; px[2] = x2; px[3] = x3;
-	py[0] = y0; py[1] = y1; py[2] = y2; py[3] = y3;
-
-		//This code projects 4 point2D's into a t,u,v screen-projection matrix
-		//
-		//Derivation: (given 4 known (sx,sy,kt,ku,kv) pairs, solve for k0-k8)
-		//   kt = k0*sx + k1*sy + k2
-		//   ku = k3*sx + k4*sy + k5
-		//   kv = k6*sx + k7*sy + k8
-		//0 = (k3*x0 + k4*y0 + k5) / (k0*x0 + k1*y0 + k2) / rxsiz
-		//0 = (k6*x0 + k7*y0 + k8) / (k0*x0 + k1*y0 + k2) / rysiz
-		//1 = (k3*x1 + k4*y1 + k5) / (k0*x1 + k1*y1 + k2) / rxsiz
-		//0 = (k6*x1 + k7*y1 + k8) / (k0*x1 + k1*y1 + k2) / rysiz
-		//1 = (k3*x2 + k4*y2 + k5) / (k0*x2 + k1*y2 + k2) / rxsiz
-		//1 = (k6*x2 + k7*y2 + k8) / (k0*x2 + k1*y2 + k2) / rysiz
-		//0 = (k3*x3 + k4*y3 + k5) / (k0*x3 + k1*y3 + k2) / rxsiz
-		//1 = (k6*x3 + k7*y3 + k8) / (k0*x3 + k1*y3 + k2) / rysiz
-		//   40*, 28+, 1~, 30W
-	k3 = y3 - y0; k4 = x0 - x3; k5 = x3*y0 - x0*y3;
-	k6 = y0 - y1; k7 = x1 - x0; k8 = x0*y1 - x1*y0;
-	n0 = x2*y3 - x3*y2; n1 = x3*y1 - x1*y3; n2 = x1*y2 - x2*y1;
-	l0 = k6*x2 + k7*y2 + k8;
-	l1 = k3*x2 + k4*y2 + k5;
-	t = n0 + n1 + n2; dx = (float)rxsiz*t*l0; dy = (float)rysiz*t*l1;
-	t = l0*l1;
-	l0 *= (k3*x1 + k4*y1 + k5);
-	l1 *= (k6*x3 + k7*y3 + k8);
-	m0 = l1 - t; m1 = l0 - l1; m2 = t - l0;
-	k0 = m0*y1 + m1*y2 + m2*y3;
-	k1 = -(m0*x1 + m1*x2 + m2*x3);
-	k2 = n0*l0 + n1*t + n2*l1;
-	k3 *= dx; k4 *= dx; k5 *= dx;
-	k6 *= dy; k7 *= dy; k8 *= dy;
-
-		//Make sure k's are in good range for conversion to integers...
-	t = fabs(k0);
-	if (fabs(k1) > t) t = fabs(k1);
-	if (fabs(k2) > t) t = fabs(k2);
-	if (fabs(k3) > t) t = fabs(k3);
-	if (fabs(k4) > t) t = fabs(k4);
-	if (fabs(k5) > t) t = fabs(k5);
-	if (fabs(k6) > t) t = fabs(k6);
-	if (fabs(k7) > t) t = fabs(k7);
-	if (fabs(k8) > t) t = fabs(k8);
-	t = -268435456.0 / t;
-	k0 *= t; k1 *= t; k2 *= t;
-	k3 *= t; k4 *= t; k5 *= t;
-	k6 *= t; k7 *= t; k8 *= t;
-	ftol(k0,&ddi);
-
-	imin = 0; imax = 0;
-	for(i=1;i<4;i++)
-	{
-		if (py[i] < py[imin]) imin = i;
-		if (py[i] > py[imax]) imax = i;
-	}
-
-	uvmax = (rysiz-1)*rbpl + (rxsiz<<2);
-
-	i = imax;
-	do
-	{
-		j = ((i+1)&3);
-			//offset would normally be -.5, but need to bias by +1.0
-		ftol(py[j]+.5,&sy); if (sy < 0) sy = 0;
-		ftol(py[i]+.5,&sy1); if (sy1 > wysiz) sy1 = wysiz;
-		if (sy1 > sy)
-		{
-			ftol((px[i]-px[j])*4096.0/(py[i]-py[j]),&xi);
-			ftol(((float)sy-py[j])*(float)xi + px[j]*4096.0 + 4096.0,&x);
-			for(;sy<sy1;sy++,x+=xi) lastx[sy] = (x>>12);
-		}
-		i = j;
-	} while (i != imin);
-	do
-	{
-		j = ((i+1)&3);
-			//offset would normally be -.5, but need to bias by +1.0
-		ftol(py[i]+.5,&sy); if (sy < 0) sy = 0;
-		ftol(py[j]+.5,&sy1); if (sy1 > wysiz) sy1 = wysiz;
-		if (sy1 > sy)
-		{
-			ftol((px[j]-px[i])*4096.0/(py[j]-py[i]),&xi);
-			ftol(((float)sy-py[i])*(float)xi + px[i]*4096.0 + 4096.0,&x);
-			for(;sy<sy1;sy++,x+=xi)
-			{
-				sx = lastx[sy]; if (sx < 0) sx = 0;
-				sxe = (x>>12); if (sxe > wxsiz) sxe = wxsiz;
-				if (sx >= sxe) continue;
-				t = k0*(float)sx + k1*(float)sy + k2; r = 1.0 / t;
-				u = k3*(float)sx + k4*(float)sy + k5; ftol(u*r-.5,&iu);
-				v = k6*(float)sx + k7*(float)sy + k8; ftol(v*r-.5,&iv);
-				ftol(t,&dd);
-				ftol((float)iu*k0 - k3,&uui); ftol((float)iu*t - u,&uu);
-				ftol((float)iv*k0 - k6,&vvi); ftol((float)iv*t - v,&vv);
-				if (k3*t < u*k0) k =    -4; else { uui = -(uui+ddi); uu = -(uu+dd); k =    4; }
-				if (k6*t < v*k0) l = -rbpl; else { vvi = -(vvi+ddi); vv = -(vv+dd); l = rbpl; }
-				iu = iv*rbpl + (iu<<2);
-				p  = (long *)(sy*wbpl+(sx<<2)+wpic);
-				pe = (long *)(sy*wbpl+(sxe<<2)+wpic);
-				do
-				{
-					if ((unsigned long)iu < uvmax) p[0] = *(long *)(rpic+iu);
-					dd += ddi;
-					uu += uui; while (uu < 0) { iu += k; uui -= ddi; uu -= dd; }
-					vv += vvi; while (vv < 0) { iu += l; vvi -= ddi; vv -= dd; }
-					p++;
-				} while (p < pe);
-			}
-		}
-		i = j;
-	} while (i != imax);
 }
 
 //------------------------- SXL parsing code begins --------------------------
@@ -7986,7 +7254,7 @@ void updatelighting (long x0, long y0, long z0, long x1, long y1, long z1)
 //Step 1: Call checkfloatinbox after every "deleting" set* call
 //Step 2: Call dofalls(); at a constant rate in movement code
 
-/** Adds all slabs inside box (inclusive) to "float check" list
+/** Adds all slabs inside an AABB (inclusive) to "float check" list
  *  Takes 6 longs ( which should be 2 vectors ) representing min and max extents
  *  of an AABB.
  *  @param x0
@@ -8068,7 +7336,9 @@ void isnewfloatingchg (long a, long b)
 		ov = v; v = vlst[v].b;
 	}
 }
-
+/** comment  by Lensman ( I have written some code that makes this much faster which
+ *  we can jam in later if needed )
+ */
 long isnewfloating (flstboxtype *flb)
 {
 	float f;
@@ -8447,292 +7717,6 @@ void finishfalls ()
 
 //----------------------------------------------------------------------------
 
-/** @warning This function can evilquit on bad malloc
- * Since voxlap is currently a software renderer and I don't have any system
- * dependent code in it, you must provide it with the frame buffer. You
- * MUST call this once per frame, AFTER startdirectdraw(), but BEFORE any
- * functions that access the frame buffer.
- * @param p pointer to the top-left corner of the frame
- * @param b pitch (bytes per line)
- * @param x frame width
- * @param y frame height
- */
-void voxsetframebuffer (long p, long b, long x, long y)
-{
-	long i;
-
-	frameplace = p;
-	if (x > MAXXDIM) x = MAXXDIM; //This sucks, but it crashes without it
-	if (y > MAXYDIM) y = MAXYDIM;
-
-		//Set global variables used by kv6draw's PIII asm (drawboundcube)
-	qsum1[3] = qsum1[1] = 0x7fff-y; qsum1[2] = qsum1[0] = 0x7fff-x;
-	kv6bytesperline = qbplbpp[1] = b; qbplbpp[0] = 4;
-	kv6frameplace = p - (qsum1[0]*qbplbpp[0] + qsum1[1]*qbplbpp[1]);
-
-	if ((b != ylookup[1]) || (x != xres_voxlap) || (y != yres_voxlap))
-	{
-		bytesperline = b; xres_voxlap = x; yres_voxlap = y; xres4_voxlap = (xres_voxlap<<2);
-		ylookup[0] = 0; for(i=0;i<yres_voxlap;i++) ylookup[i+1] = ylookup[i]+bytesperline;
-		//gihx = gihz = (float)xres_voxlap*.5f; gihy = (float)yres_voxlap*.5f; //BAD!!!
-#if (USEZBUFFER == 1)
-		if ((ylookup[yres_voxlap]+256 > zbuffersiz) || (!zbuffermem))  //Increase Z buffer size if too small
-		{
-			if (zbuffermem) { free(zbuffermem); zbuffermem = 0; }
-			zbuffersiz = ylookup[yres_voxlap]+256;
-			if (!(zbuffermem = (long *)malloc(zbuffersiz))) evilquit("voxsetframebuffer: allocation too big");
-		}
-#endif
-	}
-#if (USEZBUFFER == 1)
-		//zbuffer aligns its memory to the same pixel boundaries as the screen!
-		//WARNING: Pentium 4's L2 cache has severe slowdowns when 65536-64 <= (zbufoff&65535) < 64
-	zbufoff = (((((long)zbuffermem)-frameplace-128)+255)&~255)+128;
-#endif
-	uurend = &uurendmem[((frameplace&4)^(((long)uurendmem)&4))>>2];
-
-	if (vx5.fogcol >= 0)
-	{
-		fogcol = (((int64_t)(vx5.fogcol&0xff0000))<<16) +
-					(((int64_t)(vx5.fogcol&0x00ff00))<< 8) +
-					(((int64_t)(vx5.fogcol&0x0000ff))    );
-
-		if (vx5.maxscandist > 2047) vx5.maxscandist = 2047;
-		if ((vx5.maxscandist != ofogdist) && (vx5.maxscandist > 0))
-		{
-			ofogdist = vx5.maxscandist;
-
-			//foglut[?>>20] = MIN(?*32767/vx5.maxscandist,32767)
-#if 0
-			long j, k, l;
-			j = 0; l = 0x7fffffff/vx5.maxscandist;
-			for(i=0;i<2048;i++)
-			{
-				k = (j>>16); j += l;
-				if (k < 0) break;
-				foglut[i] = (((int64_t)k)<<32)+(((int64_t)k)<<16)+((int64_t)k);
-			}
-			while (i < 2048) foglut[i++] = all32767;
-#else
-			i = 0x7fffffff/vx5.maxscandist;
-			#if defined( __GNUC__) && !defined(NOASM) //gcc inline asm
-
-			__asm__ __volatile__
-			(
-				".intel_syntax noprefix\n"
-				"xor	eax, eax\n"
-				"mov	ecx, -2048*8\n"
-			".Lfogbeg:\n"
-				"movd	mm0, eax\n"
-				"add	eax, edx\n"
-				"jo	short .Lfogend\n"
-				"pshufw	mm0, mm0, 0x55\n"
-				"movq	foglut[ecx+2048*8], mm0\n"
-				"add	ecx, 8\n"
-				"js	short .Lfogbeg\n"
-				"jmp	short .Lfogend2\n"
-			".Lfogend:\n"
-				"movq	mm0, all32767\n"
-			".Lfogbeg2:\n"
-				"movq	foglut[ecx+2048*8], mm0\n"
-				"add	ecx, 8\n"
-				"js	short .Lfogbeg2\n"
-			".Lfogend2:\n"
-				"emms\n"
-				".att_syntax prefix\n"
-				:
-				: [i] "d" (i)
-				: "eax", "ecx", "mm0"
-			);
-			#elif defined(_MSC_VER) && !defined(NOASM)
-			_asm
-			{
-				xor	eax, eax
-				mov	ecx, -2048*8
-				mov	edx, i
-			fogbeg:
-				movd	mm0, eax
-				add	eax, edx
-				jo	short fogend
-				pshufw	mm0, mm0, 0x55
-				movq	foglut[ecx+2048*8], mm0
-				add	ecx, 8
-				js	short fogbeg
-				jmp	short fogend2
-			fogend:
-				movq	mm0, all32767
-			fogbeg2:
-				movq	foglut[ecx+2048*8], mm0
-				add	ecx, 8
-				js	short fogbeg2
-			fogend2:
-				emms
-			}
-			#else // C Default
-			#error No C Default yet defined
-			#endif
-#endif // 0
-		}
-	} else ofogdist = -1;
-
-	if (cputype&(1<<25)) drawboundcubesseinit(); else drawboundcube3dninit();
-}
-
-//------------------------ Simple PNG OUT code begins ------------------------
-FILE *pngofil;
-long pngoxplc, pngoyplc, pngoxsiz, pngoysiz;
-unsigned long pngocrc, pngoadcrc;
-
-long crctab32[256];  //SEE CRC32.C
-#define updatecrc32(c,crc) crc=(crctab32[(crc^c)&255]^(((unsigned)crc)>>8))
-#define updateadl32(c,crc) \
-{  c += (crc&0xffff); if (c   >= 65521) c   -= 65521; \
-	crc = (crc>>16)+c; if (crc >= 65521) crc -= 65521; \
-	crc = (crc<<16)+c; \
-} \
-
-void fputbytes (unsigned long v, long n)
-	{ for(;n;v>>=8,n--) { fputc(v,pngofil); updatecrc32(v,pngocrc); } }
-
-void pngoutopenfile (const char *fnam, long xsiz, long ysiz)
-{
-	long i, j, k;
-	char a[40];
-
-	pngoxsiz = xsiz; pngoysiz = ysiz; pngoxplc = pngoyplc = 0;
-	for(i=255;i>=0;i--)
-	{
-		k = i; for(j=8;j;j--) k = ((unsigned long)k>>1)^((-(k&1))&0xedb88320);
-		crctab32[i] = k;
-	}
-	pngofil = fopen(fnam,"wb");
-	*(long *)&a[0] = 0x474e5089; *(long *)&a[4] = 0x0a1a0a0d;
-	*(long *)&a[8] = 0x0d000000; *(long *)&a[12] = 0x52444849;
-	*(long *)&a[16] = bswap(xsiz); *(long *)&a[20] = bswap(ysiz);
-	*(long *)&a[24] = 0x00000208; *(long *)&a[28] = 0;
-	for(i=12,j=-1;i<29;i++) updatecrc32(a[i],j);
-	*(long *)&a[29] = bswap(j^-1);
-	fwrite(a,37,1,pngofil);
-	pngocrc = 0xffffffff; pngoadcrc = 1;
-	fputbytes(0x54414449,4); fputbytes(0x0178,2);
-}
-
-void pngoutputpixel (long rgbcol)
-{
-	long a[4];
-
-	if (!pngoxplc)
-	{
-		fputbytes(pngoyplc==pngoysiz-1,1);
-		fputbytes(((pngoxsiz*3+1)*0x10001)^0xffff0000,4);
-		fputbytes(0,1); a[0] = 0; updateadl32(a[0],pngoadcrc);
-	}
-	fputbytes(bswap(rgbcol<<8),3);
-	a[0] = (rgbcol>>16)&255; updateadl32(a[0],pngoadcrc);
-	a[0] = (rgbcol>> 8)&255; updateadl32(a[0],pngoadcrc);
-	a[0] = (rgbcol    )&255; updateadl32(a[0],pngoadcrc);
-	pngoxplc++; if (pngoxplc < pngoxsiz) return;
-	pngoxplc = 0; pngoyplc++; if (pngoyplc < pngoysiz) return;
-	fputbytes(bswap(pngoadcrc),4);
-	a[0] = bswap(pngocrc^-1); a[1] = 0; a[2] = 0x444e4549; a[3] = 0x826042ae;
-	fwrite(a,1,16,pngofil);
-	a[0] = bswap(ftell(pngofil)-(33+8)-16);
-	fseek(pngofil,33,SEEK_SET); fwrite(a,1,4,pngofil);
-	fclose(pngofil);
-}
-//------------------------- Simple PNG OUT code ends -------------------------
-
-/** Captures a screenshot of the current frame to disk.
- *  The current frame is defined by the last call to the voxsetframebuffer function.
- *  @note You <b>MUST</b> call this function while video memory is accessible. In
- *  DirectX, that means it MUST only be between a call to startdirectdraw and
- *  stopdirectdraw.
- *  @param fname filename to write to (writes uncompressed .PNG format)
- *  @return 0:always
- */
-long screencapture32bit (const char *fname)
-{
-	long p, x, y;
-
-	pngoutopenfile(fname,xres_voxlap,yres_voxlap);
-	p = frameplace;
-	for(y=0;y<yres_voxlap;y++,p+=bytesperline)
-		for(x=0;x<xres_voxlap;x++)
-			pngoutputpixel(*(long *)(p+(x<<2)));
-
-	return(0);
-}
-
-/** Generates a cubic panorama (skybox) from the given position.
- *  This is an old function that is very slow, but it is pretty cool
- *  being able to view a full panorama screenshot. Unfortunately, it
- *  doesn't draw sprites or the sky.
- *
- *  @param pos VXL map position of camera
- *  @param fname filename to write to (writes uncompressed .PNG format)
- *  @param boxsiz length of side of square. I recommend using 256 or 512 for this.
- *  @return 0:always
- */
-long surroundcapture32bit (dpoint3d *pos, const char *fname, long boxsiz)
-{
-	lpoint3d hit;
-	dpoint3d d;
-	long x, y, hboxsiz, *hind, hdir;
-	float f;
-
-	//Picture layout:
-	//   ÛÛÛÛÛÛúúúú
-	//   úúúúÛÛÛÛÛÛ
-
-	f = 2.0 / (float)boxsiz; hboxsiz = (boxsiz>>1);
-	pngoutopenfile(fname,boxsiz*5,boxsiz*2);
-	for(y=-hboxsiz;y<hboxsiz;y++)
-	{
-		for(x=-hboxsiz;x<hboxsiz;x++) //(1,1,-1) - (-1,1,1)
-		{
-			d.x = -(x+.5)*f; d.y = 1; d.z = (y+.5)*f;
-			hitscan(pos,&d,&hit,&hind,&hdir);
-			if (hind) pngoutputpixel(lightvox(*hind)); else pngoutputpixel(0);
-		}
-		for(x=-hboxsiz;x<hboxsiz;x++) //(-1,1,-1) - (-1,-1,1)
-		{
-			d.x = -1; d.y = -(x+.5)*f; d.z = (y+.5)*f;
-			hitscan(pos,&d,&hit,&hind,&hdir);
-			if (hind) pngoutputpixel(lightvox(*hind)); else pngoutputpixel(0);
-		}
-		for(x=-hboxsiz;x<hboxsiz;x++) //(-1,-1,-1) - (1,-1,1)
-		{
-			d.x = (x+.5)*f; d.y = -1; d.z = (y+.5)*f;
-			hitscan(pos,&d,&hit,&hind,&hdir);
-			if (hind) pngoutputpixel(lightvox(*hind)); else pngoutputpixel(0);
-		}
-		for(x=(boxsiz<<1);x>0;x--) pngoutputpixel(0);
-	}
-	for(y=-hboxsiz;y<hboxsiz;y++)
-	{
-		for(x=(boxsiz<<1);x>0;x--) pngoutputpixel(0);
-		for(x=-hboxsiz;x<hboxsiz;x++) //(-1,-1,1) - (1,1,1)
-		{
-			d.x = (x+.5)*f; d.y = (y+.5)*f; d.z = 1;
-			hitscan(pos,&d,&hit,&hind,&hdir);
-			if (hind) pngoutputpixel(lightvox(*hind)); else pngoutputpixel(0);
-		}
-		for(x=-hboxsiz;x<hboxsiz;x++) //(1,-1,1) - (1,1,-1)
-		{
-			d.x = 1; d.y = (y+.5)*f; d.z = -(x+.5)*f;
-			hitscan(pos,&d,&hit,&hind,&hdir);
-			if (hind) pngoutputpixel(lightvox(*hind)); else pngoutputpixel(0);
-		}
-		for(x=-hboxsiz;x<hboxsiz;x++) //(1,-1,-1) - (-1,1,-1)
-		{
-			d.x = -(x+.5)*f; d.y = (y+.5)*f; d.z = -1;
-			hitscan(pos,&d,&hit,&hind,&hdir);
-			if (hind) pngoutputpixel(lightvox(*hind)); else pngoutputpixel(0);
-		}
-	}
-	return(0);
-}
-
 
 #if 0
 /** @note This doesn't speed it up and it only makes it crash on some computers :/ */
@@ -8989,3 +7973,4 @@ long initvoxlap ()
 	printf("\n");
 	printf("%.2f bytes/column\n",(float)((j+VSID*VSID+l)<<2)/(float)(VSID*VSID));
 #endif
+
