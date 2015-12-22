@@ -1,13 +1,3 @@
-#if 0
-game.exe: game.obj voxlap5.obj v5.obj kplib.obj winmain.obj game.c; link game voxlap5 v5 kplib winmain ddraw.lib dinput.lib ole32.lib dxguid.lib user32.lib gdi32.lib
-game.obj: game.c voxlap5.h sysmain.h; cl /c /J /TP game.c      /Ox /Ob2 /G6Fy /Gs /MD /QIfist
-voxlap5.obj: voxlap5.c voxlap5.h;     cl /c /J /TP voxlap5.c   /Ox /Ob2 /G6Fy /Gs /MD
-v5.obj: v5.asm; ml /c /coff v5.asm
-kplib.obj: kplib.c;                   cl /c /J /TP kplib.c     /Ox /Ob2 /G6Fy /Gs /MD
-winmain.obj: winmain.cpp sysmain.h;   cl /c /J /TP winmain.cpp /Ox /Ob2 /G6Fy /Gs /MD /DUSEKZ /DZOOM_TEST
-!if 0
-#endif
-
 // VOXLAP engine by Ken Silverman (http://advsys.net/ken)
 // This file has been modified from Ken Silverman's original release
 
