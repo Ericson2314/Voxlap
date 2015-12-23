@@ -10,7 +10,7 @@ cd /d %~dp0
 call "C:\Program Files\Microsoft Visual Studio 10.0\VC\bin\vcvars32.bat"
 
 @rem Assembler Choice
-set _AsmName=masm
+set _AsmName=jwasm
 
 
 @rem Compiler Choice
