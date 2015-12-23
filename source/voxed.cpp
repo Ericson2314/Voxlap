@@ -225,9 +225,9 @@ static inline void ftol (float f, long *a)
 		"mov eax, a\n"
 		"fld f\n"
 		"fistpl (%eax)\n"
-}
-#endif
-#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	}
+	#endif
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		mov eax, a
@@ -242,7 +242,7 @@ static inline void dcossin (double a, double *c, double *s)
 	#ifdef __GNUC__ //AT&T SYNTAX ASSEMBLY
 	#endif
 	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
-	_asm
+		_asm
 	{
 		fld a
 		fsincos
@@ -336,7 +336,7 @@ static inline void emms () // inserts opcode emms, used to avoid many compiler c
 	#endif
 	#ifdef _MSC_VER
 	_asm { emms }
-#endif
+	#endif
 }
 
 	//RGB color selection variables
@@ -396,8 +396,8 @@ static inline void rgbcolselinitinc (long a, long b, long c)
 		"punpckldq %mm0, %mm4\n"
 		"movd %eax, %mm5\n"
 	);
-#endif
-#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
+	#endif
+	#ifdef _MSC_VER //MASM SYNTAX ASSEMBLY
 	_asm
 	{
 		mov eax, a
@@ -461,7 +461,7 @@ static inline void rgbcolselrend (long a, long b, long c, long t, long s)
 		punpckldq mm2, mm0
 		movd mm3, eax
 		sub edi, esi
-beg:
+	beg:
 		movq mm0, mm2
 		packuswb mm0, mm3
 		paddd mm2, mm4
@@ -476,7 +476,7 @@ beg:
 		pop esi
 		pop ebx
 	}
-#endif
+	#endif
 }
 
 void initrgbcolselect ()
@@ -655,13 +655,13 @@ static char *loadfileselect (char *mess, char *spec, char *defext)
 	long i;
 	for(i=0;fileselectnam[i];i++) if (fileselectnam[i] == '/') fileselectnam[i] = '\\';
 	do {
-	OPENFILENAME ofn =
-	{
-		sizeof(OPENFILENAME),ghwnd,0,spec,0,0,1,fileselectnam,MAX_PATH,0,0,(char *)(((long)relpathbase)&fileselect1stcall),mess,
-		/*OFN_PATHMUSTEXIST|OFN_FILEMUSTEXIST|*/ OFN_HIDEREADONLY,0,0,defext,0,0,0
-	};
-	fileselect1stcall = 0; //Let windows remember directory after 1st call
-	if (!GetOpenFileName(&ofn)) return(0); else return(fileselectnam);
+		OPENFILENAME ofn =
+		{
+			sizeof(OPENFILENAME),ghwnd,0,spec,0,0,1,fileselectnam,MAX_PATH,0,0,(char *)(((long)relpathbase)&fileselect1stcall),mess,
+			/*OFN_PATHMUSTEXIST|OFN_FILEMUSTEXIST|*/ OFN_HIDEREADONLY,0,0,defext,0,0,0
+		};
+		fileselect1stcall = 0; //Let windows remember directory after 1st call
+		if (!GetOpenFileName(&ofn)) return(0); else return(fileselectnam);
 	} while (0);
 }
 static char *savefileselect (char *mess, char *spec, char *defext)
@@ -669,13 +669,13 @@ static char *savefileselect (char *mess, char *spec, char *defext)
 	long i;
 	for(i=0;fileselectnam[i];i++) if (fileselectnam[i] == '/') fileselectnam[i] = '\\';
 	do {
-	OPENFILENAME ofn =
-	{
-		sizeof(OPENFILENAME),ghwnd,0,spec,0,0,1,fileselectnam,MAX_PATH,0,0,(char *)(((long)relpathbase)&fileselect1stcall),mess,
-		OFN_PATHMUSTEXIST|OFN_FILEMUSTEXIST|OFN_HIDEREADONLY|OFN_OVERWRITEPROMPT,0,0,defext,0,0,0
-	};
-	fileselect1stcall = 0; //Let windows remember directory after 1st call
-	if (!GetSaveFileName(&ofn)) return(0); else return(fileselectnam);
+		OPENFILENAME ofn =
+		{
+			sizeof(OPENFILENAME),ghwnd,0,spec,0,0,1,fileselectnam,MAX_PATH,0,0,(char *)(((long)relpathbase)&fileselect1stcall),mess,
+			OFN_PATHMUSTEXIST|OFN_FILEMUSTEXIST|OFN_HIDEREADONLY|OFN_OVERWRITEPROMPT,0,0,defext,0,0,0
+		};
+		fileselect1stcall = 0; //Let windows remember directory after 1st call
+		if (!GetSaveFileName(&ofn)) return(0); else return(fileselectnam);
 	} while (0);
 }
 #endif
@@ -1560,8 +1560,8 @@ void gridalignline (point3d *p, long daxmov, long gmode)
 		//   Problem: Finding closest point between 2 lines
 		//Treat the line as a cylinder and minimize r
 		//Cylinder equation:
-		//   (x-cx)ı+(y-cy)ı+(z-cz)ı =
-		//   ((x-cx)vx+(y-cx)vy+(z-cz)vz)ı+rı
+		//   (x-cx)Ã½+(y-cy)Ã½+(z-cz)Ã½ =
+		//   ((x-cx)vx+(y-cx)vy+(z-cz)vz)Ã½+rÃ½
 		//
 		//Given: (x,y)      -> curs[editcurs].x, curs[editcurs].y
 		//       (cx,cy,cz) -> ipos.x,ipos.y,ipos.z
@@ -1571,7 +1571,7 @@ void gridalignline (point3d *p, long daxmov, long gmode)
 		//Minimize: (r)
 		//
 		//Solution:
-		//   Step 1: Re-order terms to get r = sqrt(Azı + Bz + C)
+		//   Step 1: Re-order terms to get r = sqrt(AzÃ½ + Bz + C)
 		//   Step 2: Take derivative of r (can ignore sqrt)
 	if (daxmov&1)
 	{
@@ -2001,9 +2001,9 @@ void drawarrows (long xx, long yy, long zz, double iforx, double ifory, long col
 	long x, y, j, k;
 
 		//   V0V1V2V3
-		//H0   ÚÄ¿        (-x,-y)
-		//H1 ÚÄÎÄÅÄ¿ (-y,x) ÄÅÄ (y,-x)
-		//H2 ÀÄÁÄÁÄÙ       (x,y)
+		//H0   ÃšÃ„Â¿        (-x,-y)
+		//H1 ÃšÃ„ÃÃ„Ã…Ã„Â¿ (-y,x) Ã„Ã…Ã„ (y,-x)
+		//H2 Ã€Ã„ÃÃ„ÃÃ„Ã™       (x,y)
 
 	  //KP2
 	if (fabs(iforx) < fabs(ifory)) { x = 0; y = (((ifory < 0)-1)|1); }
@@ -2154,15 +2154,15 @@ void notepaddraw ()
 	else
 	{
 		//     Insert:    Overwrite:
-		//   ÛÛÛÛ  ÛÛÛÛ
-		//       ÛÛ         ÛÛÛÛÛ
-		//       ÛÛ       ÛÛ     ÛÛ
-		//       ÛÛ       ÛÛ     ÛÛ
-		//       []       []     ÛÛ
-		//       ÛÛ       ÛÛ     ÛÛ
-		//       ÛÛ       ÛÛ     ÛÛ
-		//       ÛÛ         ÛÛÛÛÛ
-		//   ÛÛÛÛ  ÛÛÛÛ
+		//   Ã›Ã›Ã›Ã›  Ã›Ã›Ã›Ã›
+		//       Ã›Ã›         Ã›Ã›Ã›Ã›Ã›
+		//       Ã›Ã›       Ã›Ã›     Ã›Ã›
+		//       Ã›Ã›       Ã›Ã›     Ã›Ã›
+		//       []       []     Ã›Ã›
+		//       Ã›Ã›       Ã›Ã›     Ã›Ã›
+		//       Ã›Ã›       Ã›Ã›     Ã›Ã›
+		//       Ã›Ã›         Ã›Ã›Ã›Ã›Ã›
+		//   Ã›Ã›Ã›Ã›  Ã›Ã›Ã›Ã›
 
 		for(i=-2;i<=2;i++)
 		{
@@ -4473,7 +4473,7 @@ void doframe ()
 				dy = (float)curs[i].y-ipos.y;
 				dz = (float)curs[i].z-ipos.z;
 				t = dx*ifor.x + dy*ifor.y + dz*ifor.z;
-					//Dot product equation squared (tı>³dx,dy,dy³ı*cosı(ang))
+					//Dot product equation squared (tÃ½>Â³dx,dy,dyÂ³Ã½*cosÃ½(ang))
 				if ((t < SCISSORDIST) || (t*t < (dx*dx+dy*dy+dz*dz)*0.995)) continue;
 				lastcurs = i;
 				editcurs = i; //cursaxmov = 4;

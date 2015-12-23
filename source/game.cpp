@@ -232,7 +232,7 @@ long isboxempty (long x0, long y0, long z0, long x1, long y1, long z1)
 	return(0);
 }
 
-	//Returns 0 if any voxel inside (vx-x)ý+(vy-y)ý+(vz-z)ý < rý is solid
+	//Returns 0 if any voxel inside (vx-x)Ã½+(vy-y)Ã½+(vz-z)Ã½ < rÃ½ is solid
 	//   NOTE: code uses really cool & optimized algorithm!
 long issphereempty (long x, long y, long z, long r)
 {
@@ -276,7 +276,7 @@ long issphereempty (long x, long y, long z, long r)
 	return(1);
 }
 
-	//Returns 0 if any voxel inside (vx-x)ý+(vy-y)ý+(vz-z)ý < rý is empty
+	//Returns 0 if any voxel inside (vx-x)Ã½+(vy-y)Ã½+(vz-z)Ã½ < rÃ½ is empty
 	//   NOTE: code uses really cool & optimized algorithm!
 long isspheresolid (long x, long y, long z, long r)
 {

@@ -203,13 +203,13 @@ static char *loadfileselect (char *mess, char *spec, char *defext)
 	long i;
 	for(i=0;fileselectnam[i];i++) if (fileselectnam[i] == '/') fileselectnam[i] = '\\';
 	do {
-	OPENFILENAME ofn =
-	{
-		sizeof(OPENFILENAME),ghwnd,0,spec,0,0,1,fileselectnam,MAX_PATH,0,0,(char *)(((long)relpathbase)&fileselect1stcall),mess,
-		OFN_PATHMUSTEXIST|OFN_FILEMUSTEXIST|OFN_HIDEREADONLY,0,0,defext,0,0,0
-	};
-	fileselect1stcall = 0; //Let windows remember directory after 1st call
-	if (!GetOpenFileName(&ofn)) return(0); else return(fileselectnam);
+		OPENFILENAME ofn =
+		{
+			sizeof(OPENFILENAME),ghwnd,0,spec,0,0,1,fileselectnam,MAX_PATH,0,0,(char *)(((long)relpathbase)&fileselect1stcall),mess,
+			OFN_PATHMUSTEXIST|OFN_FILEMUSTEXIST|OFN_HIDEREADONLY,0,0,defext,0,0,0
+		};
+		fileselect1stcall = 0; //Let windows remember directory after 1st call
+		if (!GetOpenFileName(&ofn)) return(0); else return(fileselectnam);
 	} while (0);
 }
 static char *savefileselect (char *mess, char *spec, char *defext)
@@ -217,20 +217,20 @@ static char *savefileselect (char *mess, char *spec, char *defext)
 	long i;
 	for(i=0;fileselectnam[i];i++) if (fileselectnam[i] == '/') fileselectnam[i] = '\\';
 	do {
-	OPENFILENAME ofn =
-	{
-		sizeof(OPENFILENAME),ghwnd,0,spec,0,0,1,fileselectnam,MAX_PATH,0,0,(char *)(((long)relpathbase)&fileselect1stcall),mess,
-		OFN_PATHMUSTEXIST|OFN_FILEMUSTEXIST|OFN_HIDEREADONLY|OFN_OVERWRITEPROMPT,0,0,defext,0,0,0
-	};
-	fileselect1stcall = 0; //Let windows remember directory after 1st call
-	if (!GetSaveFileName(&ofn)) return(0); else return(fileselectnam);
+		OPENFILENAME ofn =
+		{
+			sizeof(OPENFILENAME),ghwnd,0,spec,0,0,1,fileselectnam,MAX_PATH,0,0,(char *)(((long)relpathbase)&fileselect1stcall),mess,
+			OFN_PATHMUSTEXIST|OFN_FILEMUSTEXIST|OFN_HIDEREADONLY|OFN_OVERWRITEPROMPT,0,0,defext,0,0,0
+		};
+		fileselect1stcall = 0; //Let windows remember directory after 1st call
+		if (!GetSaveFileName(&ofn)) return(0); else return(fileselectnam);
 		} while (0);
 }
 #endif
 
 //-----------------------  WIN file select code ends -------------------------
 
-	//Note: ³p1-p0³ must equal ³p2-p0³
+	//Note: Â³p1-p0Â³ must equal Â³p2-p0Â³
 void drawarc3d (point3d *p0, point3d *p1, point3d *p2, long col)
 {
 	point3d tp, tp2;

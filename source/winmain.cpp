@@ -1897,19 +1897,19 @@ long initdirectdraw (long daxres, long dayres, long dacolbits)
 								if ((ncolbits == 8) || (colbits == 8)) updatepalette(0,256);
 
 								do {
-								DDPIXELFORMAT ddpf;
-								ddpf.dwSize = sizeof(DDPIXELFORMAT);
-								if (!IDirectDrawSurface_GetPixelFormat(ddsurf[0],&ddpf)) //colbits = ddpf.dwRGBBitCount;
-								{
-									grabmodeinfo(daxres,dayres,&ddpf,&curvidmodeinfo);
-
-										//If mode is 555 color (and not 565), use 15-bit emulation code...
-									if ((colbits != 16) && (ncolbits == 16)
-																&& (curvidmodeinfo.r0 == 10) && (curvidmodeinfo.rn == 5)
-																&& (curvidmodeinfo.g0 ==  5) && (curvidmodeinfo.gn == 5)
-																&& (curvidmodeinfo.b0 ==  0) && (curvidmodeinfo.bn == 5))
-										ddrawuseemulation = 15;
-								}
+									DDPIXELFORMAT ddpf;
+									ddpf.dwSize = sizeof(DDPIXELFORMAT);
+									if (!IDirectDrawSurface_GetPixelFormat(ddsurf[0],&ddpf)) //colbits = ddpf.dwRGBBitCount;
+									{
+										grabmodeinfo(daxres,dayres,&ddpf,&curvidmodeinfo);
+	
+											//If mode is 555 color (and not 565), use 15-bit emulation code...
+										if ((colbits != 16) && (ncolbits == 16)
+																	&& (curvidmodeinfo.r0 == 10) && (curvidmodeinfo.rn == 5)
+																	&& (curvidmodeinfo.g0 ==  5) && (curvidmodeinfo.gn == 5)
+																	&& (curvidmodeinfo.b0 ==  0) && (curvidmodeinfo.bn == 5))
+											ddrawuseemulation = 15;
+									}
 								} while (0);
 								if (ncolbits == 8)
 									if (IDirectDraw_CreatePalette(lpdd,DDPCAPS_8BIT,pal,&ddpal,0) >= 0)
@@ -2391,13 +2391,13 @@ long clearscreen (long fillcolor)
 			{
 				j = p+i-12;
 				for(x=p;x<=j;x+=12)
-				{                             //  x-j ³0123³4567³89AB
-					*(long *)(x  ) = dacol[0]; // ÚÄÄÄÄÅÄÄÄÄÅÄÄÄÄÅÄÄÄÄ¿
-					*(long *)(x+4) = dacol[1]; // ³ 12 ³    ³    ³    ³
-					*(long *)(x+8) = dacol[2]; // ³  9 ³BGR ³    ³    ³
-				}                             // ³  6 ³BGRB³GR  ³    ³
-				switch(x-j)                   // ³  3 ³BGRB³GRBG³R   ³
-				{                             // ÀÄÄÄÄÁÄÄÄÄÁÄÄÄÄÁÄÄÄÄÙ
+				{                             //  x-j Â³0123Â³4567Â³89AB
+					*(long *)(x  ) = dacol[0]; // ÃšÃ„Ã„Ã„Ã„Ã…Ã„Ã„Ã„Ã„Ã…Ã„Ã„Ã„Ã„Ã…Ã„Ã„Ã„Ã„Â¿
+					*(long *)(x+4) = dacol[1]; // Â³ 12 Â³    Â³    Â³    Â³
+					*(long *)(x+8) = dacol[2]; // Â³  9 Â³BGR Â³    Â³    Â³
+				}                             // Â³  6 Â³BGRBÂ³GR  Â³    Â³
+				switch(x-j)                   // Â³  3 Â³BGRBÂ³GRBGÂ³R   Â³
+				{                             // Ã€Ã„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„ÃÃ„Ã„Ã„Ã„Ã™
 					case 9: *(short *)x = (short)dacol[0]; *(char *)(x+2) = (char)dacol[2]; break;
 					case 6: *(long *)x = dacol[0]; *(short *)(x+4) = (short)dacol[1]; break;
 					case 3: *(long *)x = dacol[0]; *(long *)(x+4) = dacol[1]; *(char *)(x+8) = (char)dacol[2]; break;
@@ -2766,10 +2766,10 @@ void readmouse (float *fmousx, float *fmousy, long *bstatus)
 {
 	float fmousz;
 	#if defined(__cplusplus)
-	readmouse(fmousx,fmousy,&fmousz,bstatus);
+	readmouse (fmousx,fmousy,&fmousz,bstatus);
 	#else
 	readmouse_4 (fmousx,fmousy,&fmousz,bstatus);
-#endif
+	#endif
 }
 
 
@@ -3329,14 +3329,14 @@ void setears3d (float iposx, float iposy, float iposz,
 {
 	ENTERMUTX;
 	do {
-	float f = 1.f/sqrt(iheix*iheix+iheiy*iheiy+iheiz*iheiz); //Make audiostr same magnitude as audiofor
-	audiopos.x = iposx; audiopos.y = iposy; audiopos.z = iposz;
-	audiofor.x = iforx; audiofor.y = ifory; audiofor.z = iforz;
-	audiohei.x = iheix; audiohei.y = iheiy; audiohei.z = iheiz;
-	audiostr.x = (iheiy*iforz - iheiz*ifory)*f;
-	audiostr.y = (iheiz*iforx - iheix*iforz)*f;
-	audiostr.z = (iheix*ifory - iheiy*iforx)*f;
-	LEAVEMUTX;
+		float f = 1.f/sqrt(iheix*iheix+iheiy*iheiy+iheiz*iheiz); //Make audiostr same magnitude as audiofor
+		audiopos.x = iposx; audiopos.y = iposy; audiopos.z = iposz;
+		audiofor.x = iforx; audiofor.y = ifory; audiofor.z = iforz;
+		audiohei.x = iheix; audiohei.y = iheiy; audiohei.z = iheiz;
+		audiostr.x = (iheiy*iforz - iheiz*ifory)*f;
+		audiostr.y = (iheiz*iforx - iheix*iforz)*f;
+		audiostr.z = (iheix*ifory - iheiy*iforx)*f;
+		LEAVEMUTX;
 	} while (0);
 }
 
@@ -4170,10 +4170,10 @@ void setmouseout (void (*in)(long,long), long x, long y)
 	setacquire(0, kbd_acquire);
 
 	do {
-	POINT topLeft;
-	topLeft.x = 0; topLeft.y = 0;
-	ClientToScreen(ghwnd, &topLeft);
-	SetCursorPos(topLeft.x + x, topLeft.y + y);
+		POINT topLeft;
+		topLeft.x = 0; topLeft.y = 0;
+		ClientToScreen(ghwnd, &topLeft);
+		SetCursorPos(topLeft.x + x, topLeft.y + y);
 	} while (0);
 }
 

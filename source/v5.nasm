@@ -1,10 +1,11 @@
+; This file has been modified from Ken Silverman's original release
 ;CPU 686
 CPU P3
 
 
 %DEFINE USEZBUFFER 1      ;To disable, put ; in front of line
 %DEFINE LVSID 10          ;log2(VSID) - used for mip-mapping index adjustment
-%DEFINE	VSID	(1 << LVSID) ;should match VSID in VOXLAP5.H (adjust LVSID, not this)
+%DEFINE	VSID (1 << LVSID) ;should match VSID in VOXLAP5.H (adjust LVSID, not this)
 %DEFINE	LOGPREC	(8+12)
 
 SEGMENT	.data
@@ -28,9 +29,9 @@ EXTERN skyxsiz  ; dword      ;Size of longitude line
 EXTERN skylat   ; dword      ;long[skyxsiz] : latitude's unit dir. vector
 
 ;How to declare C-ASM shared variables in the ASM code:
-;ASM:                    C:
+;ASM:                       C:
 ;   GLOBAL xr0        extern void *xr0;
-;   ALIGN 16                #define lxr0 ((long *)&xr0)
+;   ALIGN 16                 #define lxr0 ((long *)&xr0)
 ;   xr0: dd 0,0,0,0   #define fxr0 ((float *)&xr0)
 ;   Use: xr0          Use: lxr0[0-3]  or:  fxr0[0-3]
 
@@ -130,7 +131,7 @@ SEGMENT	.text
 
 GLOBAL v5_asm_dep_unlock ;Data Execution Prevention unlock (works under XP2 SP2)
 v5_asm_dep_unlock:
-		ret
+	ret
 
 ALIGN 16
 
@@ -147,7 +148,7 @@ ALIGN 16
 	;   movq mm7, mm0           ;mm7: [cy0.... cx0....]
 	;   psrad mm7, 16           ;mm7: [----cy0 ----cx0]
 	;   packssdw mm7, mm7       ;mm7: [cy0 cx0 cy0 cx0]
-	;   pmaddwd mm7, mm3           ;mm7: [ 0   0  -decide]
+	;   pmaddwd mm7, mm3        ;mm7: [ 0   0  -decide]
 	;   movd eax, mm7
 	;   test eax, eax
 	;   j ?
@@ -191,7 +192,7 @@ ALIGN 16
 GLOBAL	grouscanasm ;Visual C entry point (passes parameters by stack)
 grouscanasm:
 	mov eax, [esp+4]
-	push ebx   ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
+	push ebx   ;Visual C's _cdeclrequires EBX,ESI,EDI,EBP to be preserved
 	push esi
 	push edi
 	push ebp
@@ -734,7 +735,7 @@ endskyslab:
 retsub:
 	emms
 	mov esp, dword [espbak]
-	pop ebp    ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
+	pop ebp    ;Visual C's _cdeclrequires EBX,ESI,EDI,EBP to be preserved
 	pop edi
 	pop esi
 	pop ebx
@@ -802,14 +803,14 @@ drawboundcubesseinit:
 	mov eax, [zbufoff]
 	mov dword [bcmod1-4], eax
 %endif
-	retn       ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
+	retn       ;Visual C's _cdeclrequires EBX,ESI,EDI,EBP to be preserved
 
 ALIGN 16
 GLOBAL	drawboundcubesse       ;Visual C entry point (pass by stack)
 drawboundcubesse:
 	mov eax, [esp+4]
 	mov ecx, [esp+8]
-	push ebx   ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
+	push ebx   ;Visual C's _cdeclrequires EBX,ESI,EDI,EBP to be preserved
 	push edi
 
 	movzx edi, byte [eax+6]
@@ -944,7 +945,7 @@ bcmod3:
 	jnc short boundcubenextline
 
 retboundcube:
-	pop edi    ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
+	pop edi    ;Visual C's _cdeclrequires EBX,ESI,EDI,EBP to be preserved
 	pop ebx
 	retn
 
@@ -960,14 +961,14 @@ drawboundcube3dninit:
 	mov eax, [zbufoff]
 	mov dword [bcmod1_3dn-4], eax
 %endif
-	retn       ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
+	retn       ;Visual C's _cdeclrequires EBX,ESI,EDI,EBP to be preserved
 
 ALIGN 16
 GLOBAL	drawboundcube3dn       ;Visual C entry point (pass by stack)
 drawboundcube3dn:
 	mov eax, [esp+4]
 	mov ecx, [esp+8]
-	push ebx   ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
+	push ebx   ;Visual C's _cdeclrequires EBX,ESI,EDI,EBP to be preserved
 	push edi
 
 	movzx edi, byte [eax+6]
@@ -1115,7 +1116,7 @@ bcmod3_3dn:
 	jnc short boundcubenextline_3dn
 
 retboundcube_3dn:
-	pop edi    ;Visual C's _cdecl requires EBX,ESI,EDI,EBP to be preserved
+	pop edi    ;Visual C's _cdeclrequires EBX,ESI,EDI,EBP to be preserved
 	pop ebx
 	retn
 

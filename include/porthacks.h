@@ -54,20 +54,20 @@ static inline void clearMMX () // inserts opcode emms, used to avoid many compil
 
 /* Originally by Jim Meyering.  */
 /* GPL 2 or later  */
-static int memcasecmp (const void *voidptr1, const void *voidptr2, size_t n)
+static int memcasecmp (const void* ptr0, const void* ptr1, size_t n)
 {
 	size_t i;
-	const char *ch1 = (const char*)(voidptr1);
-	const char *ch2 = (const char*)(voidptr2);
+	const char* ch0 = (const char*)(ptr0);
+	const char* ch1 = (const char*)(ptr1);
 	for (i = 0; i < n; i++)
-		{
-			unsigned char u1 = ch1[i];
-			unsigned char u2 = ch2[i];
-			int U1 = toupper (u1);
-			int U2 = toupper (u2);
-			int diff = (UCHAR_MAX <= INT_MAX ? U1 - U2
-				: U1 < U2 ? -1 : U2 < U1);
-			if (diff)
+	{
+		//int Up0 = toupper((unsigned char)(((const char*)(ptr0))[i]));
+		//int Up1 = toupper((unsigned char)(((const char*)(ptr1))[i]));
+		int Up0 = toupper((unsigned char)(ch0[i]));
+		int Up1 = toupper((unsigned char)(ch1[i]));
+		int diff = (UCHAR_MAX <= INT_MAX ? Up0 - Up1
+			: Up0 < Up1 ? -1 : Up1 < Up0);
+		if (diff)
 			return diff;
 		}
 	return 0;
@@ -83,7 +83,7 @@ static int memcasecmp (const void *voidptr1, const void *voidptr2, size_t n)
 #endif
 
 /**
- * Visual Studio Type  Hacks
+ * Visual Studio Type Hacks
  **/
 
 
@@ -117,7 +117,7 @@ typedef unsigned __int64 uint64_t;
 #define MIN(a, b)  (((a) < (b)) ? (a) : (b))
 
 #define MAX(a, b)  (((a) > (b)) ? (a) : (b))
-
+	
 #define BOUND(value, min, max)  ((value)>(max)?(max):((value)<(min)?(min):(value)))
 
 #define ANTIBOUND(value, min, max) ((value)>((max)+(min)/2)?((value)>(max)?(value):(max)):((value)<(min)?(value):(min)))
