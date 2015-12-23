@@ -1,14 +1,14 @@
 game.exe: game.obj voxlap5.obj v5.obj kplib.obj winmain1.obj
-	link game voxlap5 v5 kplib winmain1 ddraw.lib dinput.lib ole32.lib dxguid.lib user32.lib gdi32.lib /opt:nowin98
+	link game voxlap5 v5 kplib winmain1 ddraw.lib dinput.lib ole32.lib dxguid.lib user32.lib gdi32.lib
 
 kwalk.exe: kwalk.obj voxlap5.obj v5.obj kplib.obj winmain2.obj
-	link kwalk voxlap5 v5 kplib winmain2 ddraw.lib dinput.lib ole32.lib dxguid.lib user32.lib gdi32.lib comdlg32.lib /opt:nowin98
+	link kwalk voxlap5 v5 kplib winmain2 ddraw.lib dinput.lib ole32.lib dxguid.lib user32.lib gdi32.lib comdlg32.lib
 
 simple.exe:  simple.obj voxlap5.obj v5.obj kplib.obj winmain2.obj
-	link simple voxlap5 v5 kplib winmain2 ddraw.lib dinput.lib ole32.lib dxguid.lib user32.lib gdi32.lib /opt:nowin98
+	link simple voxlap5 v5 kplib winmain2 ddraw.lib dinput.lib ole32.lib dxguid.lib user32.lib gdi32.lib
 
 voxed.exe: voxed.obj voxlap5.obj v5.obj kplib.obj winmain2.obj
-	link voxed voxlap5 v5 kplib winmain2 ddraw.lib dinput.lib dxguid.lib user32.lib gdi32.lib comdlg32.lib /opt:nowin98
+	link voxed voxlap5 v5 kplib winmain2 ddraw.lib dinput.lib dxguid.lib user32.lib gdi32.lib comdlg32.lib
 
 game.obj:     game.c   voxlap5.h sysmain.h
 	cl /c /J /TP game.c      /Ox /Ob2 /G6Fy /Gs /MD /QIfist
