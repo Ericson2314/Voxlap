@@ -1,3 +1,5 @@
+CFLAGS = /J /Ox /Ob2 /G6Fy /Gs /MD
+
 game.exe: game.obj voxlap5.obj v5.obj kplib.obj winmain1.obj
 	link game voxlap5 v5 kplib winmain1 ddraw.lib dinput.lib ole32.lib dxguid.lib user32.lib gdi32.lib
 
@@ -10,22 +12,22 @@ simple.exe:  simple.obj voxlap5.obj v5.obj kplib.obj winmain2.obj
 voxed.exe: voxed.obj voxlap5.obj v5.obj kplib.obj winmain2.obj
 	link voxed voxlap5 v5 kplib winmain2 ddraw.lib dinput.lib dxguid.lib user32.lib gdi32.lib comdlg32.lib
 
-game.obj:     game.c   voxlap5.h sysmain.h
-	cl /c /J /TP game.c      /Ox /Ob2 /G6Fy /Gs /MD /QIfist
-kwalk.obj:    kwalk.c  voxlap5.h sysmain.h
-	cl /c /J /TP kwalk.c     /Ox /Ob2 /G6Fy /Gs /MD
-simple.obj:   simple.c voxlap5.h sysmain.h
-	cl /c /J /TP simple.c    /Ox /Ob2 /G6Fy /Gs /MD /QIfist
-voxed.obj:    voxed.c  voxlap5.h sysmain.h
-	cl /c /J /TP voxed.c     /Ox /Ob2 /G6Fy /Gs /MD
+game.obj:     src/game.c   inc/voxlap5.h inc/sysmain.h
+	cl $(CFLAGS) /c /TP $< /QIfist
+kwalk.obj:    src/kwalk.c  inc/voxlap5.h inc/sysmain.h
+	cl $(CFLAGS) /c /TP $<
+simple.obj:   src/simple.c inc/voxlap5.h inc/sysmain.h
+	cl $(CFLAGS) /c /TP $< /QIfist
+voxed.obj:    src/voxed.c  inc/voxlap5.h inc/sysmain.h
+	cl $(CFLAGS) /c /TP $<
 
-voxlap5.obj:  voxlap5.c voxlap5.h
-	cl /c /J /TP voxlap5.c   /Ox /Ob2 /G6Fy /Gs /MD
-v5.obj:       v5.asm
-	ml /c /coff v5.asm
-kplib.obj:    kplib.c
-	cl /c /J /TP kplib.c     /Ox /Ob2 /G6Fy /Gs /MD
-winmain1.obj: winmain.cpp sysmain.h
-	cl /c /J /TP winmain.cpp /Ox /Ob2 /G6Fy /Gs /MD /DUSEKZ /DZOOM_TEST /Fowinmain1.obj
-winmain2.obj: winmain.cpp
-	cl /c /J /TP winmain.cpp /Ox /Ob2 /G6Fy /Gs /MD /DNOSOUND           /Fowinmain2.obj
+voxlap5.obj:  src/voxlap5.c inc/voxlap5.h
+	cl $(CFLAGS) /c /TP $<
+v5.obj:       src/v5.asm
+	ml $(CFLAGS) /c /coff $<
+kplib.obj:    src/kplib.c
+	cl $(CFLAGS) /c /TP $<
+winmain1.obj: src/winmain.cpp inc/sysmain.h
+	cl $(CFLAGS) /c /TP $<  /DUSEKZ /DZOOM_TEST /Fowinmain1.obj
+winmain2.obj: src/winmain.cpp
+	cl $(CFLAGS) /c /TP $<  /DNOSOUND           /Fowinmain2.obj
